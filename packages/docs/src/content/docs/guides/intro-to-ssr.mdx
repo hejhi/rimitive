@@ -37,9 +37,9 @@ A static HTML page is obviously not what you want. Somehow, your app needs to "c
 
 ### How does it run on the server?
 
-Your app is JavaScript, and JavaScript can run on the server. For view primitives like `el`, Rimitive lets you swap in a server-friendly adapter that generates markup without a real DOM.
+Your app is JavaScript, and JavaScript can run on the server. For view modules like `el`, Rimitive lets you swap in a server-friendly adapter that generates markup without a real DOM.
 
-The out-of-the-box server adapter is powered by [`linkedom`](https://github.com/WebReflection/linkedom), a lightweight DOM implementation. When `el("div")` runs on the server, it creates a linkedom element instead of a real DOM element. This lets linkedom render your app's HTML structure the same way the browser would.
+The out-of-the-box server adapter is powered by [`parse5`](https://github.com/inikulin/parse5), a lightweight HTML parser. When `el("div")` runs on the server, it creates a parse5 element instead of a real DOM element. This lets parse5 render your app's HTML structure the same way the browser would.
 
 That generated HTML structure is then serialized into a string and sent to the client.
 
@@ -61,7 +61,7 @@ Rimitive effects are synchronous by default and _will_ run on the server. Howeve
 
 ### What about fetched data?
 
-Rimitive supports data fetching during SSR with a primitive called `load()`.
+Rimitive supports data fetching during SSR with the `load()` module.
 
 <Aside type="caution" title="SSR Data Pitfalls">
 Don't use raw `fetch()` or `resource()` for SSR data:
@@ -84,7 +84,7 @@ Rimitive provides a hydration adapter that you plug into `createElModule()`. Dur
 
 ## The Mental Model
 
-1. **Server renders your app** — using a server adapter that creates linkedom elements
+1. **Server renders your app** — using a server adapter that creates parse5 elements
 2. **HTML is serialized and sent** — the client receives fully-rendered markup
 3. **Browser displays HTML immediately** — users see content before JS loads
 4. **Client JavaScript loads** — your app code runs again

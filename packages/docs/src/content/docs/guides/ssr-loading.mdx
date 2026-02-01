@@ -15,9 +15,9 @@ Basic SSR renders static content. But when you need data from an API or database
 
 1. A way to load data into your app that works both on the client and server (`load()`)
 2. A server render function that also waits for the data when run on the server (`renderToStringAsync`)
-3. A way to pass that data to the client to provide **back** into your app (`hydrationData`), which completes the cycle by providing it back into the respective `load()` primitives (and thus hydrating them) 🔄
+3. A way to pass that data to the client to provide **back** into your app (`hydrationData`), which completes the cycle by providing it back into the respective `load()` instance (and thus hydrating them) 🔄
 
-Rimitive provides a primitive called `load()` for this. You wrap the parts of your UI that need async data, Rimitive handles fetching on the server, serializes the results, and hydrates the client without refetching.
+Rimitive provides a module called `load()` for this. You wrap the parts of your UI that need async data, Rimitive handles fetching on the server, serializes the results, and hydrates the client without refetching.
 
 ```
 SERVER
@@ -140,7 +140,7 @@ With async, we use `renderToStringAsync` instead of calling `serialize()` direct
 // server.ts
 import { createServer } from 'node:http';
 import {
-  createLinkedomAdapter,
+  createParse5Adapter,
   renderToStringAsync,
   safeJsonStringify,
 } from '@rimitive/ssr/server';
@@ -148,7 +148,7 @@ import { createService } from './service.js';
 import { App } from './App.js';
 
 const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
+  const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
   const service = createService(adapter);
 
   // Render and wait for all load() boundaries

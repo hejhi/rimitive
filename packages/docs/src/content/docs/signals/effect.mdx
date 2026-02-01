@@ -1,0 +1,250 @@
+---
+title: effect()
+description: Run side effects when reactive dependencies change.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `effect()` function runs code when its dependencies change. Unlike `computed()`, effects are for side effects — DOM updates, logging, API calls, etc.
+
+## Syntax
+
+```typescript
+const dispose = effect(fn)
+const dispose = effect(flushStrategy)
+```
+
+### Parameters
+
+**`fn`**
+: A function to run. Any signals read inside become dependencies. Can optionally return a cleanup function.
+
+**`flushStrategy`**
+: A flush strategy wrapper like `mt(fn)`, `raf(fn)`, or `debounce(ms, fn)`. See [Flush Strategies](#flush-strategies).
+
+### Return value
+
+A `dispose` function that stops the effect and runs any cleanup.
+
+## Description
+
+Effects run immediately when created, then re-run whenever their dependencies change. They're **synchronous** by default — when a signal changes, the effect runs before the next line of code.
+
+```typescript
+const count = signal(0);
+
+effect(() => {
+  console.log('Count is:', count());
+});
+// logs: "Count is: 0"
+
+count(1);
+// logs: "Count is: 1"
+
+count(2);
+// logs: "Count is: 2"
+```
+
+### Cleanup
+
+Return a function from your effect to clean up before the next run:
+
+```typescript
+const userId = signal(1);
+
+effect(() => {
+  const id = userId();
+  const controller = new AbortController();
+
+  fetch(`/api/user/${id}`, { signal: controller.signal })
+    .then(r => r.json())
+    .then(user => console.log(user));
+
+  return () => controller.abort();
+});
+```
+
+Cleanup runs:
+- Before each re-run (when dependencies change)
+- When the effect is disposed
+
+### Disposal
+
+Call the returned function to stop the effect:
+
+```typescript
+const dispose = effect(() => {
+  console.log('Count:', count());
+});
+
+count(1);  // logs
+count(2);  // logs
+
+dispose();
+
+count(3);  // nothing — effect stopped
+```
+
+Disposal also runs any cleanup function one final time.
+
+## Flush Strategies
+
+By default, effects run synchronously. Use flush strategies to control timing:
+
+```typescript
+import { mt, raf, debounce } from '@rimitive/signals/extend';
+```
+
+### mt (microtask)
+
+Defers to the next microtask. Multiple synchronous updates trigger one effect run:
+
+```typescript
+const a = signal(1);
+const b = signal(2);
+
+effect(mt(() => {
+  console.log('Sum:', a() + b());
+}));
+// logs: "Sum: 3"
+
+a(10);
+b(20);
+// logs: "Sum: 30" (once, not twice)
+```
+
+### raf (requestAnimationFrame)
+
+Defers to the next animation frame. Ideal for DOM work:
+
+```typescript
+effect(raf(() => {
+  canvas.width = width();
+  canvas.height = height();
+  ctx.fillRect(0, 0, width(), height());
+}));
+```
+
+### debounce(ms, fn)
+
+Waits until dependencies stop changing for the specified duration:
+
+```typescript
+const query = signal('');
+
+effect(debounce(300, () => {
+  performSearch(query());
+}));
+```
+
+### When to use each
+
+| Strategy | Use case |
+|----------|----------|
+| (none) | Immediate response, single dependency, predictable sync behavior |
+| `mt(fn)` | Multiple signals updating together, coalesce into one run |
+| `raf(fn)` | DOM work, canvas, animations |
+| `debounce(ms, fn)` | User input, search, expensive operations |
+
+## Examples
+
+### Sync to localStorage
+
+```typescript
+const theme = signal('dark');
+
+effect(() => {
+  localStorage.setItem('theme', theme());
+});
+```
+
+### WebSocket connection
+
+```typescript
+const roomId = signal('general');
+
+effect(() => {
+  const id = roomId();
+  const ws = new WebSocket(`wss://chat.example.com/${id}`);
+
+  ws.onmessage = (e) => {
+    messages([...messages(), JSON.parse(e.data)]);
+  };
+
+  return () => ws.close();
+});
+```
+
+### Animation loop
+
+```typescript
+const x = signal(0);
+const y = signal(0);
+
+effect(raf(() => {
+  element.style.transform = `translate(${x()}px, ${y()}px)`;
+}));
+```
+
+### With element lifecycle
+
+Return an effect from `.ref()` to tie it to an element's lifetime:
+
+```typescript
+el('canvas')
+  .ref((canvas) =>
+    effect(() => {
+      const ctx = canvas.getContext('2d');
+      drawScene(ctx, sceneData());
+    })
+  )()
+```
+
+The effect disposes automatically when the element is removed.
+
+## Anti-patterns
+
+### Don't mutate signals you read
+
+```typescript
+// BAD — infinite loop
+effect(() => {
+  count(count() + 1);
+});
+```
+
+### Don't use for derived state
+
+```typescript
+// BAD — use computed instead
+const total = signal(0);
+effect(() => {
+  total(items().reduce((a, b) => a + b, 0));
+});
+
+// GOOD
+const total = computed(() => items().reduce((a, b) => a + b, 0));
+```
+
+### Don't forget cleanup
+
+```typescript
+// BAD — leaks connections
+effect(() => {
+  const ws = new WebSocket(url());
+  ws.onmessage = handleMessage;
+});
+
+// GOOD
+effect(() => {
+  const ws = new WebSocket(url());
+  ws.onmessage = handleMessage;
+  return () => ws.close();
+});
+```
+
+## See also
+
+- [signal()](/signals/signal) — Create reactive state
+- [computed()](/signals/computed) — Derive values (prefer over effect for derived state)
+- [batch()](/signals/batch) — Batch multiple updates

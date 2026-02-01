@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noImplicitAny": false,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@rimitive/core": ["../../../core/dist/index.d.ts"],
+      "@rimitive/signals": ["../../../signals/dist/index.d.ts"],
+      "@rimitive/signals/*": ["../../../signals/dist/*"],
+      "@rimitive/view": ["../../../view/dist/index.d.ts"],
+      "@rimitive/view/*": ["../../../view/dist/*"],
+      "@rimitive/router": ["../../../router/dist/index.d.ts"],
+      "@rimitive/router/*": ["../../../router/dist/*"],
+      "@rimitive/resource": ["../../../resource/dist/index.d.ts"],
+      "@rimitive/resource/*": ["../../../resource/dist/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

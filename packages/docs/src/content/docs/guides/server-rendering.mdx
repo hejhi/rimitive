@@ -26,7 +26,7 @@ This guide covers `renderToString`. For async data loading, see [SSR with Data L
 ## What You Need
 
 For basic SSR, you need:
-1. A **server adapter** that creates elements using linkedom instead of the real DOM
+1. A **server adapter** that creates elements using parse5 instead of the real DOM
 2. A **client hydration adapter** that walks existing DOM instead of creating new elements
 
 ---
@@ -62,20 +62,20 @@ Now, this file can be shared with both the server and the client ✨
 
 ## Server Setup
 
-`createLinkedomAdapter()` creates a server-friendly adapter powered by [linkedom](https://github.com/WebReflection/linkedom), a lightweight DOM implementation for Node.js. When `el("div")` runs on the server, it creates a linkedom element instead of a real DOM element—same structure, no browser required.
+`createParse5Adapter()` creates a server-friendly adapter powered by [parse5](https://github.com/inikulin/parse5), a lightweight HTML parser for Node.js. When `el("div")` runs on the server, it creates a parse5 element instead of a real DOM element—same structure, no browser required.
 
 Create a fresh adapter and service for each incoming request. Reusing them across requests would cause data from one user to leak into another's response.
 
 ```typescript
 // server.ts
 import { createServer } from 'node:http';
-import { createLinkedomAdapter, renderToString } from '@rimitive/ssr/server';
+import { createParse5Adapter, renderToString } from '@rimitive/ssr/server';
 import { createService } from './service.js';
 import { App } from './App.js';
 
 const server = createServer((req, res) => {
   // Create per-request adapter and service
-  const { adapter, serialize } = createLinkedomAdapter();
+  const { adapter, serialize } = createParse5Adapter();
   const service = createService(adapter);
 
   // Create and render the app
@@ -97,9 +97,9 @@ server.listen(3000);
 
 ### What happens:
 
-1. `createLinkedomAdapter()` returns an `adapter` (for creating elements) and `serialize` (for converting individual elements to HTML)
+1. `createParse5Adapter()` returns an `adapter` (for creating elements) and `serialize` (for converting individual elements to HTML)
 2. `createService(adapter)` wires up your app with the server adapter
-3. `App(service).create(service)` runs your app, building a linkedom element tree
+3. `App(service).create(service)` runs your app, building a parse5 element tree
 4. `renderToString(root, serialize)` walks the tree and converts it to an HTML string
 
 Finally the HTML is sent to the client (and your `<script>` tag loads the client bundle).

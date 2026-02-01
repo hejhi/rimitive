@@ -1,0 +1,197 @@
+---
+title: el()
+description: Create elements with reactive props and children.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `el()` function creates element specs — blueprints for DOM elements with reactive props and children.
+
+## Syntax
+
+```typescript
+el(tag)
+el(tag).props(props)
+el(tag).props(props).ref(...callbacks)
+el(tag)(children)
+el(tag).props(props)(children)
+```
+
+### Parameters
+
+**`tag`**
+: The element tag name. For the DOM adapter, this is any valid HTML tag (`'div'`, `'button'`, `'input'`, etc.).
+
+**`props`** (optional)
+: An object of attributes, properties, and event handlers. Values can be static or reactive.
+
+**`callbacks`** (optional)
+: Lifecycle callbacks passed to `.ref()`. Called with the element when created, return a cleanup function for disposal.
+
+**`children`** (optional)
+: Child content — strings, numbers, reactive values, or other element specs.
+
+### Return value
+
+An `ElementSpec` — an inert blueprint that becomes a real element when mounted or created.
+
+## Description
+
+`el()` is curried and chainable:
+
+```typescript
+// Just a tag
+el('div')
+
+// With props
+el('div').props({ className: 'container' })
+
+// With children
+el('div')('Hello')
+
+// Full chain
+el('button')
+  .props({ onclick: handleClick })
+  .ref(callback)
+  ('Click me')
+```
+
+### Elements never re-render
+
+Unlike virtual DOM frameworks, `el()` creates a stable element once. The element itself doesn't re-render — only individual props and text nodes update when their reactive values change:
+
+```typescript
+const count = signal(0);
+
+// This element is created once
+// Only the text "Count: X" updates when count changes
+const display = el('div')(
+  computed(() => `Count: ${count()}`)
+);
+```
+
+### Reactive props
+
+Props can be static values or reactive (signals/computeds):
+
+```typescript
+const isDisabled = signal(false);
+const label = computed(() => isDisabled() ? 'Disabled' : 'Click me');
+
+el('button').props({
+  className: 'btn',           // static
+  disabled: isDisabled,       // reactive
+  onclick: () => doSomething() // event handler
+})(label)                      // reactive child
+```
+
+### Children
+
+The final call accepts any number of children:
+
+```typescript
+el('div')(
+  'Text content',
+  el('span')('Nested element'),
+  computed(() => `Dynamic: ${value()}`),
+  someCondition && el('p')('Conditional')
+)
+```
+
+Children can be:
+- Strings and numbers (rendered as text)
+- Reactive values (signals, computeds)
+- Other element specs
+- `null` or `undefined` (ignored)
+- Arrays of any of the above
+
+## Examples
+
+### Basic elements
+
+```typescript
+// Empty div
+el('div')()
+
+// Div with text
+el('div')('Hello, world')
+
+// Nested structure
+el('article')(
+  el('h1')('Title'),
+  el('p')('First paragraph'),
+  el('p')('Second paragraph')
+)
+```
+
+### With props
+
+```typescript
+el('input').props({
+  type: 'text',
+  placeholder: 'Enter name...',
+  value: name,
+  oninput: (e) => name(e.target.value)
+})()
+
+el('a').props({
+  href: 'https://example.com',
+  target: '_blank'
+})('Visit site')
+```
+
+### Reactive updates
+
+```typescript
+const theme = signal<'light' | 'dark'>('light');
+const count = signal(0);
+
+el('div').props({
+  className: computed(() => `app theme-${theme()}`),
+})(
+  el('p')(computed(() => `Count: ${count()}`)),
+  el('button').props({
+    onclick: () => count(count() + 1)
+  })('Increment')
+)
+```
+
+### With ref callbacks
+
+```typescript
+el('input')
+  .props({ type: 'text' })
+  .ref(
+    (input) => input.focus(),
+    (input) => {
+      // Setup
+      const handler = () => console.log('focused');
+      input.addEventListener('focus', handler);
+      // Cleanup
+      return () => input.removeEventListener('focus', handler);
+    }
+  )()
+```
+
+### Partial application
+
+Pre-bind commonly used tags:
+
+```typescript
+const div = el('div');
+const button = el('button');
+const input = el('input');
+
+// Use without repeating tag names
+div.props({ className: 'container' })(
+  input.props({ type: 'text' })(),
+  button.props({ type: 'submit' })('Submit')
+)
+```
+
+## See also
+
+- [map()](/view/map) — Render lists of elements
+- [match()](/view/match) — Conditional element rendering
+- [mount()](/view/mount) — Attach element specs to the DOM
+- [Adding a UI](/guides/adding-a-ui) — Tutorial on building UIs

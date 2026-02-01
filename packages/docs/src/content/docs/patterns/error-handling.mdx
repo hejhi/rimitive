@@ -14,7 +14,7 @@ It doesn't—because it doesn't need one.
 
 ---
 
-## Why No Error Boundary Primitive?
+## Why No Error Boundary Module?
 
 In React and Solid, components are reactive functions that re-run during a render cycle. Errors can happen mid-render, and the framework needs a way to catch them and show fallback UI.
 
@@ -52,7 +52,7 @@ const SafeWrapper = (svc: Service) => () => {
 
 ## Handling Async Errors
 
-For async operations, use the `resource` primitive. It tracks error state explicitly:
+For async operations, use the `resource` module. It tracks error state explicitly:
 
 ```typescript
 const ProductList = (svc: Service) => () => {

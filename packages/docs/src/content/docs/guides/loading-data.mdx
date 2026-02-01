@@ -14,40 +14,13 @@ Data loading in Rimitive is reactive. When dependencies change, data refetches. 
 
 ## The Manual Way
 
-You _could_ manage async state yourself with signals and effects:
-
-```typescript
-const ProductList = ({ signal, effect, el }: Service) => 
-  () => {
-    const loading = signal(true);
-    const data = signal<Product[]>([]);
-    const error = signal<Error | null>(null);
-
-    effect(() => {
-      loading(true);
-      fetch('/api/products')
-        .then(r => r.json())
-        .then(items => {
-          data(items);
-          loading(false);
-        })
-        .catch(err => {
-          error(err);
-          loading(false);
-        });
-    });
-
-    return el('div')(/* render based on loading/data/error */);
-  };
-```
-
-This works, but you're managing three signals, handling errors, and there's no cancellation. When dependencies change mid-flight, you get race conditions.
+You _could_ manage async state yourself with signals and effects, but you'd likely end up manually setting loading, error, and data states as signals, as well as cancellation. When dependencies change mid-flight, if you're not careful, you could also end up with race conditions.
 
 ---
 
-## The resource() Primitive
+## Using resource()
 
-`resource()` handles all of that. Add the resource module to your service:
+`resource()` handles all of this in a tiny module. Add the resource module to your service:
 
 ```typescript
 // service.ts
@@ -85,7 +58,7 @@ const ProductList = ({ resource, el, match }: Service) => {
       fetch('/api/products', { signal }).then(r => r.json())
     );
 
-    return el('div').ref(() => () => products.dispose())(
+    return el('div').ref(() => products.dispose)(
       match(products, (state) => {
         switch (state.status) {
           case 'pending':
@@ -103,10 +76,10 @@ const ProductList = ({ resource, el, match }: Service) => {
 };
 ```
 
-Key points:
-- The fetcher receives an `AbortSignal` - pass it to `fetch()` for automatic cancellation
-- Create resources **inside the factory function**, not at module level
-- Call `dispose()` when the component unmounts to abort in-flight requests
+Notice that:
+- the fetcher receives an `AbortSignal` - pass it to `fetch()` for automatic cancellation
+- we create resources **inside the component function**, not at module level
+- we call `dispose()` when the component unmounts to abort in-flight requests
 
 ### Reading State
 
@@ -375,7 +348,7 @@ On the server, async flush strategies (`mt`, `raf`, `debounce`) execute once and
 
 ## resource() vs load()
 
-Rimitive has two primitives for async data:
+Rimitive has two modules for async data:
 
 | | `resource()` | `load()` |
 |---|---|---|

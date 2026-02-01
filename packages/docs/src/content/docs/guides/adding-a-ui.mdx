@@ -4,14 +4,14 @@ description: Render reactive state to the DOM with el().
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SandboxDir from '../../../components/SandboxDir.astro';
 
-You have signals, and maybe some behaviors, so perhaps now we want to add a reactive UI on top of it.
-
-Rimitive provides the `view` package that contains view-specific primitives, with `el()` being the foundation: `el()` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
-
----
 
 ## Extending the Service
+
+You have signals and behaviors, so perhaps now we want to layer on some reactive UI.
+
+Rimitive provides the `view` package that contains view-specific modules, with `el()` being the foundation: `el()` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
 
 Add the view modules to your service:
 
@@ -27,7 +27,7 @@ export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  // Let's add the `el` and `mount` primitives from the `view` package, and provide the
+  // Let's add the `el` and `mount` modules from the `view` package, and provide the
   // DOM adapter to make DOM elements 👇
   createElModule(createDOMAdapter()),
   MountModule
@@ -57,15 +57,7 @@ el('div')(
 );
 ```
 
-If you provided a different adapter, then you'd pass different (strongly typed!) strings (like `el('mySpecialElement')`).
-
-<Aside type="note">
-`el` itself also **never re-renders**. You can pass it reactive children, reactive props, etc and those will all update when needed, but the underlying element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
-
-There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself doesn't reconcile or re-render. 
-
-This is **great for performance**, creates a **much simpler mental model**, and if you don't need reconciliation, don't use it! You can still write reactive apps.**.
-</Aside>
+If you provided a different adapter, then you'd pass different (strongly typed!) strings (like `el("mySpecialElement")`). `el` returns a UI **spec** with a stable reference to the underlying element—it doesn't "re-render".
 
 ---
 
@@ -85,7 +77,7 @@ const button = el('button').props({
 isDisabled(true);  // button becomes disabled, class changes
 ```
 
-Props are typesafe and typed based on the element. `el('button')` knows about `disabled`, `onclick`, `type`, etc. These types are driven by the adapter provided, so for the DOM you get things like `button`, whatever, but swap it out or customize the adapter and then you can get all sorts of other things, like custom elements, svg or canvas abstractions, hydration abstractions...whatever you want really.
+Props are type-safe, driven by the adapter provided.
 
 ---
 
@@ -107,7 +99,7 @@ count(5);  // display updates to "Count: 5"
 
 ## UI Components
 
-The star of the show, UI components in rimitive are...just functions that return elements:
+The star of the show, UI components in Rimitive are...just functions that return UI specs:
 
 ```typescript
 const Greeting = (name: string) =>
@@ -123,44 +115,18 @@ const DoubleGreeting = () => el('div')(
 ```
 
 <Aside type="note">
-Again, components in rimitive are not magical reactive closures, and there's no re-rendering of them! They are just functions. Just another pattern. There's no re-rendering, just reactive primitives. You're simply returning an element tree.
+UI "components" in Rimitive are plain functions that return a **spec** for a UI, which can be mounted and unmounted. They never re-render, reconcile, or anything else. Some modules like `map` may contain reconciliation logic if they need it to dynamically or conditionally render children, but it's always encapsulated within the module.
 </Aside>
 
-That's it, kind of anticlimactic.
+That's it, kind of anticlimactic. Here's a working example:
+
+<SandboxDir dir="adding-a-ui" editorHeight="380px" />
 
 ---
 
-## With Behaviors
+## Wrapping Components in Service Functions
 
-Drive UIs with reactive behavior:
-
-```typescript
-import { svc, el, computed } from './service';
-import { useCounter } from './behaviors/counter';
-
-const Counter = (initial: number) => {
-  const { count, doubled, increment, decrement, reset } = useCounter(initial);
-
-  return el('div')(
-    el('div')(computed(() => `Count: ${count()} (doubled: ${doubled()})`)),
-    el('div')(
-      el('button').props({ onclick: decrement })('-'),
-      el('button').props({ onclick: increment })('+'),
-      el('button').props({ onclick: reset })('Reset')
-    )
-  );
-};
-```
-
-Again, `Counter` itself is not a reactive closure, so it's not going to re-render!
-
-But wait, there's more!
-
----
-
-## Portable Components
-
-Just like behaviors, components can be made portable by wrapping them in a function that receives the service:
+Just like behaviors, components can be wrapped in a service function for portability:
 
 ```typescript
 import type { Service } from './service';
@@ -169,7 +135,7 @@ import { counter } from './behaviors/counter';
 const Counter = (svc: Service) => {
   const { el, computed } = svc;
 
-  // The service layer is so cyute isn't it??
+  // The service function is so cyute isn't it??
   const useCounter = svc(counter);
 
   return (initial: number) => {
@@ -186,27 +152,20 @@ const Counter = (svc: Service) => {
   };
 };
 
-// Components can compose both behaviors AND components in the service layer
+// Components can compose other components in the service function
 const Counters = (svc: Service) => {
-  const { el, computed } = svc;
+  const { el } = svc;
   const CounterComponent = svc(Counter);
 
-  return (initial: number) => {
-    const { count, doubled, increment, decrement, reset } = useCounter(initial);
-
-    return el('div')(
+  return () =>
+    el('div')(
       CounterComponent(0),
       CounterComponent(100)
     );
-  };
 };
 ```
 
-Same shape as portable behaviors: `(svc) => (args) => result`. The outer function is the service layer, the inner function is the component factory.
-
-The service layer is where you wire up your dependencies—behaviors, other components, whatever you need. Then the inner function just uses them.
-
-This is useful for testing, SSR, or sharing components across different service contexts.
+Same shape as portable behaviors: `(svc) => (args) => result`. This is useful for testing, SSR, or sharing components across different service contexts.
 
 ---
 

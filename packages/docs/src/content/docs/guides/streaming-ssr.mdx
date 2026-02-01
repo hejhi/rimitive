@@ -66,7 +66,7 @@ Use `renderToStream` instead of `renderToStringAsync`:
 // server.ts
 import { createServer } from 'node:http';
 import {
-  createLinkedomAdapter,
+  createParse5Adapter,
   renderToStream,
   createStreamWriter,
 } from '@rimitive/ssr/server';
@@ -78,7 +78,7 @@ const STREAM_KEY = '__APP_STREAM__';
 const stream = createStreamWriter(STREAM_KEY);
 
 const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
+  const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
 
   // Create service with streaming callback
   const service = createService(adapter, {

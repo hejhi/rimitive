@@ -1,0 +1,134 @@
+---
+title: signal()
+description: Create reactive state that notifies dependents when it changes.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import SandboxDir from '../../../components/SandboxDir.astro';
+
+The `signal()` function creates reactive state. Read with `sig()`, write with `sig(value)`.
+
+## Syntax
+
+```typescript
+const sig = signal(initialValue)
+```
+
+### Parameters
+
+**`initialValue`**
+: The initial value of the signal. Can be any type.
+
+### Return value
+
+A `SignalFunction<T>` — a callable function with the following behavior:
+
+- **`sig()`** — Returns the current value and tracks this read as a dependency
+- **`sig(newValue)`** — Sets a new value and notifies all dependents
+- **`sig.peek()`** — Returns the current value without tracking
+
+## Description
+
+Signals are the foundation of Rimitive's reactivity. When you read a signal inside a `computed()` or `effect()`, that read is tracked. When the signal's value changes, all dependents are notified and re-run.
+
+```typescript
+const count = signal(0);
+
+// Reading
+count();        // 0 (tracked if inside computed/effect)
+count.peek();   // 0 (never tracked)
+
+// Writing
+count(5);             // sets to 5
+count(count() + 1);   // read then write
+```
+
+### Reactive tracking
+
+Reads are only tracked inside reactive contexts — `computed()` and `effect()`. Reading a signal in plain JavaScript doesn't create any subscription:
+
+```typescript
+const name = signal('Alice');
+
+// Not reactive — this string is computed once, never updates
+const greeting = `Hello, ${name()}!`;
+
+// Reactive — recomputes when name changes
+const greeting = computed(() => `Hello, ${name()}!`);
+```
+
+### Untracked reads with peek()
+
+Use `peek()` when you need the current value without creating a dependency:
+
+```typescript
+effect(() => {
+  // This effect only re-runs when `trigger` changes,
+  // not when `count` changes
+  if (trigger()) {
+    console.log('Count is:', count.peek());
+  }
+});
+```
+
+Common use cases for `peek()`:
+- Event handlers where you need the current value but don't want reactivity
+- Breaking circular dependencies
+- Performance optimization when you know a re-run isn't needed
+
+## Examples
+
+### Counter
+
+```typescript
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+
+count();        // 0
+doubled();      // 0
+
+count(5);
+count();        // 5
+doubled();      // 10
+
+count(count() + 1);
+count();        // 6
+doubled();      // 12
+```
+
+### Form state
+
+```typescript
+const form = signal({
+  name: '',
+  email: '',
+  valid: false,
+});
+
+// Update one field
+form({ ...form(), name: 'Alice' });
+
+// Derived validation
+const isValid = computed(() => {
+  const { name, email } = form();
+  return name.length > 0 && email.includes('@');
+});
+```
+
+### Toggle pattern
+
+```typescript
+const isOpen = signal(false);
+
+// Toggle
+isOpen(!isOpen());
+
+// Or create a helper
+const toggle = () => isOpen(!isOpen());
+```
+
+## See also
+
+- [computed()](/signals/computed) — Derive values from signals
+- [effect()](/signals/effect) — Run side effects when signals change
+- [Signal Patterns](/patterns/signal-patterns) — Common patterns for working with signals

@@ -1,0 +1,105 @@
+---
+title: View
+description: Declarative UI modules for building reactive interfaces.
+---
+
+The `@rimitive/view` package provides declarative modules for building reactive user interfaces — elements, lists, conditionals, and more.
+
+## Installation
+
+```bash
+npm install @rimitive/core @rimitive/signals @rimitive/view
+```
+
+## Quick Start
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  MountModule
+);
+
+const { signal, computed, el, mount } = svc;
+
+const count = signal(0);
+
+const app = mount(
+  el('button').props({
+    onclick: () => count(count() + 1)
+  })(
+    computed(() => `Clicked ${count()} times`)
+  )
+);
+
+document.body.appendChild(app.element);
+```
+
+## APIs
+
+| API | Description |
+|-----|-------------|
+| [el()](/view/el) | Create elements with reactive props and children |
+| [map()](/view/map) | Render reactive lists with keyed items |
+| [match()](/view/match) | Conditional rendering based on reactive values |
+| [portal()](/view/portal) | Render children to a different DOM location |
+| [mount()](/view/mount) | Attach element specs to the DOM |
+| [on()](/view/on) | Event handling with automatic cleanup |
+
+## Modules
+
+View modules are factory functions that take an adapter:
+
+```typescript
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { createPortalModule } from '@rimitive/view/portal';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter),
+  createPortalModule(adapter),
+  MountModule,
+  OnModule
+);
+```
+
+## Adapters
+
+The view layer is adapter-agnostic. The DOM adapter is provided for browser environments:
+
+```typescript
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+
+const adapter = createDOMAdapter();
+```
+
+For SSR, use the parse5 adapter from `@rimitive/ssr`:
+
+```typescript
+import { createParse5Adapter } from '@rimitive/ssr/server';
+
+const adapter = createParse5Adapter();
+```
+
+You can also create custom adapters for other rendering targets (Canvas, WebGL, native, etc.).

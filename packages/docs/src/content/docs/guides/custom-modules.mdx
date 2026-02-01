@@ -1,9 +1,9 @@
 ---
 title: Custom Modules
-description: Define your own primitives with defineModule.
+description: Define your own modules with defineModule.
 ---
 
-Rimitive's composition system isn't limited to the built-in primitives. You can define your own modules with `defineModule` and compose them alongside signals, view, or anything else.
+You can define your own modules with `defineModule` and compose them alongside signals, view, or anything else.
 
 ---
 
@@ -164,7 +164,7 @@ const svc = compose(SignalModule, ComputedModule);
 
 Create a module when you want to:
 
-- **Add new primitives** to the composed service
+- **Add new modules** to a composed service
 - **Share infrastructure** (logging, http, storage) across behaviors
 - **Encapsulate setup/teardown** with lifecycle hooks
 - **Build your own libraries** on top of composition

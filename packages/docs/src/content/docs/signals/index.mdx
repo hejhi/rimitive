@@ -1,0 +1,87 @@
+---
+title: Signals
+description: Reactive primitives for state management.
+---
+
+The `@rimitive/signals` package provides the base reactive primitives—signals, computeds, and effects—that form the foundation of rimitive's reactivity system.
+
+## Installation
+
+```bash
+npm install @rimitive/core @rimitive/signals
+```
+
+## Quick Start
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+const { signal, computed, effect } = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule
+);
+
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+
+effect(() => {
+  console.log(`Count: ${count()}, Doubled: ${doubled()}`);
+});
+
+count(1);  // logs: "Count: 1, Doubled: 2"
+```
+
+## APIs
+
+| API | Description |
+|-----|-------------|
+| [signal()](/signals/signal) | Create reactive state |
+| [computed()](/signals/computed) | Derive values from signals |
+| [effect()](/signals/effect) | Run side effects when dependencies change |
+| [batch()](/signals/batch) | Group updates into a single notification |
+| [untrack()](/signals/untrack) | Read signals without creating dependencies |
+| [subscribe()](/signals/subscribe) | Subscribe to signal changes with a callback |
+
+## Modules
+
+Each API has a corresponding module for composition:
+
+```typescript
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  UntrackModule,
+  SubscribeModule,
+} from '@rimitive/signals/extend';
+```
+
+Compose only what you need:
+
+```typescript
+// Minimal — just signals
+const svc = compose(SignalModule);
+
+// With derived values
+const svc = compose(SignalModule, ComputedModule);
+
+// Full reactivity
+const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
+```
+
+## Flush Strategies
+
+Effects support flush strategies to control when they run:
+
+```typescript
+import { mt, raf, debounce } from '@rimitive/signals/extend';
+
+effect(mt(() => { ... }));        // microtask
+effect(raf(() => { ... }));       // requestAnimationFrame
+effect(debounce(300, () => { ... })); // debounced
+```
+
+See [effect()](/signals/effect#flush-strategies) for details.

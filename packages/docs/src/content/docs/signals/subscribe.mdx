@@ -1,0 +1,151 @@
+---
+title: subscribe()
+description: Subscribe to signal changes with explicit source tracking.
+---
+
+The `subscribe()` function calls a callback when source dependencies change. Unlike `effect()`, it separates the tracked source from the untracked callback.
+
+## Syntax
+
+```typescript
+const unsubscribe = subscribe(source, callback)
+```
+
+### Parameters
+
+**`source`**
+: A function that reads signals. These reads are tracked as dependencies.
+
+**`callback`**
+: A function called with the source's return value. Signal reads here are **not** tracked.
+
+### Return value
+
+An `unsubscribe` function that stops the subscription.
+
+## Description
+
+`subscribe()` provides fine-grained control over what triggers re-runs. The source function determines dependencies; the callback can read any signals without creating subscriptions:
+
+```typescript
+const count = signal(0);
+const multiplier = signal(2);
+
+subscribe(
+  () => count(),                    // tracked
+  (value) => console.log(value * multiplier())  // NOT tracked
+);
+
+count(5);       // logs: 10
+multiplier(3);  // no log — multiplier isn't a dependency
+count(6);       // logs: 18
+```
+
+### vs effect()
+
+With `effect()`, all signal reads create dependencies:
+
+```typescript
+// Effect: re-runs when a OR b changes
+effect(() => {
+  console.log(a() + b());
+});
+
+// Subscribe: re-runs only when a changes
+subscribe(
+  () => a(),
+  (val) => console.log(val + b())
+);
+```
+
+### Initial call
+
+Like effects, `subscribe()` calls the callback immediately with the initial value:
+
+```typescript
+const count = signal(0);
+
+subscribe(
+  () => count(),
+  (value) => console.log('Count:', value)
+);
+// logs: "Count: 0"
+
+count(1);
+// logs: "Count: 1"
+```
+
+### Unsubscribing
+
+Call the returned function to stop the subscription:
+
+```typescript
+const unsubscribe = subscribe(
+  () => count(),
+  (value) => console.log(value)
+);
+
+count(1);  // logs: 1
+unsubscribe();
+count(2);  // nothing
+```
+
+## Examples
+
+### External system sync
+
+Sync to an external system only when specific signals change:
+
+```typescript
+const userId = signal('user-1');
+const settings = signal({ theme: 'dark' });
+
+// Only re-sync when userId changes, not settings
+subscribe(
+  () => userId(),
+  (id) => {
+    externalSystem.setUser(id);
+    externalSystem.applySettings(settings());  // read but not tracked
+  }
+);
+```
+
+### Debounced search with stable config
+
+```typescript
+const query = signal('');
+const config = signal({ limit: 10 });
+
+subscribe(
+  () => query(),
+  (q) => {
+    // config changes don't trigger new searches
+    fetch(`/search?q=${q}&limit=${config().limit}`);
+  }
+);
+```
+
+### Computed source
+
+The source can be any reactive expression:
+
+```typescript
+const items = signal([1, 2, 3]);
+const filter = signal('all');
+
+subscribe(
+  () => {
+    // Both items and filter are dependencies
+    const all = items();
+    return filter() === 'all' ? all : all.filter(x => x > 2);
+  },
+  (filtered) => {
+    renderList(filtered);
+  }
+);
+```
+
+## See also
+
+- [effect()](/signals/effect) — Simpler API when you want all reads tracked
+- [computed()](/signals/computed) — For derived values, not side effects

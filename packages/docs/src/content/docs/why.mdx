@@ -57,7 +57,7 @@ Then I got carried away with the idea of extending this model beyond state to th
 
 - I wanted "components" to be a _pattern_, not a _prescription_, with complete encapsulation of reactivity confined to primitives (I didn't want to build a component framework).
 - I didn't want a virtual DOM, or to worry about "re-renders" of components, I didn't want a framework to "own" the tree.
-- I wanted minimal, scarce reconciliation, encapsulated and specialized to only the primitives that needed it (like the `map` primitive).
+- I wanted minimal, scarce reconciliation, encapsulated and specialized to only the modules that needed it (like `map`).
 - I wanted to be able to hot-swap renderers on the fly.
 
 Really, I wanted a toolkit where I could take only what I needed when I needed it, and use it the way I wanted. The primitives/services/modules/compose pattern allowed it all to grow organically, and soon I ended up with a reactive view layer (with adapters). From there, I wanted some helpers that I could sprinkle in as needed, and ended up with routing, then SSR, then streaming, async loading, then framework bindings.

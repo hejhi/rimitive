@@ -1,0 +1,140 @@
+---
+title: batch()
+description: Group multiple signal writes into a single update cycle.
+---
+
+The `batch()` function groups multiple signal updates so that dependents only run once, after all updates complete.
+
+## Syntax
+
+```typescript
+const result = batch(fn)
+```
+
+### Parameters
+
+**`fn`**
+: A function that performs multiple signal writes.
+
+### Return value
+
+Whatever `fn` returns.
+
+## Description
+
+Normally, each signal write immediately notifies dependents. When updating multiple signals, this can cause redundant recalculations:
+
+```typescript
+const a = signal(1);
+const b = signal(2);
+const sum = computed(() => a() + b());
+
+effect(() => console.log('Sum:', sum()));
+// logs: "Sum: 3"
+
+a(10);  // logs: "Sum: 12"
+b(20);  // logs: "Sum: 30"
+// Effect ran twice!
+```
+
+With `batch()`, updates are deferred until the batch completes:
+
+```typescript
+batch(() => {
+  a(10);
+  b(20);
+});
+// logs: "Sum: 30" (once)
+```
+
+### Nested batches
+
+Batches can nest. Updates only flush when the outermost batch completes:
+
+```typescript
+batch(() => {
+  a(10);
+  batch(() => {
+    b(20);
+    c(30);
+  });
+  d(40);
+});
+// All effects run once, after all updates
+```
+
+### Return values
+
+`batch()` returns whatever your function returns:
+
+```typescript
+const total = batch(() => {
+  count(count() + 1);
+  return count();
+});
+```
+
+## Examples
+
+### Form reset
+
+```typescript
+const name = signal('');
+const email = signal('');
+const phone = signal('');
+
+const reset = () => {
+  batch(() => {
+    name('');
+    email('');
+    phone('');
+  });
+};
+```
+
+### Bulk data update
+
+```typescript
+const items = signal<Item[]>([]);
+const selectedId = signal<string | null>(null);
+const filter = signal('all');
+
+const loadData = async () => {
+  const data = await fetchItems();
+
+  batch(() => {
+    items(data.items);
+    selectedId(data.defaultSelected);
+    filter('all');
+  });
+};
+```
+
+### State machine transition
+
+```typescript
+const status = signal<'idle' | 'loading' | 'error' | 'success'>('idle');
+const data = signal<Data | null>(null);
+const error = signal<Error | null>(null);
+
+const setSuccess = (result: Data) => {
+  batch(() => {
+    status('success');
+    data(result);
+    error(null);
+  });
+};
+
+const setError = (err: Error) => {
+  batch(() => {
+    status('error');
+    data(null);
+    error(err);
+  });
+};
+```
+
+## See also
+
+- [signal()](/signals/signal) — Create reactive state
+- [effect()](/signals/effect) — Flush strategies like `mt()` also batch updates

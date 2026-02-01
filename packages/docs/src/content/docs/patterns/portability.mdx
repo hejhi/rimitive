@@ -14,9 +14,9 @@ Rimitive is designed around this insight. The same code can run in different con
 
 ---
 
-## The Key: Depend on Contracts, Not Frameworks
+## Depend on Contracts, Not Frameworks
 
-A portable component depends on a **service contract**—a set of primitives it needs—not a specific framework:
+A portable component depends on a **service contract**—a set of dependencies it needs—not a specific framework:
 
 ```typescript
 // This component depends on { el, signal, computed }
@@ -179,7 +179,7 @@ Same component, different targets.
 
 ### Don't Import Framework-Specific Code Directly
 
-Importing primitives directly couples your code to a specific setup:
+Importing directly couples your code to a specific setup:
 
 ```typescript
 // ❌ WRONG - hardcoded dependency, not portable

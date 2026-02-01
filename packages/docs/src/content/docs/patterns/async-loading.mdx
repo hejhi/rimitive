@@ -10,13 +10,13 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 React has Suspense. Solid has `<Suspense>` and `<Show>`. These handle async loading states declaratively.
 
-Rimitive handles async state explicitly through two primitives: `resource` for reactive data fetching with automatic refetch, and `load` for simpler async boundaries. Both use `match` for rendering. No magic, no special components—just reactive state.
+Rimitive handles async state explicitly through two modules: `resource` for reactive data fetching with automatic refetch, and `load` for simpler async boundaries. Both use `match` for rendering. No magic, no special components—just reactive state.
 
 ---
 
 ## The Resource Pattern
 
-The `resource` primitive wraps async operations and exposes their state reactively:
+The `resource` module wraps async operations and exposes their state reactively:
 
 ```typescript
 const ProductList = (svc: Service) => () => {

@@ -8,9 +8,9 @@ import { Aside } from '@astrojs/starlight/components';
 
 <SearchTags tags={["service", "compose", "setup", "configuration", "modules", "dependency-injection"]} />
 
-Every Rimitive app begins with a reactive service composed of modules. Services and modules are constructs of our lightweight dependency injection (DI) system in [`core`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
+To use Rimitive, start by creating a **reactive service**. Services and modules are constructs of our flyweight dependency injection (DI) system in [`core`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
 
-A simple example:
+The simplest example of a reactive service:
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -20,8 +20,8 @@ const svc = compose(SignalModule);
 const { signal } = svc;
 ```
 
-- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context.
-- A **module** is what you provide to `compose()`. Each module provides one or more primitives or tooling—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
+- A **service** is the result of calling `compose()`. It bundles selected modules into an isolated reactive context.
+- A **module** is what you provide to `compose()`. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
 
 Using `svc` to represent a service is a convention you'll see used throughout these docs.
 
@@ -29,9 +29,9 @@ This service wouldn't do much on its own—nothing is connected to react to sign
 
 ---
 
-## Adding More Primitives
+## Adding More Modules
 
-We can add some more primitives that _would_ react to signal updates:
+We can add some more modules that _would_ react to signal updates:
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -58,8 +58,6 @@ Reactive dependencies are automatically tracked in Rimitive, so you don't need t
 ---
 
 ## Why `compose()`?
-
-You might wonder: why not just export these functions directly?
 
 Each `compose()` call creates an independent reactive context with no global leakage. This means:
 

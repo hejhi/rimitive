@@ -6,7 +6,7 @@ description: Patterns for building reactive forms with validation.
 import { Aside } from '@astrojs/starlight/components';
 import SearchTags from '../../../components/SearchTags.astro';
 
-Forms are one of the most common UI patterns. Rimitive doesn't have a built-in form primitive—you compose form behavior from signals and computeds.
+Forms are one of the most common UI patterns. Rimitive doesn't have a built-in form module—you compose form behavior from signals and computeds.
 
 ---
 
@@ -509,5 +509,5 @@ tags.add('c');     // Proper reactive update
 tags.remove(0);    // Proper reactive update
 
 // Or if you need custom operations, create a new array:
-tags.items(items => items.filter(f => f.valid()));
+tags.items(tags.items().filter(f => f.valid()));
 ```

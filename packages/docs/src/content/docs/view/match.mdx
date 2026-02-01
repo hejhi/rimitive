@@ -1,0 +1,192 @@
+---
+title: match()
+description: Conditionally render elements based on reactive values.
+---
+
+import SandboxDir from '../../../components/SandboxDir.astro';
+
+The `match()` function swaps elements based on a reactive value. When the value changes, the old element is disposed and a new one takes its place.
+
+<SandboxDir dir="conditional-rendering" editorHeight="380px" />
+
+## Syntax
+
+```typescript
+match(source, render)
+```
+
+### Parameters
+
+**`source`**
+: A reactive value (signal or computed) to match against.
+
+**`render`**
+: A function that receives the current value and returns an element spec, or `null` to render nothing.
+
+### Return value
+
+A reactive spec that renders the result of the render function, disposing and replacing elements when the source value changes.
+
+## Description
+
+`match()` is for conditional rendering — showing different elements based on state. Unlike `computed()` which derives values, `match()` renders elements:
+
+```typescript
+const show = signal(true);
+
+match(show, (visible) =>
+  visible ? el('div')('Visible!') : null
+)
+```
+
+When `show` changes from `true` to `false`:
+1. The `div` element is disposed (cleanup callbacks run)
+2. Nothing is rendered (`null`)
+
+When `show` changes back to `true`:
+1. A new `div` element is created
+
+### Element lifecycle
+
+Each time the render function returns a different element, the previous one is fully disposed. This includes:
+- Running any cleanup functions from `.ref()` callbacks
+- Disposing any effects tied to the element
+- Removing the element from the DOM
+
+### Why not computed?
+
+`computed()` derives values, not elements. This won't work:
+
+```typescript
+// WRONG — computed can't return elements
+const content = computed(() =>
+  show() ? el('div')('Yes') : el('div')('No')
+);
+```
+
+Use `match()` for conditional elements, `computed()` for conditional values.
+
+## Examples
+
+### Show/hide
+
+```typescript
+const isVisible = signal(true);
+
+el('div')(
+  el('button').props({
+    onclick: () => isVisible(!isVisible())
+  })('Toggle'),
+  match(isVisible, (visible) =>
+    visible ? el('p')('Now you see me') : null
+  )
+)
+```
+
+### Switch views
+
+```typescript
+const isEditing = signal(false);
+const text = signal('Click to edit');
+
+el('div')(
+  match(isEditing, (editing) =>
+    editing
+      ? el('input').props({
+          value: text,
+          oninput: (e) => text(e.target.value),
+          onblur: () => isEditing(false),
+        })()
+      : el('span').props({
+          onclick: () => isEditing(true)
+        })(text)
+  )
+)
+```
+
+### Multi-way switch
+
+```typescript
+type Status = 'idle' | 'loading' | 'success' | 'error';
+
+const status = signal<Status>('idle');
+
+match(status, (s) => {
+  switch (s) {
+    case 'idle':
+      return el('button').props({
+        onclick: load
+      })('Load data');
+    case 'loading':
+      return el('div')('Loading...');
+    case 'success':
+      return el('div')('Data loaded!');
+    case 'error':
+      return el('div').props({ className: 'error' })('Error!');
+  }
+})
+```
+
+### Tabs
+
+```typescript
+type Tab = 'home' | 'settings' | 'profile';
+
+const currentTab = signal<Tab>('home');
+
+el('div')(
+  el('nav')(
+    el('button').props({ onclick: () => currentTab('home') })('Home'),
+    el('button').props({ onclick: () => currentTab('settings') })('Settings'),
+    el('button').props({ onclick: () => currentTab('profile') })('Profile'),
+  ),
+  match(currentTab, (tab) => {
+    switch (tab) {
+      case 'home': return HomePanel();
+      case 'settings': return SettingsPanel();
+      case 'profile': return ProfilePanel();
+    }
+  })
+)
+```
+
+### With loading states
+
+```typescript
+const user = signal<User | null>(null);
+const loading = signal(false);
+const error = signal<Error | null>(null);
+
+match(
+  computed(() => ({ user: user(), loading: loading(), error: error() })),
+  ({ user, loading, error }) => {
+    if (loading) return el('div')('Loading...');
+    if (error) return el('div')(`Error: ${error.message}`);
+    if (user) return UserProfile(user);
+    return el('div')('No user');
+  }
+)
+```
+
+### Nested match
+
+```typescript
+const loggedIn = signal(false);
+const role = signal<'admin' | 'user'>('user');
+
+match(loggedIn, (isLoggedIn) =>
+  isLoggedIn
+    ? match(role, (r) =>
+        r === 'admin'
+          ? AdminDashboard()
+          : UserDashboard()
+      )
+    : LoginForm()
+)
+```
+
+## See also
+
+- [el()](/view/el) — Create elements
+- [map()](/view/map) — Render lists
+- [computed()](/signals/computed) — Derive values (not elements)

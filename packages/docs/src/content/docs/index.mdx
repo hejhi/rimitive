@@ -1,12 +1,12 @@
 ---
 title: Rimitive
-description: Composable reactive primitives for TypeScript.
+description: Type-safe reactive primitives, atomic tooling, and compositional patterns you can use anywhere
 template: splash
 hero:
   image:
     file: ../../assets/rimitive-logo.png
   title: Rimitive
-  tagline: Composable reactive primitives with an awkward name but a lot of personality 🌝
+  tagline: Type-safe reactive primitives, atomic tooling, and compositional patterns you can use anywhere
   actions:
     - text: Get Started
       link: /guides/getting-started/
@@ -19,16 +19,19 @@ hero:
 
 import { LinkCard } from '@astrojs/starlight/components';
 
-## Primitives With Pizzazz
+## Reactivity With Pizzazz
 
 Rimitive grows with you:
 - from your most simple state management use cases
 - to your UI
+- to routing
 - to SSR with streaming and beyond
 
-...without forcing you commit to any framework, build, or transpilation up-front. Everything is opt-in, swappable, and fully customizable 🛠️.
+...without forcing you commit to any framework, build, or transpilation. Everything is opt-in, swappable, and fully customizable 🛠️.
 
 ## Start with Simple State
+
+Everything in Rimitive starts with a **reactive service**:
 
 ```typescript
 const { signal, computed, effect } = compose(
@@ -45,6 +48,8 @@ effect(() => console.log(highFive())); // 🫸💥🫷
 ```
 
 ## Add a UI
+
+The service composes all the modules you want to use from Rimitive, using dependency injection under the hood:
 
 ```ts
 const { signal, computed, el, mount } = compose(
@@ -70,7 +75,7 @@ const App = () => {
 document.body.appendChild(mount(App()).element!);
 ```
 
-## Indulge in Tooling
+## Indulge in the Tooling
 
 ```ts
 const { router, el, match } = compose(
@@ -82,7 +87,7 @@ const { router, el, match } = compose(
   ])
 );
 
-// Routes are reactive and pair nicely with the `match` primitive
+// Routes are reactive and pair nicely with `match`
 match(router.matches, (routes) => {
   const route = routes[0];
   switch (route?.id) {
@@ -97,15 +102,15 @@ match(router.matches, (routes) => {
 router.navigate('/celebrate/reactively');
 ```
 
-Routing, async resources, SSR, streaming—all opt-in modules, building on the same primitives.
+Routing, async resources, SSR, streaming—building off the same primitives.
 
 ## What Makes It Different
 
-**Reactivity lives in the primitives, not in components.** No re-renders, no magic closures. Component functions run once. When state changes, only the specific thing bound to it updates.
+**Reactivity lives in the primitives, not in components.** No component-level re-renders, reconciliation, rules, builds, transpilation, or magical closures. They return a **spec** of a reactive UI that can be mounted and unmounted. That's it! 
 
-**Portable behaviors.** Your reactive logic isn't tied to a component model. Write a `disclosure` behavior once, use it in Rimitive views, React, or anything else that speaks signals.
+**Portable Components and Behaviors.** Your reactive logic isn't tied to a component model. Write a `disclosure` behavior once, use it in Rimitive views, React, or anything else that speaks signals.
 
-**Transparent architecture.** Every layer is swappable: the reactive graph, the scheduler, the renderer. Rimitive's own primitives are built with `defineModule()`—the same tool you have.
+**Transparent architecture.** Every layer is swappable: the reactive graph, the scheduler, the renderer. Rimitive's own modules are built with `defineModule()`—the same tool you have.
 
 ---
 

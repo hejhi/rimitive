@@ -23,7 +23,7 @@ Deep reactivity requires proxies. Proxies have costs:
 - **Complexity**: Edge cases around arrays, Maps, Sets, class instances, etc.
 - **Encourages sprawl**: Big nested state objects instead of focused, composable units.
 
-There's nothing saying you can't create your own primitive—it's just that rimitive doesn't ship one by default.
+There's nothing saying you can't create your own module—it's just that Rimitive doesn't ship one by default.
 
 ---
 
@@ -252,7 +252,7 @@ const userSettings = (svc: SignalsSvc) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   return {
     theme,
-    toggleTheme: () => theme(t => t === 'light' ? 'dark' : 'light'),
+    toggleTheme: () => theme(theme() === 'light' ? 'dark' : 'light'),
   };
 };
 
@@ -332,8 +332,8 @@ const counter = (svc: SignalsSvc) => () => {
 
   return {
     count,  // Read access
-    increment: () => count(c => c + 1),
-    decrement: () => count(c => Math.max(0, c - 1)),  // Validated
+    increment: () => count(count() + 1),
+    decrement: () => count(Math.max(0, count() - 1)),  // Validated
     reset: () => count(0),
   };
 };

@@ -11,15 +11,24 @@ Once you've [created a service](/guides/creating-a-service), there are a few way
 
 ## Exporting a Service
 
-You can safely destructure anything in Rimitive from a service, so it's idiomatic to export the service as well as the service type directly, which comes in handy _a lot_:
+You can safely destructure anything in Rimitive from a service, so for simpler use cases, you can export the return of a service:
 
 ```typescript
 // myService.ts
 
-export const svc = compose(SignalModule, ComputedModule, EffectModule);
-export const { signal, computed, effect, batch, el, mount } = svc;
+export const { signal, computed } = compose(SignalModule, ComputedModule);
+```
+
+But `svc` is also call-able. So it's more idiomatic to export the service and service type if you're looking for a more durable pattern:
+
+```typescript
+// myService.ts
+
+export const svc = compose(SignalModule, ComputedModule);
 export type Service = typeof svc;
 ```
+
+For now though, we'll continue exporting the destructured parts for simplicity.
 
 ---
 
@@ -30,26 +39,26 @@ Rimitive makes heavy usage of factory functions that look like components or hoo
 ```typescript
 import { signal } from './myService.ts'
 
-const myCounter = () => {
+const useCounter = () => {
   const count = signal(0);
   const increment = () => count(count() + 1);
 
   return { count, increment };
 };
 
-const counter = myCounter();
+const counter = useCounter();
 counter.increment();
 counter.count(); // 1
 ```
 
-But a nuance here is that the above is **simply a factory** that instantiates reactive state and returns an api to drive it 🚗. In Rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with `use*` for clarity (ie `useCounter` instead of `myCounter`).
+A nuance here is that the above is **a plain function** that instantiates reactive state and returns an api to drive it 🚗. In Rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with `use*` for clarity (ie `useCounter` instead of `myCounter` or something).
 
 <Aside type="note">
-React peeps: prefixing with `use*` in rimitive is **just convention and nice semantics**. You can use behaviors in vanilla js, no problem. It doesn't grant the function any magical reactive abilities or reactive closures, or require you to obey any rules in how it's used.
+For those coming from reactive frameworks, prefixing with `use*` in rimitive is **only a naming convention and nice semantics**. It doesn't confer any reactive abilities, or require you to obey any rules in how it's used.
 </Aside>
 
-You can stop right here, if that's all you need! For plenty of apps simple apps, behaviors might be enough.
+You can stop right here, if that's all you need! For plenty of apps simple apps, direct service exports and simple behaviors might be enough.
 
-If you want to drive a reactive ui with state, Rimitive also has primitives and patterns to help you with that.
+If you want to drive a reactive ui with state, Rimitive also has modules and patterns to help you with that.
 
 Next up though, let's talk more about the [behavior pattern](/guides/creating-a-behavior).

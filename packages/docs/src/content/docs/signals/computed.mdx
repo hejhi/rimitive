@@ -1,0 +1,187 @@
+---
+title: computed()
+description: Derive reactive values that automatically update when dependencies change.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `computed()` function creates a derived value that updates automatically when its dependencies change. Computeds are lazy — they only recalculate when read.
+
+## Syntax
+
+```typescript
+const derived = computed(fn)
+```
+
+### Parameters
+
+**`fn`**
+: A function that computes the derived value. Any signals read inside this function become dependencies.
+
+### Return value
+
+A `Readable<T>` — a read-only reactive value:
+
+- **`derived()`** — Returns the current computed value, tracking this read as a dependency
+- **`derived.peek()`** — Returns the current value without tracking
+
+## Description
+
+Computeds derive values from other reactive state. When you read signals inside a computed, those reads are tracked. When any dependency changes, the computed is marked stale and will recalculate on the next read.
+
+```typescript
+const firstName = signal('Ada');
+const lastName = signal('Lovelace');
+
+const fullName = computed(() => `${firstName()} ${lastName()}`);
+
+fullName();  // "Ada Lovelace"
+
+firstName('Grace');
+fullName();  // "Grace Lovelace"
+```
+
+### Lazy evaluation
+
+Computeds don't recalculate immediately when dependencies change. They wait until someone reads them:
+
+```typescript
+const count = signal(0);
+const doubled = computed(() => {
+  console.log('calculating...');
+  return count() * 2;
+});
+
+count(1);  // Nothing logged yet
+count(2);  // Still nothing
+doubled(); // logs "calculating...", returns 4
+doubled(); // No log — cached
+```
+
+This makes computeds efficient even in complex dependency graphs.
+
+### Caching
+
+Once computed, the value is cached until a dependency changes:
+
+```typescript
+const items = signal([1, 2, 3, 4, 5]);
+const sum = computed(() => items().reduce((a, b) => a + b, 0));
+
+sum();  // Calculates: 15
+sum();  // Cached: 15
+sum();  // Cached: 15
+
+items([1, 2, 3]);
+sum();  // Recalculates: 6
+```
+
+### Composing computeds
+
+Computeds can depend on other computeds:
+
+```typescript
+const items = signal([1, 2, 3]);
+const count = computed(() => items().length);
+const sum = computed(() => items().reduce((a, b) => a + b, 0));
+const average = computed(() => count() > 0 ? sum() / count() : 0);
+
+average();  // 2
+items([10, 20]);
+average();  // 15
+```
+
+The dependency graph is tracked automatically — no manual wiring needed.
+
+## Examples
+
+### Filtered list
+
+```typescript
+const todos = signal([
+  { id: 1, text: 'Learn', done: true },
+  { id: 2, text: 'Build', done: false },
+]);
+
+const active = computed(() => todos().filter(t => !t.done));
+const completed = computed(() => todos().filter(t => t.done));
+const counts = computed(() => ({
+  active: active().length,
+  completed: completed().length,
+  total: todos().length,
+}));
+```
+
+### Expensive calculations
+
+```typescript
+const data = signal(largeDataset);
+
+const processed = computed(() => {
+  // Only runs when data changes
+  return data()
+    .filter(expensiveFilter)
+    .map(expensiveTransform)
+    .sort(expensiveSort);
+});
+```
+
+### Conditional dependencies
+
+```typescript
+const showDetails = signal(false);
+const user = signal({ name: 'Alice', bio: 'Long bio...' });
+
+const display = computed(() => {
+  if (showDetails()) {
+    // Only depends on user when showDetails is true
+    return `${user().name}: ${user().bio}`;
+  }
+  return user().name;
+});
+```
+
+## Anti-patterns
+
+### Don't mutate state in computeds
+
+Computeds should be pure — no side effects:
+
+```typescript
+// BAD — side effect in computed
+const doubled = computed(() => {
+  console.log('computing');  // side effect
+  otherSignal(count() * 2);  // mutation!
+  return count() * 2;
+});
+
+// GOOD — pure computation
+const doubled = computed(() => count() * 2);
+```
+
+### Don't create circular dependencies
+
+```typescript
+// BAD — infinite loop
+const a = computed(() => b() + 1);
+const b = computed(() => a() + 1);
+```
+
+### Don't return elements from computeds
+
+Computeds return values, not DOM elements. Use `match()` for conditional rendering:
+
+```typescript
+// BAD — computed can't return elements
+const content = computed(() =>
+  show() ? el('div')('Yes') : el('div')('No')
+);
+
+// GOOD — use match for conditional elements
+match(show, (s) => s ? el('div')('Yes') : el('div')('No'))
+```
+
+## See also
+
+- [signal()](/signals/signal) — Create reactive state
+- [effect()](/signals/effect) — Run side effects when values change

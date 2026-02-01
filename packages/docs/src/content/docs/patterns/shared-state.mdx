@@ -8,15 +8,13 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["context", "shared-state", "global-state", "service-threading", "theme", "user", "prop-drilling"]} />
 
-Other frameworks have "context"—a way to pass values down the component tree without threading them through every intermediate component. In React, it's `createContext` and `useContext`. In Solid, it's similar.
-
-Rimitive doesn't have a separate context primitive. It doesn't need one.
+Other frameworks have "context"—a way to pass values down the component tree without threading them through every intermediate component.
 
 ---
 
 ## The Pattern: Service Threading
 
-In Rimitive, the **service is the context**. Components receive a service object containing the primitives they need. You can extend that service with additional state at any point in the tree.
+In Rimitive, the **service is the context**. Components receive a service object containing the modules they need. You can extend that service with additional state at any point in the tree.
 
 ```typescript
 // Define your app-level shared state
@@ -139,7 +137,7 @@ const UserProfile = (svc: AppService) => () => { ... };
 
 ---
 
-## Why Not a Context Primitive?
+## Why Not a Context Module?
 
 I considered adding one. The problem: context in other frameworks works through implicit tree traversal—a component "finds" the nearest provider by walking up the tree at render time.
 

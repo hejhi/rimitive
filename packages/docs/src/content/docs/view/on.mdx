@@ -1,0 +1,178 @@
+---
+title: on()
+description: Event handling with automatic cleanup and batching.
+---
+
+import SandboxDir from '../../../components/SandboxDir.astro';
+
+The `on()` function creates event listeners with automatic cleanup and batched signal updates.
+
+<SandboxDir dir="event-handling" editorHeight="380px" />
+
+## Syntax
+
+```typescript
+on(eventName, handler)
+on(eventName, handler, options)
+```
+
+### Parameters
+
+**`eventName`**
+: The event type (`'click'`, `'input'`, `'keydown'`, etc.).
+
+**`handler`**
+: The event handler function.
+
+**`options`** (optional)
+: Standard `addEventListener` options (`capture`, `once`, `passive`).
+
+### Return value
+
+A lifecycle callback for use with `.ref()`. When the element is removed, the listener is automatically cleaned up.
+
+## Description
+
+For simple event handlers, use props:
+
+```typescript
+el('button').props({
+  onclick: () => doSomething()
+})('Click')
+```
+
+`on()` provides additional benefits:
+- **Automatic cleanup** when the element is removed
+- **Batched updates** — multiple signal writes trigger one render
+- **Multiple listeners** on the same element
+
+### Usage with ref
+
+```typescript
+el('button').ref(
+  on('click', () => count(count() + 1))
+)('Click')
+```
+
+### Multiple listeners
+
+Stack multiple `on()` calls:
+
+```typescript
+el('input').ref(
+  on('focus', () => console.log('focused')),
+  on('blur', () => console.log('blurred')),
+  on('input', (e) => value(e.target.value))
+)()
+```
+
+### Automatic batching
+
+When a handler updates multiple signals, they're batched into a single render:
+
+```typescript
+el('button').ref(
+  on('click', () => {
+    // All three updates batched into one render
+    firstName('');
+    lastName('');
+    loading(true);
+  })
+)('Reset')
+```
+
+## Examples
+
+### Basic click
+
+```typescript
+const count = signal(0);
+
+el('button').ref(
+  on('click', () => count(count() + 1))
+)('Increment')
+```
+
+### Input handling
+
+```typescript
+const text = signal('');
+
+el('input')
+  .props({
+    type: 'text',
+    value: text,
+  })
+  .ref(
+    on('input', (e) => text(e.target.value))
+  )()
+```
+
+### Form submission
+
+```typescript
+const query = signal('');
+
+const handleSubmit = () => {
+  console.log('Searching:', query());
+};
+
+el('input')
+  .props({
+    type: 'text',
+    placeholder: 'Search...',
+    value: query,
+  })
+  .ref(
+    on('input', (e) => query(e.target.value)),
+    on('keydown', (e) => {
+      if (e.key === 'Enter') handleSubmit();
+    })
+  )()
+```
+
+### Event options
+
+```typescript
+// Capture phase
+on('click', handler, { capture: true })
+
+// Fire once only
+on('click', handler, { once: true })
+
+// Passive (for scroll performance)
+on('scroll', handler, { passive: true })
+```
+
+### With props events
+
+You can mix `on()` with props events:
+
+```typescript
+el('button')
+  .props({
+    onclick: () => console.log('props handler')
+  })
+  .ref(
+    on('click', () => console.log('on handler'))
+  )('Both fire')
+```
+
+Both handlers fire on click.
+
+## on() vs props
+
+| Feature | Props (`onclick`) | `on()` |
+|---------|-------------------|--------|
+| Simple cases | ✓ Best choice | Works |
+| Multiple listeners | One per event | ✓ Unlimited |
+| Auto cleanup | ✓ | ✓ |
+| Batching | No | ✓ |
+| Event options | No | ✓ |
+
+Use props for simple handlers. Use `on()` when you need batching, multiple listeners, or event options.
+
+## See also
+
+- [el()](/view/el) — Element creation with props events
+- [batch()](/signals/batch) — Manual batching alternative

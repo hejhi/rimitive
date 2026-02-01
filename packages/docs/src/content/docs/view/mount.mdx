@@ -1,0 +1,138 @@
+---
+title: mount()
+description: Attach element specs to the DOM.
+---
+
+The `mount()` function creates an element from a spec and prepares it for insertion into the DOM.
+
+## Syntax
+
+```typescript
+const ref = mount(spec)
+```
+
+### Parameters
+
+**`spec`**
+: An element spec created with `el()`, `map()`, `match()`, or other view modules.
+
+### Return value
+
+A `NodeRef` with:
+- **`element`** — The created DOM element (or `null` for fragments)
+- **`dispose()`** — Cleanup function that removes the element and runs all cleanup callbacks
+
+## Description
+
+Element specs are inert blueprints. `mount()` realizes them into actual DOM elements:
+
+```typescript
+const spec = el('div')('Hello');  // just a blueprint
+const ref = mount(spec);           // creates real DOM element
+
+document.body.appendChild(ref.element);
+```
+
+### Disposal
+
+Call `dispose()` to remove the element and clean up:
+
+```typescript
+const ref = mount(App());
+document.body.appendChild(ref.element);
+
+// Later, when unmounting
+ref.dispose();
+```
+
+Disposal:
+- Removes the element from its parent
+- Runs cleanup callbacks from `.ref()`
+- Disposes effects tied to the element
+- Recursively disposes all children
+
+### App pattern
+
+A common pattern is to mount once at startup:
+
+```typescript
+const App = () =>
+  el('div').props({ id: 'app' })(
+    Header(),
+    Main(),
+    Footer()
+  );
+
+const app = mount(App());
+document.body.appendChild(app.element);
+```
+
+## Examples
+
+### Basic mounting
+
+```typescript
+const { el, mount } = svc;
+
+const button = mount(
+  el('button').props({
+    onclick: () => console.log('clicked')
+  })('Click me')
+);
+
+document.getElementById('root').appendChild(button.element);
+```
+
+### Conditional mounting
+
+```typescript
+let appRef = null;
+
+const show = () => {
+  if (appRef) return;
+  appRef = mount(App());
+  document.body.appendChild(appRef.element);
+};
+
+const hide = () => {
+  if (!appRef) return;
+  appRef.dispose();
+  appRef = null;
+};
+```
+
+### Multiple instances
+
+```typescript
+const Widget = (name: string) =>
+  el('div').props({ className: 'widget' })(name);
+
+// Mount multiple independent instances
+const widget1 = mount(Widget('First'));
+const widget2 = mount(Widget('Second'));
+
+document.getElementById('sidebar').appendChild(widget1.element);
+document.getElementById('main').appendChild(widget2.element);
+```
+
+### With disposal tracking
+
+```typescript
+const refs: NodeRef[] = [];
+
+const addItem = (text: string) => {
+  const ref = mount(el('li')(text));
+  refs.push(ref);
+  list.appendChild(ref.element);
+};
+
+const clearAll = () => {
+  refs.forEach(ref => ref.dispose());
+  refs.length = 0;
+};
+```
+
+## See also
+
+- [el()](/view/el) — Create element specs
+- [portal()](/view/portal) — Render to different DOM locations

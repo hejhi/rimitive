@@ -1,0 +1,98 @@
+---
+import type { FileEntry } from '@rimitive/sandbox';
+
+/**
+ * Sandbox component that loads files from a directory
+ * Files are loaded at build time using Vite's glob imports
+ */
+export interface Props {
+  /** Directory path relative to src/sandboxes/ */
+  dir: string;
+  /** Entry file name (defaults to 'app.ts') */
+  entryFile?: string;
+  /** Height of the editor area */
+  editorHeight?: string;
+}
+
+const { dir, entryFile = 'app.ts', editorHeight = '250px' } = Astro.props;
+
+// Load all sandbox files at build time
+const allFiles = import.meta.glob('../sandboxes/**/*.ts', { query: '?raw', import: 'default', eager: true });
+
+// Filter files for this directory and build FileEntry array
+const dirPrefix = `../sandboxes/${dir}/`;
+const files: FileEntry[] = [];
+
+for (const [path, content] of Object.entries(allFiles)) {
+  if (path.startsWith(dirPrefix)) {
+    const name = path.slice(dirPrefix.length);
+    files.push({ name, code: content as string });
+  }
+}
+
+// Sort files: entry file first, then svc.ts, then alphabetically
+files.sort((a, b) => {
+  if (a.name === entryFile) return -1;
+  if (b.name === entryFile) return 1;
+  if (a.name === 'svc.ts') return -1;
+  if (b.name === 'svc.ts') return 1;
+  return a.name.localeCompare(b.name);
+});
+
+// Serialize files for data attribute
+const filesJson = JSON.stringify(files);
+---
+
+<rimitive-sandbox
+  data-files={filesJson}
+  data-entry-file={entryFile}
+  data-editor-height={editorHeight}
+>
+  <div class="sandbox-loading">Loading sandbox...</div>
+</rimitive-sandbox>
+
+<script>
+  import { createSandbox, type FileEntry } from '@rimitive/sandbox';
+
+  class RimitiveSandbox extends HTMLElement {
+    connectedCallback() {
+      const filesJson = this.dataset.files || '[]';
+      const entryFile = this.dataset.entryFile || 'app.ts';
+      const editorHeight = this.dataset.editorHeight || '250px';
+
+      const files: FileEntry[] = JSON.parse(filesJson);
+
+      // Clear loading state
+      this.innerHTML = '';
+
+      const sandbox = createSandbox({
+        files,
+        entryFile,
+        editorHeight,
+      });
+
+      this.appendChild(sandbox.element);
+    }
+  }
+
+  // Only define if not already defined (Sandbox.astro may have defined it)
+  if (!customElements.get('rimitive-sandbox')) {
+    customElements.define('rimitive-sandbox', RimitiveSandbox);
+  }
+</script>
+
+<style>
+  rimitive-sandbox {
+    display: block;
+    margin: 1.5rem 0;
+  }
+
+  .sandbox-loading {
+    padding: 2rem;
+    text-align: center;
+    color: var(--sl-color-text-accent);
+    background: var(--sl-color-bg-nav);
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 8px;
+  }
+</style>

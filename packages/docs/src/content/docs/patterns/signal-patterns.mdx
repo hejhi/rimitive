@@ -5,50 +5,37 @@ description: Common patterns for working with signals effectively.
 
 import { Aside } from '@astrojs/starlight/components';
 import SearchTags from '../../../components/SearchTags.astro';
+import SandboxDir from '../../../components/SandboxDir.astro';
 
-<SearchTags tags={["signal", "updater", "toggle", "previous-value", "debounce", "async-action", "derived-state"]} />
+<SearchTags tags={["signal", "toggle", "previous-value", "debounce", "async-action", "derived-state"]} />
+
+## Try It
+
+<SandboxDir dir="signal-patterns" editorHeight="420px" />
 
 Signals are simple—read with `sig()`, write with `sig(value)`. But there are patterns that make them more ergonomic for common use cases.
 
 ---
 
-## Updater Functions
+## Working with Arrays and Objects
 
-Signals accept functions for updates based on the previous value:
-
-```typescript
-const count = signal(0);
-
-// Direct update
-count(5);
-
-// Updater function: receives previous value, returns new value
-count(c => c + 1);  // increment
-count(c => c * 2);  // double
-count(c => Math.max(0, c - 1));  // decrement, minimum 0
-```
-
-This is particularly useful for arrays and objects:
+When updating arrays and objects, read the current value and write the new value:
 
 ```typescript
 const items = signal<Item[]>([]);
 
 // Append
-items(arr => [...arr, newItem]);
+items([...items(), newItem]);
 
 // Remove by id
-items(arr => arr.filter(x => x.id !== id));
+items(items().filter(x => x.id !== id));
 
 // Update one item
-items(arr => arr.map(x => x.id === id ? { ...x, done: true } : x));
+items(items().map(x => x.id === id ? { ...x, done: true } : x));
 
 // Toggle a property
-items(arr => arr.map(x => x.id === id ? { ...x, done: !x.done } : x));
+items(items().map(x => x.id === id ? { ...x, done: !x.done } : x));
 ```
-
-<Aside type="note">
-Updater functions are synchronous. The signal is updated immediately with the return value.
-</Aside>
 
 ---
 
@@ -76,8 +63,8 @@ const counter = (svc: SignalsSvc) => (initial = 0) => {
   const count = svc.signal(initial);
 
   return Object.assign(count, {
-    increment: () => count(c => c + 1),
-    decrement: () => count(c => c - 1),
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
     reset: () => count(initial),
   });
 };
@@ -110,7 +97,7 @@ const toggle = (svc: SignalsSvc) => (initial = false) => {
   return Object.assign(value, {
     on: () => value(true),
     off: () => value(false),
-    toggle: () => value(v => !v),
+    toggle: () => value(!value()),
   });
 };
 
@@ -174,7 +161,7 @@ const withHistory = <T>(svc: SignalsSvc) => (initial: T, maxHistory = 10) => {
   const canRedo = computed(() => future().length > 0);
 
   const set = (value: T) => {
-    past(p => [...p.slice(-(maxHistory - 1)), current()]);
+    past([...past().slice(-(maxHistory - 1)), current()]);
     future([]);
     current(value);
   };
@@ -184,7 +171,7 @@ const withHistory = <T>(svc: SignalsSvc) => (initial: T, maxHistory = 10) => {
     const prev = past();
     const last = prev[prev.length - 1];
     past(prev.slice(0, -1));
-    future(f => [...f, current()]);
+    future([...future(), current()]);
     current(last!);
   };
 
@@ -193,7 +180,7 @@ const withHistory = <T>(svc: SignalsSvc) => (initial: T, maxHistory = 10) => {
     const fut = future();
     const next = fut[fut.length - 1];
     future(fut.slice(0, -1));
-    past(p => [...p, current()]);
+    past([...past(), current()]);
     current(next!);
   };
 
@@ -363,10 +350,10 @@ const todoList = (svc: SignalsSvc) => () => {
     counts,
     allDone,
     // Actions...
-    add: (text: string) => items(arr => [...arr, { id: crypto.randomUUID(), text, done: false }]),
-    toggle: (id: string) => items(arr => arr.map(t => t.id === id ? { ...t, done: !t.done } : t)),
-    remove: (id: string) => items(arr => arr.filter(t => t.id !== id)),
-    clear: () => items(arr => arr.filter(t => !t.done)),
+    add: (text: string) => items([...items(), { id: crypto.randomUUID(), text, done: false }]),
+    toggle: (id: string) => items(items().map(t => t.id === id ? { ...t, done: !t.done } : t)),
+    remove: (id: string) => items(items().filter(t => t.id !== id)),
+    clear: () => items(items().filter(t => !t.done)),
   };
 };
 ```
@@ -499,10 +486,10 @@ items();  // Still returns the same reference - no reactive update!
 ```
 
 ```typescript
-// ✅ CORRECT - use updater functions to create new values
+// ✅ CORRECT - create new values with explicit read/write
 const items = signal<string[]>([]);
 
-items(arr => [...arr, 'new item']);  // New array, signal updates
+items([...items(), 'new item']);  // New array, signal updates
 ```
 
 The same applies to objects:
@@ -513,7 +500,7 @@ const user = signal({ name: 'Alice', age: 30 });
 user().age = 31;  // Mutation - no reactive update
 
 // ✅ CORRECT
-user(u => ({ ...u, age: 31 }));  // New object - reactive update
+user({ ...user(), age: 31 });  // New object - reactive update
 ```
 
 ### Don't Read Signals Outside Reactive Context

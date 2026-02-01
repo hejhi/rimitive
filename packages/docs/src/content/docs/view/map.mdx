@@ -1,0 +1,212 @@
+---
+title: map()
+description: Render reactive lists with efficient reconciliation.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import SandboxDir from '../../../components/SandboxDir.astro';
+
+The `map()` function renders a reactive array as a list of elements. When items change, it efficiently updates only what's necessary.
+
+<SandboxDir dir="rendering-lists" editorHeight="380px" />
+
+## Syntax
+
+```typescript
+// Primitives (auto-keyed by value)
+map(items, render)
+
+// Objects (explicit key function)
+map(items, keyFn, render)
+```
+
+### Parameters
+
+**`items`**
+: A reactive array (signal or computed).
+
+**`keyFn`** (required for objects)
+: A function that returns a unique identifier for each item. Receives the plain item value.
+
+**`render`**
+: A function that returns an element spec for each item. Receives a **reactive signal** wrapping the item.
+
+### Return value
+
+A reactive list spec that reconciles efficiently when the source array changes.
+
+## Description
+
+`map()` efficiently reconciles DOM elements when items are added, removed, or reordered. Unlike virtual DOM diffing, it tracks items by key and updates only what's necessary.
+
+### Primitive arrays
+
+For arrays of strings or numbers, the value itself is used as the key:
+
+```typescript
+const items = signal(['Apple', 'Banana', 'Cherry']);
+
+el('ul')(
+  map(items, (item) => el('li')(item))
+)
+```
+
+### Object arrays
+
+For objects, provide a key function to track identity:
+
+```typescript
+const todos = signal([
+  { id: 1, text: 'Learn', done: false },
+  { id: 2, text: 'Build', done: false },
+]);
+
+el('ul')(
+  map(
+    todos,
+    (todo) => todo.id,       // key function
+    (todo) => el('li')(      // render function
+      computed(() => todo().text)
+    )
+  )
+)
+```
+
+### Item signals
+
+The render function receives a **signal** wrapping each item, not the plain value. This enables reactive updates when items change:
+
+```typescript
+map(todos, t => t.id, (todo) => {
+  // todo is a signal, read it to get the value
+  return el('li')(
+    computed(() => todo().text),
+    computed(() => todo().done ? '✓' : '')
+  );
+})
+```
+
+When you update an item in the source array, the corresponding item signal updates — the element isn't recreated:
+
+```typescript
+// Update one todo — the element updates reactively
+todos(arr => arr.map(t =>
+  t.id === 1 ? { ...t, done: true } : t
+));
+```
+
+<Aside type="caution">
+`map()`'s render function is **not** a reactive scope. Use `computed()` for reactive props or text inside the render function. See [Signal Patterns](/patterns/signal-patterns#dont-return-elements-from-computeds) for details.
+</Aside>
+
+### Reconciliation
+
+When the source array changes, `map()`:
+- **Adds** elements for new items
+- **Removes** elements for deleted items
+- **Reorders** elements when positions change
+- **Updates** item signals when values change (same key)
+
+This is efficient because elements are reused — only the minimal DOM operations are performed.
+
+## Examples
+
+### Simple list
+
+```typescript
+const names = signal(['Alice', 'Bob', 'Carol']);
+
+el('ul')(
+  map(names, (name) => el('li')(name))
+)
+
+// Add item
+names([...names(), 'Dave']);
+
+// Remove item
+names(names().filter(x => x !== 'Bob'));
+```
+
+### Todo list
+
+```typescript
+type Todo = { id: string; text: string; done: boolean };
+
+const todos = signal<Todo[]>([]);
+
+const toggle = (id: string) => {
+  todos(todos().map(t =>
+    t.id === id ? { ...t, done: !t.done } : t
+  ));
+};
+
+const remove = (id: string) => {
+  todos(todos().filter(t => t.id !== id));
+};
+
+el('ul')(
+  map(todos, t => t.id, (todo) =>
+    el('li').props({
+      style: computed(() =>
+        todo().done ? 'text-decoration: line-through' : ''
+      ),
+    })(
+      el('input').props({
+        type: 'checkbox',
+        checked: computed(() => todo().done),
+        onchange: () => toggle(todo().id),
+      })(),
+      computed(() => todo().text),
+      el('button').props({
+        onclick: () => remove(todo().id)
+      })('×')
+    )
+  )
+)
+```
+
+### Nested lists
+
+```typescript
+type Category = { id: string; name: string; items: string[] };
+
+const categories = signal<Category[]>([...]);
+
+el('div')(
+  map(categories, c => c.id, (category) =>
+    el('section')(
+      el('h2')(computed(() => category().name)),
+      el('ul')(
+        map(
+          computed(() => category().items),
+          (item) => el('li')(item)
+        )
+      )
+    )
+  )
+)
+```
+
+### With index
+
+If you need the index, derive it from the array position:
+
+```typescript
+const items = signal(['A', 'B', 'C']);
+
+el('ol')(
+  map(items, (item, index) =>
+    el('li')(computed(() => `${index() + 1}. ${item()}`))
+  )
+)
+```
+
+<Aside type="note">
+The index parameter is also a signal that updates when items are reordered.
+</Aside>
+
+## See also
+
+- [el()](/view/el) — Create elements
+- [match()](/view/match) — Conditional rendering
+- [Signal Patterns](/patterns/signal-patterns) — Computed collections pattern

@@ -1,0 +1,156 @@
+---
+title: portal()
+description: Render content to a different DOM location.
+---
+
+The `portal()` function renders content into a different DOM location — useful for modals, tooltips, and overlays that need to escape their parent's overflow or z-index context.
+
+## Syntax
+
+```typescript
+portal()(child)
+portal(target)(child)
+```
+
+### Parameters
+
+**`target`** (optional)
+: Where to render the content. Can be:
+- A DOM element
+- A function returning a DOM element
+- A reactive value (signal) containing an element
+- Omitted to use `document.body`
+
+**`child`**
+: The element spec to render at the target location.
+
+### Return value
+
+A spec that renders its child at the specified target, maintaining reactivity and proper cleanup.
+
+## Description
+
+Portals let you render content outside the normal DOM hierarchy while keeping it logically connected to its parent component:
+
+```typescript
+el('div').props({ className: 'container' })(
+  el('button')('Open Modal'),
+  portal()(
+    el('div').props({ className: 'modal' })('Modal content')
+  )
+)
+```
+
+The modal is a child of the container in your code, but renders to `document.body` in the DOM.
+
+### Lifecycle
+
+Portal content follows normal lifecycle rules:
+- Created when the portal is mounted
+- Disposed when the portal is unmounted
+- Cleanup callbacks from `.ref()` run on disposal
+
+### With match
+
+Combine with `match()` for conditional portals:
+
+```typescript
+const showModal = signal(false);
+
+match(showModal, (show) =>
+  show
+    ? portal()(ModalContent())
+    : null
+)
+```
+
+## Examples
+
+### Modal
+
+```typescript
+const App = () => {
+  const showModal = signal(false);
+
+  return el('div')(
+    el('button').props({
+      onclick: () => showModal(true)
+    })('Open Modal'),
+
+    match(showModal, (show) =>
+      show
+        ? portal()(
+            el('div').props({ className: 'modal-backdrop' })(
+              el('div').props({ className: 'modal' })(
+                el('h2')('Modal Title'),
+                el('p')('Content here...'),
+                el('button').props({
+                  onclick: () => showModal(false)
+                })('Close')
+              )
+            )
+          )
+        : null
+    )
+  );
+};
+```
+
+### Custom target
+
+```typescript
+// Render to a specific element
+portal(() => document.getElementById('tooltip-container'))(
+  el('div').props({ className: 'tooltip' })('Tooltip text')
+)
+```
+
+### Reactive target
+
+```typescript
+const targetRef = signal<HTMLElement | null>(null);
+
+el('div')(
+  // Capture the target element
+  el('div').props({ id: 'dropdown-anchor' }).ref(
+    (node) => {
+      targetRef(node);
+      return () => targetRef(null);
+    }
+  )(),
+
+  // Portal renders next to the anchor
+  portal(targetRef)(
+    el('ul').props({ className: 'dropdown' })(
+      el('li')('Option 1'),
+      el('li')('Option 2')
+    )
+  )
+)
+```
+
+### Tooltip positioning
+
+```typescript
+const Tooltip = (anchor: HTMLElement, text: string) => {
+  const position = signal({ x: 0, y: 0 });
+
+  // Calculate position based on anchor
+  const rect = anchor.getBoundingClientRect();
+  position({ x: rect.left, y: rect.bottom + 8 });
+
+  return portal()(
+    el('div').props({
+      className: 'tooltip',
+      style: computed(() =>
+        `position: fixed; left: ${position().x}px; top: ${position().y}px;`
+      ),
+    })(text)
+  );
+};
+```
+
+## See also
+
+- [match()](/view/match) — Conditional rendering (often used with portals)
+- [mount()](/view/mount) — Alternative for one-off DOM insertion

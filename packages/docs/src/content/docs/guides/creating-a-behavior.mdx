@@ -8,17 +8,17 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["behavior", "hook", "reusable-logic", "headless", "state-management", "portable"]} />
 
-A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to encapsulate reactive logic.
+A **behavior** is a pattern for encapsulating reactive state and actions into a reusable function (inspired by [SAM](https://sam.js.org/) and [downshift](https://www.downshift-js.com/)).
 
 <Aside type="note">
-As mentioned in the previous section, behaviors are _just functions_. They aren't themselves reactive, despite us prefixing with `use*`, my React peeps. There's no re-rendering. In rimitive, **all reactivity is encapsulated in primitives**.
+As mentioned in the previous section, behaviors are _just functions_. They're prefixed with `use*` for naming convention purposes only, which does not confer any magical reactive abilities or require them to be used in specific ways.
 </Aside>
 
 ---
 
 ## The Simple Approach
 
-The easiest way to create a behavior is to import primitives directly from your service:
+The easiest way to create a behavior is to import directly from your service:
 
 ```typescript
 // behaviors/useCounter.ts
@@ -53,22 +53,20 @@ counter.count();  // 11
 
 <SearchTags tags={["portable", "service-injection", "testable", "ssr", "dependency-injection"]} />
 
-## The Portable Pattern
+## Using a Service Wrapper for Portability
 
 When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern. This is, generally speaking, the preferred pattern.
-
-### The Shape
 
 ```typescript
 // Remember how we exported `typeof svc` in the previous guide example?
 import type { Service } from './service';
 
-// The "portable" pattern is...just wrapping your behavior in an outer
-// function that injects the service
-const myPortableBehavior = (svc: Service) => (options?) => {
-  // Create state
-  // Return API
-};
+const myBehavior = (svc: Service) => {
+  // This would be called during composition like `const useMyBehavior = svc(myBehavior)`.
+  // This is colloquially known as the **service function** or **service closure**. 
+  // It's also where you'd compose other behaviors or components.
+  return (options?) => // ...
+}
 ```
 
 This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. It also decouples your function from Rimitive! you could pass in whatever you want for `svc` later, as long as it matches the Service type. So from now on, we'll be working with portable functions.
@@ -97,7 +95,7 @@ const counter = ({ signal, computed }: Service) => (initial = 0) => {
 ```typescript
 import { svc } from './service';
 
-// Oh look! svc itself is callable and injects the svc for you! Neat!
+// As mentioned before, `svc` itself is callable, injects the service, and returns the inner component
 const useCounter = svc(counter);
 const c = useCounter(10);
 
@@ -106,7 +104,7 @@ c.increment();
 c.doubled();
 ```
 
-`svc(counter)` provides (or injects) the service (and is type safe). Then you have a ready-to-use behavior bound to your service that you can name whatever you want. Again, by convention (NOT prescription) we prefix with `use*` for nice semantics and ergonomics.
+`svc(counter)` provides (or injects) the service, and is type-safe. Then you have a ready-to-use behavior or component bound to your service.
 
 ---
 
@@ -114,7 +112,7 @@ c.doubled();
 
 ## Composing Behaviors
 
-The double-function behavior pattern is quite powerful for composition. Behaviors can easily compose other behaviors. To demonstrate this, let's start with a basic portable behavior:
+Behaviors ergonomically compose other behaviors. To demonstrate this, let's start with a basic portable behavior:
 
 ```typescript
 const disclosure = ({ signal }: Service) => (initialOpen = false) => {
@@ -133,8 +131,7 @@ Now, we can compose it:
 
 ```typescript
 const dropdown = (svc: Service) => {
-  // Another convention is to use the outer function as a "service layer", but you could
-  // do this in the return function if you don't mind it running on every mount.
+  // Utilize the service closure as a space to compose
   const useDisclosure = svc(disclosure);
 
   return (options?: { initialOpen?: boolean }) => {
@@ -156,7 +153,7 @@ const dropdown = (svc: Service) => {
 };
 ```
 
-Now `dropdown` composes `disclosure`! They both use the same behavior shape of `(svc) => (args) => api`, but one composes the other. In rimitive, we call the outer function the **service layer**. It's a convenient place to inject services a single time.
+Now `dropdown` composes `disclosure`! They both use the same behavior shape of `(svc) => (args) => api`, but one composes the other. The outer service function is a convenient place to inject services a single time.
 
 ---
 

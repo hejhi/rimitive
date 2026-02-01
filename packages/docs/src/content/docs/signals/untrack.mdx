@@ -1,0 +1,124 @@
+---
+title: untrack()
+description: Read signals without creating reactive dependencies.
+---
+
+The `untrack()` function executes code without tracking signal reads as dependencies.
+
+## Syntax
+
+```typescript
+const result = untrack(fn)
+```
+
+### Parameters
+
+**`fn`**
+: A function to execute. Signal reads inside this function won't be tracked.
+
+### Return value
+
+Whatever `fn` returns.
+
+## Description
+
+Normally, reading a signal inside `computed()` or `effect()` creates a dependency. With `untrack()`, you can read signals without subscribing to their changes:
+
+```typescript
+const a = signal(1);
+const b = signal(2);
+
+const sum = computed(() => {
+  // Depends on `a`, but NOT on `b`
+  return a() + untrack(() => b());
+});
+
+sum();  // 3
+
+a(10);
+sum();  // 12 (recomputed because `a` changed)
+
+b(20);
+sum();  // 12 (not recomputed — `b` isn't a dependency)
+```
+
+### vs peek()
+
+Both `untrack()` and `peek()` avoid tracking, but they serve different purposes:
+
+- **`sig.peek()`** — Read a single signal without tracking
+- **`untrack(fn)`** — Execute a block of code without tracking any reads
+
+```typescript
+// These are equivalent for a single signal
+const x = untrack(() => count());
+const x = count.peek();
+
+// untrack is better for multiple reads
+const { a, b, c } = untrack(() => ({
+  a: sigA(),
+  b: sigB(),
+  c: sigC(),
+}));
+```
+
+## Examples
+
+### Conditional dependency
+
+Only depend on some signals based on a condition:
+
+```typescript
+const useCache = signal(true);
+const cache = signal({});
+const fetchData = signal(() => { ... });
+
+const data = computed(() => {
+  if (useCache()) {
+    // Only track cache when useCache is true
+    return cache();
+  }
+  // Don't track fetchData — just call it
+  return untrack(() => fetchData()());
+});
+```
+
+### Logging without dependency
+
+Log values without creating dependencies:
+
+```typescript
+effect(() => {
+  const value = importantSignal();
+
+  // Log other context without depending on it
+  untrack(() => {
+    console.log('Context:', otherSignal(), anotherSignal());
+  });
+
+  doSomethingWith(value);
+});
+```
+
+### Breaking circular patterns
+
+Avoid infinite loops when an effect needs to read and write the same signal:
+
+```typescript
+effect(() => {
+  const trigger = someTrigger();
+
+  // Read count without creating a dependency
+  const current = untrack(() => count());
+
+  if (trigger && current < 10) {
+    count(current + 1);
+  }
+});
+```
+
+## See also
+
+- [signal()](/signals/signal) — `peek()` for single-signal untracked reads
+- [effect()](/signals/effect) — Where tracking matters most
+- [computed()](/signals/computed) — Derived values with automatic tracking

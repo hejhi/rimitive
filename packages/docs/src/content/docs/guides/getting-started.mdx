@@ -4,6 +4,7 @@ description: Get up and running with Rimitive in minutes.
 ---
 
 import SearchTags from '../../../components/SearchTags.astro';
+import SandboxDir from '../../../components/SandboxDir.astro';
 
 <SearchTags tags={["getting-started", "installation", "setup", "quickstart", "hello-world", "first-app"]} />
 
@@ -25,40 +26,7 @@ npm install @rimitive/core @rimitive/signals @rimitive/view
 
 Then, create the app:
 
-```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(createDOMAdapter()),
-  MountModule
-);
-
-const { signal, computed, el, mount } = svc;
-
-const App = () => {
-  const count = signal(0);
-  const doubled = computed(() => count() * 2);
-
-  return el('div')(
-    el('h1')('Counter'),
-    el('p')(computed(() => `Count: ${count()}`)),
-    el('p')(computed(() => `Doubled: ${doubled()}`)),
-    el('button').props({
-      onclick: () => count(count() + 1)
-    })('Increment')
-  );
-}
-
-const app = mount(App());
-document.body.appendChild(app.element!);
-```
+<SandboxDir dir="getting-started" editorHeight="320px" />
 
 That's it! Click the button, the count updates, the DOM updates automatically.
 
@@ -72,4 +40,4 @@ That's it! Click the button, the count updates, the DOM updates automatically.
 
 If you're lost already, don't worry. We'll start from the very basics. These docs also cover reactive patterns in-depth, so you can jump around if you get confused at any time.
 
-Rimitive is as much about patterns as it is about reactive primitives and tooling, so if at any point you hate it, you can always take any patterns that inspired you elsewhere!
+Rimitive is as much about patterns as it is about reactive modules and tooling, so if at any point you hate it, you can always take any patterns that inspired you elsewhere!
