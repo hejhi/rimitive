@@ -71,7 +71,7 @@ type DocsJsonOutput = {
 };
 
 class BenchmarkRunner {
-  private readonly suitesDir: string;
+  private readonly suitesDirs: string[];
   private readonly outputDir: string;
   private readonly timeout: number;
   private readonly commitHash: string;
@@ -81,12 +81,12 @@ class BenchmarkRunner {
   private readonly tempJsonDir: string;
 
   constructor(
-    suitesDir: string = './src/suites/rimitive',
+    suitesDirs: string[] = ['./src/suites/rimitive', './src/suites/view'],
     outputDir: string = './dist',
     timeout: number = 300000, // 5 minutes
     outputDocs: boolean = false
   ) {
-    this.suitesDir = path.resolve(suitesDir);
+    this.suitesDirs = suitesDirs.map((d) => path.resolve(d));
     this.outputDir = path.resolve(outputDir);
     this.timeout = timeout;
     this.commitHash = this.getGitHash();
@@ -144,25 +144,46 @@ class BenchmarkRunner {
   }
 
   private async findBenchmarkFiles(filters?: string[]): Promise<string[]> {
-    const entries = await fs.readdir(this.suitesDir, { withFileTypes: true });
-    return entries
-      .filter((entry) => {
-        if (
-          !entry.isFile() ||
-          !entry.name.endsWith('.bench.ts') ||
-          entry.name.startsWith('test-')
-        ) {
-          return false;
+    const allFiles: string[] = [];
+
+    // Recursively find all benchmark files in a directory
+    const findInDir = async (dir: string): Promise<void> => {
+      try {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory() && !entry.name.startsWith('.')) {
+            // Recurse into subdirectories (skip hidden dirs and deps)
+            if (entry.name !== 'deps' && entry.name !== 'node_modules') {
+              await findInDir(fullPath);
+            }
+          } else if (
+            entry.isFile() &&
+            entry.name.endsWith('.bench.ts') &&
+            !entry.name.startsWith('test-')
+          ) {
+            allFiles.push(fullPath);
+          }
         }
-        if (filters?.length) {
-          // Check if the file name (without extension) matches any of the filters
-          const baseName = path.basename(entry.name, '.bench.ts');
-          // Support partial matching (e.g., "signal" matches "signal-updates")
-          return filters.some((filter) => baseName.includes(filter));
-        }
-        return true;
-      })
-      .map((entry) => path.join(this.suitesDir, entry.name));
+      } catch {
+        // Directory doesn't exist, skip it
+      }
+    };
+
+    // Search all suites directories
+    for (const suitesDir of this.suitesDirs) {
+      await findInDir(suitesDir);
+    }
+
+    // Apply filters
+    return allFiles.filter((file) => {
+      if (filters?.length) {
+        const baseName = path.basename(file, '.bench.ts');
+        // Support partial matching (e.g., "signal" matches "signal-updates")
+        return filters.some((filter) => baseName.includes(filter));
+      }
+      return true;
+    });
   }
 
   private async runBenchmark(filePath: string): Promise<BenchmarkResult> {
@@ -474,7 +495,7 @@ async function main() {
   // }
 
   const runner = new BenchmarkRunner(
-    './src/suites/rimitive',
+    ['./src/suites/rimitive', './src/suites/view'],
     './dist',
     300000,
     values.docs

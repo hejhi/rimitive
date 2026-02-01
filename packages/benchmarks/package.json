@@ -7,7 +7,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter @rimitive/signals build",
+    "build": "pnpm --filter @rimitive/signals build && pnpm --filter @rimitive/view build",
     "bench": "tsx --expose-gc src/runner.ts",
     "bench:docs": "tsx --expose-gc src/runner.ts --docs",
     "typecheck": "tsc --noEmit",
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@rimitive/core": "workspace:*",
     "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*",
     "@preact/signals-core": "1.12.1",
     "@reduxjs/toolkit": "2.11.2",
     "@testing-library/react": "16.3.2",
