@@ -433,6 +433,80 @@ ${results
       return entries;
     };
 
+    // Separate results by suite type (signals vs view)
+    const signalsResults = results.filter(
+      (r) => !r.error && r.jsonData && !r.name.includes('/')
+    );
+    const viewResults = results.filter(
+      (r) => !r.error && r.jsonData && r.name.includes('/')
+    );
+
+    // Note: The benchmark file paths determine the suite type
+    // rimitive/*.bench.ts -> signals (no slash in name after basename extraction)
+    // view/**/*.bench.ts -> view (has category in path)
+
+    // Actually, let's check by looking at the source directory
+    const categorizeResult = (result: BenchmarkResult): 'signals' | 'view' => {
+      // Results from view/ directory will have been found there
+      // We can check by looking at benchmark names - view benchmarks have specific patterns
+      const benchmarks = result.jsonData || [];
+      for (const bench of benchmarks) {
+        for (const run of bench.runs) {
+          // View benchmarks have names like "append 100 to $existing existing"
+          // Signals benchmarks have names like "Rimitive - 10 signals"
+          if (
+            run.name.includes('Rimitive') ||
+            run.name.includes('Preact') ||
+            run.name.includes('Alien')
+          ) {
+            return 'signals';
+          }
+        }
+      }
+      return 'view';
+    };
+
+    const signalsSuites = results
+      .filter((r) => !r.error && r.jsonData && categorizeResult(r) === 'signals')
+      .map((r) => ({
+        name: r.name,
+        benchmarks: processRawBenchmarks(r.jsonData!),
+      }));
+
+    const viewSuites = results
+      .filter((r) => !r.error && r.jsonData && categorizeResult(r) === 'view')
+      .map((r) => ({
+        name: r.name,
+        benchmarks: processRawBenchmarks(r.jsonData!),
+      }));
+
+    // Save signals benchmarks
+    if (signalsSuites.length > 0) {
+      const signalsOutput: DocsJsonOutput = {
+        timestamp: new Date().toISOString(),
+        commit: this.commitHash,
+        system,
+        suites: signalsSuites,
+      };
+      const signalsJsonPath = path.join(this.docsDataDir, 'signals-benchmarks.json');
+      await fs.writeFile(signalsJsonPath, JSON.stringify(signalsOutput, null, 2));
+      console.log(`\nSignals benchmarks saved to: ${signalsJsonPath}`);
+    }
+
+    // Save view benchmarks
+    if (viewSuites.length > 0) {
+      const viewOutput: DocsJsonOutput = {
+        timestamp: new Date().toISOString(),
+        commit: this.commitHash,
+        system,
+        suites: viewSuites,
+      };
+      const viewJsonPath = path.join(this.docsDataDir, 'view-benchmarks.json');
+      await fs.writeFile(viewJsonPath, JSON.stringify(viewOutput, null, 2));
+      console.log(`\nView benchmarks saved to: ${viewJsonPath}`);
+    }
+
+    // Also save combined for backwards compatibility
     const docsOutput: DocsJsonOutput = {
       timestamp: new Date().toISOString(),
       commit: this.commitHash,
@@ -444,11 +518,8 @@ ${results
           benchmarks: processRawBenchmarks(r.jsonData!),
         })),
     };
-
     const docsJsonPath = path.join(this.docsDataDir, 'benchmarks.json');
     await fs.writeFile(docsJsonPath, JSON.stringify(docsOutput, null, 2));
-
-    console.log(`\nDocs JSON saved to: ${docsJsonPath}`);
 
     // Clean up temp JSON files
     try {
