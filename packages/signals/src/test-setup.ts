@@ -9,6 +9,7 @@ import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createSubscribeFactory } from './subscribe';
+import { createIterFactory, type Iter } from './iter';
 import { createGraphEdges } from './deps/graph-edges';
 import { createPullPropagator } from './deps/pull-propagator';
 import { createScheduler } from './deps/scheduler';
@@ -60,6 +61,8 @@ export function createTestInstance() {
     dispose: opts.dispose,
   });
 
+  const iter = createIterFactory({ signal });
+
   // Batch function
   function batch<T>(fn: () => T): T {
     opts.startBatch();
@@ -82,6 +85,7 @@ export function createTestInstance() {
     effect,
     batch,
     subscribe,
+    iter,
 
     // Context access for testing
     setCurrentConsumer: (consumerNode: ConsumerNode | null) => {
@@ -114,6 +118,11 @@ export const subscribe = <T>(
   fn: () => T,
   cb: SubscribeCallback<T>
 ): (() => void) => defaultInstance.subscribe(fn, cb);
+
+export const iter = <T>(
+  keyFn: (value: T) => string | number,
+  initialItems?: T[]
+): Iter<T> => defaultInstance.iter(keyFn, initialItems);
 
 // Context control exports
 export const setCurrentConsumer = (consumer: ConsumerNode | null) =>

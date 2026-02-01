@@ -15,71 +15,94 @@ This document contains the complete Rimitive documentation for LLM consumption.
 
 ## Project Overview (README)
 
-Rimitive is a set of composable libraries that provide:
+Reactive primitives and composable libraries that work with them for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity. An awkward name but a lot of personality 🌝
 
-- **reactive primitives** for state, views, routing, and async data
-- **a composition system** to wire together only what you need
-- **adapters and integrations** for DOM, SSR, React, and more
+Start with signals, add what you need as you go, and swap out anything you want.
 
-Rimitive uses the primitive construct with a tiny but powerful compositional library so you **avoid as much up-front commitment as possible**. You can start with just signals and computeds in your vanilla js app or reactive framework as you prototype, pulling in more Rimitive as you need (or not). The goal of Rimitive is to blend into your architecture, and allow you to easily package and re-use micro reactive services tailored to your needs.
+\`\`\`bash
+npm install @rimitive/core @rimitive/signals
+\`\`\`
 
-The primitives:
-
-- [\`@rimitive/signals\`](packages/signals): primitives for state management
-- [\`@rimitive/view\`](packages/view): primitives for composing a reactive UI
-- [\`@rimitive/resource\`](packages/resource): primitive for async data
-
-The composition core:
-
-- [\`@rimitive/core\`](packages/core): a strongly typed composition system that can be used outside of rimitive altogether
-
-Additional packages provide [routing](https://rimitive.dev/guides/adding-routing/), [SSR](https://rimitive.dev/guides/server-rendering/), React bindings, and devtools. You can also [design your own modules](https://rimitive.dev/guides/custom-modules/).
-
-No build or transpilation required. Everything tree-shakes.
-
----
-
-Here is the most basic setup of rimitive:
+Rimitive grows with you starting from your most simple reactive use cases:
 
 \`\`\`ts
 import { compose } from '@rimitive/core';
-import { SignalModule } from '@rimitive/signals/extend';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
 
-// \`compose()\` returns your reactive service
-const { signal } = compose(SignalModule);
+const { signal, computed, effect } = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule
+);
+
+const you = signal('🫸');
+const rimitive = signal('🫷');
+const highFive = computed(() => \`\${you()}💥\${rimitive()}\`);
+
+effect(() => console.log(highFive())); // 🫸💥🫷
 \`\`\`
 
-Add a computed to your reactive service:
-
-\`\`\`ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
-
-// All wiring happens under the hood, as part of the module/service system. But you can
-// customize or define your own modules, tapping directly into the reactive graph
-// (or even replacing it if you want!)
-const { signal, computed } = compose(SignalModule, ComputedModule);
-\`\`\`
-
-Compose your own tiny, performant reactive services tailored to your use cases. This pattern scales all the way to the most complex use cases you can imagine.
-
-With the ability to define your own modules, you can even create your own reactive primitives to work with or replace Rimitives! 🎶
+\`compose()\` wires modules together into a tiny, encapsulated, reactive service, with only what you asked for. But Rimitive takes primitives to another level, so hold onto your butts!
 
 ---
 
-In addition to the above, Rimitive does not prescribe ways to use primitives, but rather provides framework-agnostic **patterns, conventions, and mental models** for building performant, lean, ergonomic, and scalable reactive applications.
+## Add a view layer
 
-For instance, Rimitive provides patterns for creating components and headless components (or behaviors), but there's no capital-C components or magical reactive closures like you would find in most reactive frameworks. Reactivity lives entirely within the primitives.
+If you want to add a UI, sprinkle in some UI primitives:
 
-Patterns and architectures in Rimitive focus on **low coupling, high cohesion**—focusing on keeping reactive logic self-contained and portable. Test behaviors without rendering, swap components without touching logic, and share behaviors across frameworks and environments.
+\`\`\`ts
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { MountModule } from '@rimitive/view/deps/mount';
 
-Additionally:
+const { signal, computed, el, mount } = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  // Add these 👇
+  createElModule(createDOMAdapter()),
+  MountModule
+);
 
-- **No VDOM**: fine-grained updates directly to the DOM
-- **Minimal reconciliation**: only primitives that need reconciliation have it
-- **No global state**: each \`compose()\` creates an isolated reactive context, making it safe for React concurrency or usage on the server.
+const App = () => {
+  const together = signal(false);
 
-📚 **[Full documentation at rimitive.dev](https://rimitive.dev)**
+  return el('div')(
+    el('p').props({
+      textContent: computed(() => (together() ? '🫸💥🫷' : '🫸   🫷')),
+    }),
+    el('button').props({ onclick: () => together(!together()) })('High five!')
+  );
+};
+
+document.body.appendChild(mount(App()).element!);
+\`\`\`
+
+Rimitive does things _a little differently_:
+
+1. The component function runs once
+2. The DOM structure is created once
+3. When \`together\` changes, only that one text node updates (no diffing, reconciliation, or component re-renders)
+
+Reactivity lives in the primitives, not in components. No component re-renders! Just mounting and unmounting.
+
+Rimitive primitives (yes it sounds absurd) are environment-agnostic, which is where adapters come into play—which is why \`createElModule\` takes an adapter.
+
+Rimitive ships DOM, SSR, and hydration adapters, but you can write your own for whatever you want (Canvas, WebGL, or anything tree-shaped).
+
+But that's just the beginning. Rimitive provides common tooling that utilizes these primitives, including routing, async loading, SSR, and streaming—all on-demand, swappable, extensible, and completely optional.
+
+For the full picture, check out the [docs](https://rimitive.dev/guides/getting-started)!
 
 ---
 
@@ -99,123 +122,56 @@ Additionally:
 
 ---
 
-## Using Rimitive Primitives
+## Extending
 
-Yes, "Rimitive primitive" sounds ridiculous.
+The modules that ship with Rimitive are built with the same \`defineModule()\` that's available to you:
 
-Anyway, here's a slightly larger example, with view primitives and a DOM adapter!
+\`\`\`ts
+import { defineModule } from '@rimitive/core';
 
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import {
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-} from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { MountModule } from '@rimitive/view/deps/mount';
+const LoggerModule = defineModule({
+  name: 'logger',
+  provides: { log: (msg: string) => console.log(\`[app] \${msg}\`) },
+});
 
-const { signal, computed, el, mount } = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(createDOMAdapter()), // Provide the DOM adapter to the view primitive
-  MountModule
-);
+const { signal, log } = compose(SignalModule, LoggerModule);
 \`\`\`
 
-> Note: primitives are environment-agnostic, so some modules (like \`createElModule\`) take an adapter. Rimitive provides DOM, SSR, and hydration adapters—or write your own!
-
-Now that you have a reactive service, you can use it however you'd like:
-
-\`\`\`typescript
-// Note: this might _look_ like a capital-c Component, but it's not a magically reactive closure!
-// This means no "re-rendering"—it mounts or unmounts. Das it.
-const App = () => {
-  const count = signal(0);
-
-  return el('div')(
-    el('p').props({ textContent: computed(() => \`Count: \${count()}\`) }),
-    el('button').props({ onclick: () => count(count() + 1) })('Increment')
-  );
-};
-
-document.body.appendChild(mount(App()).element!);
-\`\`\`
-
-The component itself doesn't re-render, and neither does \`el\`—the element structure is created **once**. Only reactive props and text children update via fine-grained effects that target exactly one DOM property or text node (for reactive DOM structure, you can use primitives like [\`map\` and \`match\`](https://rimitive.dev/guides/rendering-lists/)).
-
-That's about all there is to using rimitive! The rest is all about choosing the primitives and patterns you want to use—check out the [guides](https://rimitive.dev/guides/getting-started/) and [API reference](https://rimitive.dev/api/).
+Create your own primitives! Swap out the entire reactive system if you want, or build adapters for new renderers. See the [Custom Modules](https://rimitive.dev/guides/custom-modules/) guide.
 
 ---
 
-## Extensibility
+## AI
 
-Want to:
+Just because Rimitive is brand new shouldn't mean an AI stumbles while trying to write idiomatic Rimitive code. [\`@rimitive/mcp\`](packages/mcp) provides an MCP server that exposes the entire Rimitive docs as meticulously tagged, searchable tools.
 
-- **Create custom modules?** Use [\`defineModule()\`](https://rimitive.dev/guides/custom-modules/) with the same patterns rimitive uses internally
-- **Swap out the reactive system?** Replace the dependency modules with your own (or someone else's), or even swap out entire primitives for something else
-- **Build a custom adapter/renderer?** Implement the \`Adapter\` interface for Canvas, WebGL, or anything tree-based
-- **Add instrumentation?** Compose with \`createInstrumentation()\` for debugging; instrumentation is first-class in rimitive
+If you use [Claude Code](https://claude.ai/code), there are on-demand plugins too:
 
-Rimitive provides modules for reactivity and UI out of the box, but they're not special. In fact, they're built with the same tools rimitive provides to you. Rimitive at its core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just reactive frameworks.
-
----
-
-## Claude Code Plugins
-
-If you use [Claude Code](https://claude.ai/code), these plugins teach Claude how to write idiomatic rimitive code:
-
-| Plugin                                           | Description                                                      |
-| ------------------------------------------------ | ---------------------------------------------------------------- |
-| [\`rimitive-behavior\`](plugins/rimitive-behavior) | Create headless behaviors — portable reactive logic without UI   |
-| [\`rimitive-compose\`](plugins/rimitive-compose)   | Help composing services with the right modules and imports       |
-| [\`rimitive-module\`](plugins/rimitive-module)     | Create custom modules with \`defineModule()\`                      |
-| [\`rimitive-view\`](plugins/rimitive-view)         | Build views with \`el\`, \`map\`, \`match\`, and other view primitives |
-| [\`rimitive-adapter\`](plugins/rimitive-adapter)   | Create custom adapters for Canvas, WebGL, or other renderers     |
-
-Install via Claude Code: \`/install-plugin github:hejhi/rimitive/plugins/<plugin-name>\`
-
-### MCP Server
-
-For deeper integration, [\`@rimitive/mcp\`](packages/mcp) provides an MCP server that exposes Rimitive documentation as searchable tools:
-
-\`\`\`json
-{
-  "mcpServers": {
-    "rimitive": {
-      "command": "npx",
-      "args": ["@rimitive/mcp"]
-    }
-  }
-}
-\`\`\`
-
-This gives Claude access to \`search_api\`, \`get_module\`, and \`get_example\` tools for looking up Rimitive documentation on demand.
+| Plugin                                           | Purpose                                      |
+| ------------------------------------------------ | -------------------------------------------- |
+| [\`rimitive-behavior\`](plugins/rimitive-behavior) | Headless behaviors — portable reactive logic |
+| [\`rimitive-module\`](plugins/rimitive-module)     | Custom modules with \`defineModule()\`         |
+| [\`rimitive-view\`](plugins/rimitive-view)         | Views with \`el\`, \`map\`, \`match\`              |
 
 ---
 
 ## Inspirations
 
-Rimitive draws from libraries and ideas by _brilliant_ people that have shaped how I think about reactivity and composition, and what I want in my nerd life:
+Rimitive builds on ideas from _brilliant_ people who've thought deeply about reactivity and composition:
 
-- [alien-signals](https://github.com/stackblitz/alien-signals) and [reactively](https://github.com/milomg/reactively) — push-pull reactivity, graph coloring
-- [downshift](https://www.downshift-js.com/use-select/) — headless, portable UI behavior
-- [jotai](https://jotai.org/docs/core/atom) — atoms as configs, not values
-- [ProseMirror](https://prosemirror.net) — extensibility and determinism
-
----
-
-## Why Rimitive?
-
-The story behind Rimitive—the impetus, how it started, how it's going: [Why Rimitive?](https://rimitive.dev/why/)
+- [alien-signals](https://github.com/stackblitz/alien-signals), [reactively](https://github.com/milomg/reactively): push-pull reactivity, graph coloring, primitives in general
+- [solidjs](https://www.solidjs.com), [radix](https://www.radix-ui.com): beautiful implementations of primitives in their respective domains
+- [downshift](https://www.downshift-js.com/use-select): headless, portable UI patterns
+- [jotai](https://jotai.org/docs/core/atom): treating atoms as configs rather than values
+- [ProseMirror](https://prosemirror.net): extensibility and determinism
 
 ---
 
 ## Status
 
-Alpha. Tested, benchmarked, used in personal projects, _not_ battle-tested in production yet.
+Alpha. Tested, benchmarked, used in personal projects. Not yet battle-tested in production.
+
+[Why Rimitive?](https://rimitive.dev/why/) — the story behind the project.
 
 
 ---
@@ -224,33 +180,23 @@ Alpha. Tested, benchmarked, used in personal projects, _not_ battle-tested in pr
 
 <!-- @tags: getting-started, installation, setup, quickstart, hello-world, first-app -->
 
-Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, migrations, or a "now we need a real framework" moment.
-
-Compose only the primitives you need, opting in as you go!
-
-In fact, rimitive is as much about providing **scalable patterns, conventions, and mental models** for building performant, lean, ergonomic, and scalable reactive applications as it is about providing the actual reactive primitives and tooling you need to do it.
-
-Rimitive also has a transparent architecture. You can literally replace or extend any part of it with your own custom-built tooling, at any point in time, down to the core reactive graph if you really wanted to.
-
-Patterns and architectures in rimitive are designed for **low coupling, high cohesion**—your reactive logic is self-contained and reusable, your UI just consumes it and has its own ui-specific logic if needed. Test behaviors without rendering, swap components without touching logic, share behaviors across frameworks, compose and share accessible patterns across your UIs.
-
-- **It's a collection of reactive libraries, not a framework** — take only what you need, as you need it!
-- **No VDOM** — fine-grained updates directly to the DOM
-- **No global state** — each \`compose()\` creates an isolated reactive context
-
----
-
 ## Installation
 
 \`\`\`bash
-npm install @rimitive/core @rimitive/signals @rimitive/view
+npm install @rimitive/core @rimitive/signals
 \`\`\`
 
 <!-- @tags: counter, example, tutorial, reactive-state, dom-rendering -->
 
 ## Your First App
 
-Create a counter with reactive state and DOM rendering:
+Create a counter with reactive state and DOM rendering. Start by installing the deps:
+
+\`\`\`bash
+npm install @rimitive/core @rimitive/signals @rimitive/view
+\`\`\`
+
+Then, create the app:
 
 \`\`\`typescript
 import { compose } from '@rimitive/core';
@@ -259,28 +205,21 @@ import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import { createElModule } from '@rimitive/view/el';
 import { MountModule } from '@rimitive/view/deps/mount';
 
-// 1. Create the adapter
-const adapter = createDOMAdapter();
-
-// 2. Compose your service
 const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  createElModule(adapter),
+  createElModule(createDOMAdapter()),
   MountModule
 );
 
-// 3. Destructure the primitives
 const { signal, computed, el, mount } = svc;
 
-// 4. Create reactive state
-const count = signal(0);
-const doubled = computed(() => count() * 2);
+const App = () => {
+  const count = signal(0);
+  const doubled = computed(() => count() * 2);
 
-// 5. Build the UI
-const App = () =>
-  el('div')(
+  return el('div')(
     el('h1')('Counter'),
     el('p')(computed(() => \`Count: \${count()}\`)),
     el('p')(computed(() => \`Doubled: \${doubled()}\`)),
@@ -288,13 +227,13 @@ const App = () =>
       onclick: () => count(count() + 1)
     })('Increment')
   );
+}
 
-// 6. Mount it
 const app = mount(App());
 document.body.appendChild(app.element!);
 \`\`\`
 
-That's it. Click the button, the count updates, the DOM updates automatically.
+That's it! Click the button, the count updates, the DOM updates automatically.
 
 ## What Just Happened?
 
@@ -304,13 +243,19 @@ That's it. Click the button, the count updates, the DOM updates automatically.
 4. **\`el()\`** creates DOM elements with reactive children and props
 5. **\`mount()\`** attaches the element tree to the DOM
 
+If you're lost already, don't worry. We'll start from the very basics. These docs also cover reactive patterns in-depth, so you can jump around if you get confused at any time.
+
+Rimitive is as much about patterns as it is about reactive primitives and tooling, so if at any point you hate it, you can always take any patterns that inspired you elsewhere!
+
 ---
 
 ## Creating a Service
 
 <!-- @tags: service, compose, setup, configuration, modules, dependency-injection -->
 
-Here's the simplest Rimitive setup:
+Every Rimitive app begins with a reactive service composed of modules. Services and modules are constructs of our lightweight dependency injection (DI) system in [\`core\`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
+
+A simple example:
 
 \`\`\`typescript
 import { compose } from '@rimitive/core';
@@ -320,13 +265,18 @@ const svc = compose(SignalModule);
 const { signal } = svc;
 \`\`\`
 
-\`compose()\` takes primitive modules and returns a reactive service with only the primitives you asked for.
+- A **service** is the result of calling \`compose()\`. It bundles your chosen primitives into an isolated reactive context.
+- A **module** is what you provide to \`compose()\`. Each module provides one or more primitives or tooling—\`SignalModule\` provides \`signal\`, \`ComputedModule\` provides \`computed\`, and so on. Modules can depend on other modules, and \`compose()\` bundles everything up into a service where they all share the same underlying reactive graph.
+
+Using \`svc\` to represent a service is a convention you'll see used throughout these docs.
+
+This service wouldn't do much on its own—nothing is connected to react to signal changes yet.
 
 ---
 
 ## Adding More Primitives
 
-Need more primitives? Add them!
+We can add some more primitives that _would_ react to signal updates:
 
 \`\`\`typescript
 import { compose } from '@rimitive/core';
@@ -337,7 +287,7 @@ const { signal, computed, effect } = compose(SignalModule, ComputedModule, Effec
 
 Then use them:
 
-\`\`\`typescript
+\`\`\`ts
 const count = signal(0);
 const doubled = computed(() => count() * 2);
 
@@ -348,18 +298,20 @@ effect(() => {
 // ...etc
 \`\`\`
 
+Reactive dependencies are automatically tracked in Rimitive, so you don't need to worry about it.
+
 ---
 
-## Why Compose?
+## Why \`compose()\`?
 
 You might wonder: why not just export these functions directly?
 
 Each \`compose()\` call creates an independent reactive context with no global leakage. This means:
 
-- **Isolation** — Multiple services don't interfere with each other
-- **Testing** — Fresh contexts per test, no cleanup needed
-- **Tree-shaking** — Only bundle what you use
-- **Extensibility** — Add [view modules](/guides/adding-a-ui), [router](/guides/adding-routing), or [custom modules](/guides/custom-modules) later
+- **Isolation**: Multiple services don't interfere with each other
+- **Testing**: Fresh contexts per test, no cleanup needed
+- **Tree-shaking**: Only bundle what you use
+- **Extensibility**: Add [view modules](/guides/adding-a-ui), [router](/guides/adding-routing), or [custom modules](/guides/custom-modules) later
 
 ---
 
@@ -369,24 +321,9 @@ Once you've [created a service](/guides/creating-a-service), there are a few way
 
 ---
 
-## Top-Level
+## Exporting a Service
 
-You can safely destructure anything in rimitive from a service, so it's common to do this:
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-
-const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
-const count = signal(0);
-const doubled = computed(() => count() * 2);
-
-effect(() => {
-  console.log(count(), doubled());
-});
-\`\`\`
-
-Great for simple scripts or when you only need a single service. In rimitive, it's also common to export the service as well as the service type directly, which comes in handy _a lot_:
+You can safely destructure anything in Rimitive from a service, so it's idiomatic to export the service as well as the service type directly, which comes in handy _a lot_:
 
 \`\`\`typescript
 // myService.ts
@@ -400,7 +337,7 @@ export type Service = typeof svc;
 
 ## In a Function
 
-rimitive makes heavy usage of plain factory functions that encapsulate bits of reactive behavior, like:
+Rimitive makes heavy usage of factory functions that look like components or hooks you might be used to from other frameworks:
 
 \`\`\`typescript
 import { signal } from './myService.ts'
@@ -417,9 +354,13 @@ counter.increment();
 counter.count(); // 1
 \`\`\`
 
-The above is simply a factory that instantiates reactive state and returns an api to drive it. In rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with \`use*\` for clarity (ie \`useCounter\` instead of \`myCounter\`).
+But a nuance here is that the above is **simply a factory** that instantiates reactive state and returns an api to drive it 🚗. In Rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with \`use*\` for clarity (ie \`useCounter\` instead of \`myCounter\`).
 
-You can stop right here, if that's all you need! But if you want to actually drive a reactive ui with state (a "component"), rimitive has primitives and patterns to help you with that too. Next up though, let's talk about the [behavior pattern](/guides/creating-a-behavior).
+You can stop right here, if that's all you need! For plenty of apps simple apps, behaviors might be enough.
+
+If you want to drive a reactive ui with state, Rimitive also has primitives and patterns to help you with that.
+
+Next up though, let's talk more about the [behavior pattern](/guides/creating-a-behavior).
 
 ---
 
@@ -427,7 +368,7 @@ You can stop right here, if that's all you need! But if you want to actually dri
 
 You have signals, and maybe some behaviors, so perhaps now we want to add a reactive UI on top of it.
 
-rimitive provides the \`view\` package that contains view-specific primitives, with \`el()\` being the foundation. \`el()\` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
+Rimitive provides the \`view\` package that contains view-specific primitives, with \`el()\` being the foundation: \`el()\` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
 
 ---
 
@@ -448,35 +389,36 @@ export const svc = compose(
   ComputedModule,
   EffectModule,
   // Let's add the \`el\` and \`mount\` primitives from the \`view\` package, and provide the
-  // DOM adapter to make DOM elements
+  // DOM adapter to make DOM elements 👇
   createElModule(createDOMAdapter()),
   MountModule
 );
-export const { signal, computed, effect, el, mount } = svc;
 export type Service = typeof svc;
 \`\`\`
 
-Same pattern as before, just now with more modules!
+Notice it's the same compose/service pattern as before, just now with more modules!
 
 ---
 
 ## Creating Elements
 
-\`el()\` is curried: \`el(tag)(children)\`. Don't be scurred, it'll make sense:
+\`el()\` is curried: \`el(tag)(children)\`. It's all just factories:
 
 \`\`\`typescript
-// Just a div tag
-const div = el('div')();
+// A div tag
+el('div')();
 
-// An h1 with text
-const heading = el('h1')('Hello, World');
+// An h1 with text ("Hello, World" are children)
+el('h1')('Hello, World');
 
-// a div with children
-const container = el('div')(
+// A div with \`el\` children
+el('div')(
   el('h1')('Title'),
   el('p')('Some text')
 );
 \`\`\`
+
+If you provided a different adapter, then you'd pass different (strongly typed!) strings (like \`el('mySpecialElement')\`).
 
 ---
 
@@ -518,7 +460,7 @@ count(5);  // display updates to "Count: 5"
 
 ## UI Components
 
-the star of the show, UI components in rimitive are...just functions that return elements:
+The star of the show, UI components in rimitive are...just functions that return elements:
 
 \`\`\`typescript
 const Greeting = (name: string) =>
@@ -527,7 +469,7 @@ const Greeting = (name: string) =>
     el('p')('Welcome to Rimitive.')
   );
 
-const app = el('div')(
+const DoubleGreeting = () => el('div')(
   Greeting('Ada'),
   Greeting('Grace')
 );
@@ -557,14 +499,9 @@ const Counter = (initial: number) => {
     )
   );
 };
-
-const app = el('div')(
-  Counter(0),
-  Counter(100)
-);
 \`\`\`
 
-Again, \`Counter\` itself is not a reactive closure. It's not going to re-render. But it's quite nice in a way, isn't it? all your reactive behavior and logic contained in behavior functions, then using the api returned to drive UI specific logic?
+Again, \`Counter\` itself is not a reactive closure, so it's not going to re-render!
 
 But wait, there's more!
 
@@ -597,48 +534,24 @@ const Counter = (svc: Service) => {
     );
   };
 };
+
+// Components can compose both behaviors AND components in the service layer
+const Counters = (svc: Service) => {
+  const { el, computed } = svc;
+  const CounterComponent = svc(Counter);
+
+  return (initial: number) => {
+    const { count, doubled, increment, decrement, reset } = useCounter(initial);
+
+    return el('div')(
+      CounterComponent(0),
+      CounterComponent(100)
+    );
+  };
+};
 \`\`\`
 
 Same shape as portable behaviors: \`(svc) => (args) => result\`. The outer function is the service layer, the inner function is the component factory.
-
-\`\`\`typescript
-import { svc } from './service';
-
-const CounterComponent = svc(Counter);
-
-const app = el('div')(
-  CounterComponent(0),
-  CounterComponent(100)
-);
-\`\`\`
-
-Can you see what's coming?? Components compose other components in the service layer:
-
-\`\`\`typescript
-import type { Service } from './service';
-import { counter } from './behaviors/counter';
-import { Counter } from './Counter';
-
-const Dashboard = (svc: Service) => {
-  const { el } = svc;
-
-  // Compose the Counter component in the service layer
-  const CounterComponent = svc(Counter);
-
-  return () =>
-    el('div')(
-      el('h1')('Dashboard'),
-      el('div')(
-        el('label')('Users: '),
-        CounterComponent(0)
-      ),
-      el('div')(
-        el('label')('Sessions: '),
-        CounterComponent(100)
-      )
-    );
-};
-\`\`\`
 
 The service layer is where you wire up your dependencies—behaviors, other components, whatever you need. Then the inner function just uses them.
 
@@ -657,6 +570,204 @@ const App = () => el('div')(
 
 const app = mount(App());
 document.body.appendChild(app.element!);
+\`\`\`
+
+---
+
+## Refs and DOM Access
+
+<!-- @tags: ref, dom-access, focus, imperative, third-party, canvas, resize-observer, cleanup -->
+
+Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the \`.ref()\` method on elements.
+
+---
+
+## Basic Ref Usage
+
+The \`.ref()\` method takes a callback that runs when the element is mounted:
+
+\`\`\`typescript
+const AutofocusInput = ({ el }: Service) => () => {
+  return el('input').ref((node) => {
+    node.focus();
+  })();
+};
+\`\`\`
+
+---
+
+## Cleanup
+
+Return a cleanup function from the callback:
+
+\`\`\`typescript
+const ResizeObserved = ({ el, signal }: Service) => () => {
+  const dimensions = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      dimensions({ width, height });
+    });
+
+    observer.observe(node);
+
+    // Return cleanup function
+    return () => observer.disconnect();
+  })(
+    // ... children
+  );
+};
+\`\`\`
+
+The cleanup runs when the element is removed from the DOM.
+
+---
+
+## Passing Refs to Children
+
+If a parent needs access to a child's DOM node, pass a callback:
+
+\`\`\`typescript
+const Input = ({ el }: Service) => (props: { onRef?: (node: HTMLInputElement) => void }) => {
+  return el('input').ref((node) => {
+    props.onRef?.(node);
+  })();
+};
+
+const Form = (svc: Service) => () => {
+  const { el } = svc;
+  const useInput = svc(Input);
+  let inputNode: HTMLInputElement | null = null;
+
+  return el('form')(
+    useInput({ onRef: (node) => { inputNode = node; } }),
+    el('button').props({
+      onclick: () => inputNode?.focus()
+    })('Focus Input')
+  );
+};
+\`\`\`
+
+Or with signals for reactive access:
+
+\`\`\`typescript
+const Form = (svc: Service) => () => {
+  const { el, signal } = svc;
+  const useInput = svc(Input);
+  const inputRef = signal<HTMLInputElement | null>(null);
+
+  return el('form')(
+    useInput({ onRef: (node) => inputRef(node) }),
+    el('button').props({
+      onclick: () => inputRef()?.focus()
+    })('Focus Input')
+  );
+};
+\`\`\`
+
+---
+
+## Third-Party Library Integration
+
+Use refs to integrate non-reactive libraries:
+
+\`\`\`typescript
+const Chart = ({ el, effect }: Service) => (props: { data: Readable<ChartData> }) => {
+  return el('canvas').ref((canvas) => {
+    // Initialize chart library
+    const chart = new ChartLibrary(canvas, {
+      data: props.data()
+    });
+
+    // Update chart when data changes
+    const disposeEffect = effect(() => {
+      chart.update(props.data());
+    });
+
+    // Return cleanup
+    return () => {
+      disposeEffect();
+      chart.destroy();
+    };
+  })();
+};
+\`\`\`
+
+---
+
+## Multiple Refs
+
+For collections, store refs in a map:
+
+\`\`\`typescript
+const ScrollableList = ({ el, signal, map }: Service) => () => {
+  const items = signal(['a', 'b', 'c', 'd', 'e']);
+  const itemRefs = new Map<string, HTMLElement>();
+
+  const scrollToItem = (id: string) => {
+    itemRefs.get(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return el('div')(
+    el('div')(
+      ...['a', 'b', 'c', 'd', 'e'].map(id =>
+        el('button').props({ onclick: () => scrollToItem(id) })(\`Go to \${id}\`)
+      )
+    ),
+    el('div').props({ style: 'height: 200px; overflow: auto' })(
+      map(items, (item) =>
+        el('div').props({ style: 'height: 100px' }).ref((node) => {
+          itemRefs.set(item(), node);
+          return () => itemRefs.delete(item());
+        })(item)
+      )
+    )
+  );
+};
+\`\`\`
+
+---
+
+## Anti-patterns
+
+### Don't Forget Cleanup
+
+Refs that set up observers, listeners, or other subscriptions need cleanup to avoid memory leaks:
+
+\`\`\`typescript
+// ❌ WRONG - observer never disconnected
+const Measured = (svc: Service) => () => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+    // Missing cleanup! Observer lives forever
+  })();
+};
+\`\`\`
+
+\`\`\`typescript
+// ✅ CORRECT - return cleanup function
+const Measured = (svc: Service) => () => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+
+    return () => observer.disconnect();  // Cleanup when unmounted
+  })();
+};
 \`\`\`
 
 ---
@@ -686,11 +797,12 @@ const svc = compose(
   ComputedModule,
   EffectModule,
   createElModule(adapter),
+  // Add this 👇
   createMatchModule(adapter),
   MountModule
 );
 
-const { el, match, signal, mount } = svc;
+export type Service = typeof svc;
 \`\`\`
 
 ---
@@ -700,18 +812,18 @@ const { el, match, signal, mount } = svc;
 Toggle visibility by returning \`null\`:
 
 \`\`\`typescript
-const showMessage = signal(true);
+const ToggleMessage = ({ el, signal, match }: Service) => () => {
+  const showMessage = signal(true);
 
-const message = match(showMessage, (show) =>
-  show ? el('div')('Hello!') : null
-);
-
-const app = el('div')(
-  el('button').props({
-    onclick: () => showMessage(!showMessage())
-  })('Toggle'),
-  message
-);
+  return el('div')(
+    el('button').props({
+      onclick: () => showMessage(!showMessage())
+    })('Toggle'),
+    match(showMessage, (show) =>
+      show ? el('div')('Hello!') : null
+    )
+  );
+};
 \`\`\`
 
 ---
@@ -721,23 +833,23 @@ const app = el('div')(
 Switch between different element types:
 
 \`\`\`typescript
-const isEditMode = signal(false);
-const text = signal('Click edit to change');
+const EditableText = ({ el, signal, computed, match }: Service) => () => {
+  const isEditMode = signal(false);
+  const text = signal('Click edit to change');
 
-const content = match(isEditMode, (editing) =>
-  editing
-    ? el('input').props({ value: text })()
-    : el('span')(text)
-);
-
-const app = el('div')(
-  content,
-  el('button').props({
-    onclick: () => isEditMode(!isEditMode())
-  })(
-    computed(() => isEditMode() ? 'Save' : 'Edit')
-  )
-);
+  return el('div')(
+    match(isEditMode, (editing) =>
+      editing
+        ? el('input').props({ value: text })()
+        : el('span')(text)
+    ),
+    el('button').props({
+      onclick: () => isEditMode(!isEditMode())
+    })(
+      computed(() => isEditMode() ? 'Save' : 'Edit')
+    )
+  );
+};
 \`\`\`
 
 ---
@@ -748,23 +860,19 @@ Use a discriminated value for multiple branches:
 
 \`\`\`typescript
 type Tab = 'home' | 'settings' | 'profile';
-const currentTab = signal<Tab>('home');
 
-const tabContent = match(currentTab, (tab) => {
-  switch (tab) {
-    case 'home': return el('div')('Welcome home');
-    case 'settings': return el('div')('Settings panel');
-    case 'profile': return el('div')('Your profile');
-  }
-});
+const TabPanel = ({ el, signal, match }: Service) => () => {
+  const currentTab = signal<Tab>('home');
+
+  return match(currentTab, (tab) => {
+    switch (tab) {
+      case 'home': return el('div')('Welcome home');
+      case 'settings': return el('div')('Settings panel');
+      case 'profile': return el('div')('Your profile');
+    }
+  });
+};
 \`\`\`
-
----
-
-## Next Steps
-
-- [Rendering Lists](/guides/rendering-lists) — Efficient list rendering with \`map()\`
-- [Portals](/guides/portals) — Render to different DOM locations
 
 ---
 
@@ -852,7 +960,7 @@ const list = el('ul')(
 );
 \`\`\`
 
-The key function receives the plain item value and returns a unique identifier. This lets \`map()\` efficiently update items when the array changes. I tried so hard to get away without using keys but I'm not smart enough so key functions there shall remain.
+The key function receives the plain item value and returns a unique identifier. This lets \`map()\` efficiently update items when the array changes.
 
 ### Reactive Item Updates
 
@@ -895,6 +1003,7 @@ const svc = compose(
   EffectModule,
   createElModule(adapter),
   createMatchModule(adapter),
+  // Add this module 👇
   createPortalModule(adapter),
   MountModule
 );
@@ -909,30 +1018,32 @@ const { el, match, portal, signal, mount } = svc;
 Render to \`document.body\` (the default):
 
 \`\`\`typescript
-const showModal = signal(false);
+const App = ({ el, signal, match, portal }: Service) => () => {
+  const showModal = signal(false);
 
-const modal = match(showModal, (show) =>
-  show
-    ? portal()(
-        el('div').props({ className: 'modal-backdrop' })(
-          el('div').props({ className: 'modal' })(
-            el('h2')('Modal Title'),
-            el('p')('Modal content here...'),
-            el('button').props({
-              onclick: () => showModal(false)
-            })('Close')
+  return el('div')(
+    el('button').props({
+      onclick: () => showModal(true)
+    })('Open Modal'),
+
+    // Modal rendered to body, not inside this div
+    match(showModal, (show) =>
+      show
+        ? portal()(
+            el('div').props({ className: 'modal-backdrop' })(
+              el('div').props({ className: 'modal' })(
+                el('h2')('Modal Title'),
+                el('p')('Modal content here...'),
+                el('button').props({
+                  onclick: () => showModal(false)
+                })('Close')
+              )
+            )
           )
-        )
-      )
-    : null
-);
-
-const app = el('div')(
-  el('button').props({
-    onclick: () => showModal(true)
-  })('Open Modal'),
-  modal  // Rendered to body, not inside this div
-);
+        : null
+    )
+  );
+};
 \`\`\`
 
 ---
@@ -951,22 +1062,20 @@ portal(() => document.getElementById('tooltip-root'))(
 Or use a signal ref:
 
 \`\`\`typescript
-const targetRef = signal<HTMLElement | null>(null);
+const TooltipContainer = ({ el, signal, portal }: Service) => () => {
+  const targetRef = signal<HTMLElement | null>(null);
 
-el('div').ref((el) => {
-  targetRef(el);
-  return () => targetRef(null);
-})();
-
-portal(targetRef)(tooltipContent)
+  return el('div')(
+    el('div').ref((node) => {
+      targetRef(node);
+      return () => targetRef(null);
+    })(),
+    portal(targetRef)(
+      el('div').props({ className: 'tooltip' })('Tooltip content')
+    )
+  );
+};
 \`\`\`
-
----
-
-## Next Steps
-
-- [Rendering Lists](/guides/rendering-lists) — Efficient list rendering with \`map()\`
-- [Conditional Rendering](/guides/conditional-rendering) — Show/hide and switch views with \`match()\`
 
 ---
 
@@ -1124,7 +1233,7 @@ el('button').ref(
 )('Submit')
 \`\`\`
 
-Without batching, this would trigger three separate re-renders. With \`on()\`, it's one.
+Without batching, this would trigger three separate updates. With \`on()\`, it's one.
 
 ### Why Batching Matters
 
@@ -1165,133 +1274,11 @@ on('scroll', handler, { passive: true })
 
 ---
 
-## When to Use What
-
-**Use props (\`onclick\`, \`oninput\`, etc.) when:**
-- Simple, single handler
-- No need for cleanup management
-- Handler updates one signal
-
-**Use \`on()\` when:**
-- Multiple listeners on one element
-- Handler updates multiple signals (batching)
-- Need explicit cleanup
-- Using event options (capture, passive, once)
-
-Both are valid. Props are simpler; \`on()\` is more powerful.
-
----
-
-## A Complete Example
-
-A search form with debounced input:
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { OnModule } from '@rimitive/view/deps/addEventListener';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const adapter = createDOMAdapter();
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  BatchModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  OnModule,
-  MountModule
-);
-
-const { el, match, on, signal, computed, effect, mount } = svc;
-
-// State
-const query = signal('');
-const results = signal<string[]>([]);
-const loading = signal(false);
-
-// Debounced search
-let debounceTimer: number;
-const debouncedSearch = (q: string) => {
-  clearTimeout(debounceTimer);
-  if (!q.trim()) {
-    results([]);
-    return;
-  }
-
-  loading(true);
-  debounceTimer = setTimeout(() => {
-    // Simulate API call
-    const mockResults = ['Apple', 'Banana', 'Cherry', 'Date']
-      .filter(item => item.toLowerCase().includes(q.toLowerCase()));
-
-    // Batched update
-    results(mockResults);
-    loading(false);
-  }, 300);
-};
-
-// Watch query changes
-effect(() => {
-  debouncedSearch(query());
-});
-
-// App
-const App = () => el('div').props({ className: 'search-app' })(
-  el('h1')('Search'),
-
-  // Search input
-  el('input')
-    .props({
-      type: 'text',
-      placeholder: 'Type to search...',
-      value: query,
-    })
-    .ref(
-      on('input', (e) => query((e.target as HTMLInputElement).value)),
-      on('keydown', (e) => {
-        if (e.key === 'Escape') query('');
-      })
-    )(),
-
-  // Loading indicator
-  match(loading, (isLoading) =>
-    isLoading ? el('div').props({ className: 'loading' })('Searching...') : null
-  ),
-
-  // Results
-  el('ul')(
-    ...[] // Would use map() here for dynamic results
-  ),
-
-  // Result count
-  el('div').props({ className: 'count' })(
-    computed(() => {
-      const r = results();
-      return r.length === 0
-        ? 'No results'
-        : \`\${r.length} result\${r.length === 1 ? '' : 's'}\`;
-    })
-  )
-);
-
-const app = mount(App());
-document.body.appendChild(app.element!);
-\`\`\`
-
-Event handling, batching, cleanup—all handled. Next: [Loading Data](/guides/loading-data) for async data fetching.
-
----
-
 ## Creating a Behavior
 
 <!-- @tags: behavior, hook, reusable-logic, headless, state-management, portable -->
 
-A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to provide portable reactive logic.
+A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to encapsulate reactive logic.
 
 ---
 
@@ -1328,15 +1315,13 @@ counter.increment();
 counter.count();  // 11
 \`\`\`
 
-This works great for simple cases. The behavior is tied to your service, which is fine when you have a single app context.
-
 ---
 
 <!-- @tags: portable, service-injection, testable, ssr, dependency-injection -->
 
 ## The Portable Pattern
 
-When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern.
+When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern. This is, generally speaking, the preferred pattern.
 
 ### The Shape
 
@@ -1352,7 +1337,7 @@ const myPortableBehavior = (svc: Service) => (options?) => {
 };
 \`\`\`
 
-This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. So from now on, we'll be working with portable functions.
+This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. It also decouples your function from Rimitive! you could pass in whatever you want for \`svc\` later, as long as it matches the Service type. So from now on, we'll be working with portable functions.
 
 ### A Counter Example
 
@@ -1387,7 +1372,7 @@ c.increment();
 c.doubled();
 \`\`\`
 
-\`svc(counter)\` provides (or injects) the service (and is totally type safe). Then you have a ready-to-use behavior bound to your service that you can name whatever you want. Again, by convention (NOT prescription) we prefix with \`use*\` for nice semantics and ergonomics.
+\`svc(counter)\` provides (or injects) the service (and is type safe). Then you have a ready-to-use behavior bound to your service that you can name whatever you want. Again, by convention (NOT prescription) we prefix with \`use*\` for nice semantics and ergonomics.
 
 ---
 
@@ -1410,7 +1395,7 @@ const disclosure = ({ signal }: Service) => (initialOpen = false) => {
 };
 \`\`\`
 
-Now, we can compose it!
+Now, we can compose it:
 
 \`\`\`typescript
 const dropdown = (svc: Service) => {
@@ -1477,7 +1462,7 @@ Pure functions, pure tests. Again, if this is all you need, you can stop here. I
 
 ## Adding Routing
 
-Routing in Rimitive is reactive state. The router tracks the current URL and matches it against your route definitions. You render different views by reacting to those matches.
+Routing in Rimitive is simply reactive state. The router tracks the provided URL and matches it against your route definitions. You render different views by reacting to those matches.
 
 ---
 
@@ -1500,6 +1485,7 @@ const routes = [
 const svc = compose(
   SignalModule,
   ComputedModule,
+  // Add this 👇
   createRouterModule(routes)
 );
 
@@ -1527,74 +1513,50 @@ That's the core: routes in, reactive matches out.
 
 ## Rendering Routes
 
-Use \`match()\` to render different views based on the current route:
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { MountModule } from '@rimitive/view/deps/mount';
-import { createRouterModule } from '@rimitive/router';
-
-const routes = [
-  { id: 'home', path: '' },
-  { id: 'about', path: 'about' },
-];
-
-const adapter = createDOMAdapter();
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  MountModule,
-  createRouterModule(routes)
-);
-
-const { el, match, mount, router } = svc;
-\`\`\`
-
-Now render based on the matched route:
+Use \`match()\` to render based on the matched route:
 
 \`\`\`typescript
 // Page components
-const Home = () => el('div')(
+const Home = ({ el }: Service) => () => el('div')(
   el('h1')('Home'),
   el('p')('Welcome!')
 );
 
-const About = () => el('div')(
+const About = ({ el }: Service) => () => el('div')(
   el('h1')('About'),
   el('p')('Learn more about us.')
 );
 
-const NotFound = () => el('div')(
+const NotFound = ({ el }: Service) => () => el('div')(
   el('h1')('404'),
   el('p')('Page not found.')
 );
 
-// Route → component mapping
-const pages = {
-  home: Home,
-  about: About,
+// App with routing
+const App = (svc: Service) => () => {
+  const { el, match, router } = svc;
+  const HomePage = svc(Home);
+  const AboutPage = svc(About);
+  const NotFoundPage = svc(NotFound);
+
+  const pages: Record<string, () => ReturnType<typeof el>> = {
+    home: HomePage,
+    about: AboutPage,
+  };
+
+  return el('div')(
+    match(router.matches, (matches) => {
+      const route = matches[0];
+      if (!route) return NotFoundPage();
+
+      const Page = pages[route.id];
+      return Page ? Page() : NotFoundPage();
+    })
+  );
 };
 
-// App with routing
-const App = () => el('div')(
-  match(router.matches, (matches) => {
-    const route = matches[0];
-    if (!route) return NotFound();
-
-    const Page = pages[route.id];
-    return Page ? Page() : NotFound();
-  })
-);
-
-const app = mount(App());
+const AppComponent = svc(App);
+const app = mount(AppComponent());
 document.body.appendChild(app.element!);
 \`\`\`
 
@@ -1607,24 +1569,38 @@ When \`router.matches\` changes, \`match()\` swaps the rendered component.
 Use \`Link\` for declarative navigation that works with the router:
 
 \`\`\`typescript
-import { Link } from '@rimitive/router/link';
+import { createLinkModule } from '@rimitive/router/link';
 
-const Nav = () => el('nav')(
+// Add to service composition
+const svc = compose(
+  // ... other modules
+  createLinkModule()
+);
+
+const Nav = ({ el, Link }: Service) => () => el('nav')(
   Link({ href: '/' })('Home'),
   Link({ href: '/about' })('About')
 );
 
-const App = () => el('div')(
-  Nav(),
-  el('main')(
-    match(router.matches, (matches) => {
-      const route = matches[0];
-      if (!route) return NotFound();
-      const Page = pages[route.id];
-      return Page ? Page() : NotFound();
-    })
-  )
-);
+const App = (svc: Service) => () => {
+  const { el, match, router } = svc;
+  const NavComponent = svc(Nav);
+  const NotFoundPage = svc(NotFound);
+
+  // ... page setup from earlier
+
+  return el('div')(
+    NavComponent(),
+    el('main')(
+      match(router.matches, (matches) => {
+        const route = matches[0];
+        if (!route) return NotFoundPage();
+        const Page = pages[route.id];
+        return Page ? Page() : NotFoundPage();
+      })
+    )
+  );
+};
 \`\`\`
 
 \`Link\` renders an \`<a>\` tag that intercepts clicks and calls \`router.navigate()\` instead of doing a full page reload.
@@ -1632,7 +1608,7 @@ const App = () => el('div')(
 For programmatic navigation, use \`router.navigate()\` directly:
 
 \`\`\`typescript
-const Home = () => el('div')(
+const Home = ({ el, router }: Service) => () => el('div')(
   el('h1')('Home'),
   el('button').props({
     onclick: () => router.navigate('/about')
@@ -1665,22 +1641,24 @@ router.matches();
 Use the params in your component:
 
 \`\`\`typescript
-const ProductDetail = (params: { id: string }) => el('div')(
+const ProductDetail = ({ el }: Service) => (params: { id: string }) => el('div')(
   el('h1')(\`Product \${params.id}\`),
   el('p')('Product details here...')
 );
 
-// In the router match
+// In the App component's router match
+const ProductDetailPage = svc(ProductDetail);
+
 match(router.matches, (matches) => {
   const route = matches[0];
-  if (!route) return NotFound();
+  if (!route) return NotFoundPage();
 
   if (route.id === 'product-detail') {
-    return ProductDetail(route.params as { id: string });
+    return ProductDetailPage(route.params as { id: string });
   }
 
   const Page = pages[route.id];
-  return Page ? Page() : NotFound();
+  return Page ? Page() : NotFoundPage();
 });
 \`\`\`
 
@@ -1700,7 +1678,7 @@ router.query();   // { sort: 'price', category: 'electronics' }
 React to query changes:
 
 \`\`\`typescript
-const Products = () => {
+const Products = ({ el, computed, router }: Service) => () => {
   const sortOrder = computed(() => router.query().sort || 'name');
 
   return el('div')(
@@ -1720,7 +1698,7 @@ const Products = () => {
 Use \`router.currentPath\` to style the active link:
 
 \`\`\`typescript
-const NavLink = (href: string, label: string) => {
+const NavLink = ({ computed, router, Link }: Service) => (href: string, label: string) => {
   const isActive = computed(() => router.currentPath() === href);
 
   return Link({
@@ -1729,128 +1707,19 @@ const NavLink = (href: string, label: string) => {
   })(label);
 };
 
-const Nav = () => el('nav')(
-  NavLink('/', 'Home'),
-  NavLink('/about', 'About'),
-  NavLink('/products', 'Products')
-);
+const Nav = (svc: Service) => () => {
+  const { el } = svc;
+  const navLink = svc(NavLink);
+
+  return el('nav')(
+    navLink('/', 'Home'),
+    navLink('/about', 'About'),
+    navLink('/products', 'Products')
+  );
+};
 \`\`\`
 
----
-
-## A Complete Example
-
-Putting it all together:
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { MountModule } from '@rimitive/view/deps/mount';
-import { createRouterModule } from '@rimitive/router';
-import { Link } from '@rimitive/router/link';
-
-// Routes
-const routes = [
-  { id: 'home', path: '' },
-  { id: 'about', path: 'about' },
-  { id: 'products', path: 'products' },
-  { id: 'product-detail', path: 'products/:id' },
-];
-
-// Service
-const adapter = createDOMAdapter();
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  MountModule,
-  createRouterModule(routes)
-);
-
-const { el, match, mount, router, computed } = svc;
-
-// Navigation
-const NavLink = (href: string, label: string) =>
-  Link({
-    href,
-    className: computed(() =>
-      router.currentPath() === href ? 'active' : ''
-    )
-  })(label);
-
-const Nav = () => el('nav')(
-  NavLink('/', 'Home'),
-  NavLink('/about', 'About'),
-  NavLink('/products', 'Products')
-);
-
-// Pages
-const Home = () => el('div')(
-  el('h1')('Home'),
-  el('button').props({
-    onclick: () => router.navigate('/about')
-  })('Learn More')
-);
-
-const About = () => el('div')(
-  el('h1')('About'),
-  el('p')('We build things.')
-);
-
-const Products = () => el('div')(
-  el('h1')('Products'),
-  el('ul')(
-    el('li')(Link({ href: '/products/1' })('Product 1')),
-    el('li')(Link({ href: '/products/2' })('Product 2')),
-    el('li')(Link({ href: '/products/3' })('Product 3'))
-  )
-);
-
-const ProductDetail = (id: string) => el('div')(
-  el('h1')(\`Product \${id}\`),
-  el('button').props({
-    onclick: () => router.navigate('/products')
-  })('← Back')
-);
-
-const NotFound = () => el('div')(
-  el('h1')('404'),
-  Link({ href: '/' })('Go Home')
-);
-
-// App
-const App = () => el('div')(
-  Nav(),
-  el('main')(
-    match(router.matches, (matches) => {
-      const route = matches[0];
-      if (!route) return NotFound();
-
-      // Just plain old javascript...
-      switch (route.id) {
-        case 'home': return Home();
-        case 'about': return About();
-        case 'products': return Products();
-        case 'product-detail': return ProductDetail(route.params.id);
-        default: return NotFound();
-      }
-    })
-  )
-);
-
-// Mount
-const app = mount(App());
-document.body.appendChild(app.element!);
-\`\`\`
-
-Routes are data. Matching is reactive. Rendering is just \`match()\` on \`router.matches\`. Everything composes with the same patterns you've already learned.
-
-Next: [Server Rendering](/guides/server-rendering) for rendering on the server with data loading.
+Routes are data, and matching is reactive. Rendering is just \`match()\` on \`router.matches\`, and everything composes with the same patterns you've already learned!
 
 ---
 
@@ -1864,33 +1733,31 @@ Data loading in Rimitive is reactive. When dependencies change, data refetches. 
 
 ## The Manual Way
 
-You could manage async state yourself with signals and effects:
+You _could_ manage async state yourself with signals and effects:
 
 \`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+const ProductList = ({ signal, effect, el }: Service) => 
+  () => {
+    const loading = signal(true);
+    const data = signal<Product[]>([]);
+    const error = signal<Error | null>(null);
 
-const { signal, effect } = compose(SignalModule, ComputedModule, EffectModule);
-
-// State
-const loading = signal(true);
-const data = signal<string[]>([]);
-const error = signal<Error | null>(null);
-
-// Fetch on mount
-effect(() => {
-  loading(true);
-  fetch('/api/items')
-    .then(r => r.json())
-    .then(items => {
-      data(items);
-      loading(false);
-    })
-    .catch(err => {
-      error(err);
-      loading(false);
+    effect(() => {
+      loading(true);
+      fetch('/api/products')
+        .then(r => r.json())
+        .then(items => {
+          data(items);
+          loading(false);
+        })
+        .catch(err => {
+          error(err);
+          loading(false);
+        });
     });
-});
+
+    return el('div')(/* render based on loading/data/error */);
+  };
 \`\`\`
 
 This works, but you're managing three signals, handling errors, and there's no cancellation. When dependencies change mid-flight, you get race conditions.
@@ -1899,34 +1766,66 @@ This works, but you're managing three signals, handling errors, and there's no c
 
 ## The resource() Primitive
 
-\`resource()\` handles all of that. Add the resource module:
+\`resource()\` handles all of that. Add the resource module to your service:
 
 \`\`\`typescript
+// service.ts
 import { compose } from '@rimitive/core';
 import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 import { ResourceModule } from '@rimitive/resource';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 
-const svc = compose(
+const adapter = createDOMAdapter();
+
+export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  ResourceModule
+  ResourceModule,
+  createElModule(adapter),
+  createMatchModule(adapter)
 );
 
-const { signal, resource } = svc;
+export type Service = typeof svc;
 \`\`\`
 
-### Basic Usage
+---
 
-Create a resource with a fetcher function:
+## Basic Usage
+
+Create a resource inside your component with a fetcher function:
 
 \`\`\`typescript
-const items = resource((signal) =>
-  fetch('/api/items', { signal }).then(r => r.json())
-);
+const ProductList = ({ resource, el, match }: Service) => {
+  return () => {
+    const products = resource<Product[]>((signal) =>
+      fetch('/api/products', { signal }).then(r => r.json())
+    );
+
+    return el('div').ref(() => () => products.dispose())(
+      match(products, (state) => {
+        switch (state.status) {
+          case 'pending':
+            return el('div')('Loading...');
+          case 'error':
+            return el('div')(\`Error: \${state.error}\`);
+          case 'ready':
+            return el('ul')(
+              ...state.value.map(p => el('li')(p.name))
+            );
+        }
+      })
+    );
+  };
+};
 \`\`\`
 
-The fetcher receives an \`AbortSignal\`. Pass it to \`fetch()\` for automatic cancellation.
+Key points:
+- The fetcher receives an \`AbortSignal\` - pass it to \`fetch()\` for automatic cancellation
+- Create resources **inside the factory function**, not at module level
+- Call \`dispose()\` when the component unmounts to abort in-flight requests
 
 ### Reading State
 
@@ -1934,15 +1833,17 @@ A resource has multiple ways to read its state:
 
 \`\`\`typescript
 // Full state object
-items();
+products();
+// { status: 'idle' }     // when enabled=false
 // { status: 'pending' }
 // { status: 'ready', value: [...] }
 // { status: 'error', error: Error }
 
 // Convenience accessors
-items.loading();  // true | false
-items.data();     // T | undefined
-items.error();    // unknown | undefined
+products.idle();     // true when disabled
+products.loading();  // true when pending
+products.data();     // T | undefined
+products.error();    // unknown | undefined
 \`\`\`
 
 All are reactive—use them in computeds or effects.
@@ -1956,42 +1857,65 @@ All are reactive—use them in computeds or effects.
 Here's where resources shine. Read signals inside the fetcher, and the resource refetches when they change:
 
 \`\`\`typescript
-const categoryId = signal(1);
+const ProductList = (svc: Service) => {
+  const { signal, resource, el, match } = svc;
 
-const products = resource((signal) =>
-  fetch(\`/api/products?category=\${categoryId()}\`, { signal })
-    .then(r => r.json())
-);
+  return (initialCategory: string) => {
+    const category = signal(initialCategory);
 
-// Initial fetch: /api/products?category=1
+    const products = resource<Product[]>((signal) =>
+      fetch(\`/api/products?category=\${category()}\`, { signal })
+        .then(r => r.json())
+    );
 
-categoryId(2);
-// Aborts previous request
-// New fetch: /api/products?category=2
+    return el('div').ref(() => () => products.dispose())(
+      el('div')(
+        el('button').props({ onclick: () => category('electronics') })('Electronics'),
+        el('button').props({ onclick: () => category('books') })('Books')
+      ),
+      match(products, (state) => {
+        // ... render based on state
+      })
+    );
+  };
+};
 \`\`\`
 
-The previous request is automatically aborted. No race conditions, no stale data.
+When \`category\` changes:
+1. The previous request is automatically aborted
+2. A new fetch starts with the updated category
+3. No race conditions, no stale data
 
 ### Multiple Dependencies
 
 Track as many signals as you need:
 
 \`\`\`typescript
-const category = signal('electronics');
-const sortBy = signal('price');
-const page = signal(1);
+const ProductList = (svc: Service) => {
+  const { signal, resource } = svc;
 
-const products = resource((signal) =>
-  fetch(
-    \`/api/products?category=\${category()}&sort=\${sortBy()}&page=\${page()}\`,
-    { signal }
-  ).then(r => r.json())
-);
+  return () => {
+    const category = signal('electronics');
+    const sortBy = signal('price');
+    const page = signal(1);
 
-// Any change triggers a refetch
-category('books');   // refetch
-sortBy('rating');    // refetch
-page(2);             // refetch
+    const products = resource<Product[]>((signal) =>
+      fetch(
+        \`/api/products?category=\${category()}&sort=\${sortBy()}&page=\${page()}\`,
+        { signal }
+      ).then(r => r.json())
+    );
+
+    // Any change triggers a refetch with automatic cancellation
+    // category('books');   // refetch
+    // sortBy('rating');    // refetch
+    // page(2);             // refetch
+
+    return el('div').ref(() => () => products.dispose())(
+      // ... render with filters and pagination controls
+    );
+  };
+};
 \`\`\`
 
 ---
@@ -2000,83 +1924,38 @@ page(2);             // refetch
 
 ## Rendering Resources
 
-Use \`match()\` to render different states:
+Use \`match()\` to render based on resource state:
 
 \`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { ResourceModule } from '@rimitive/resource';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createMapModule } from '@rimitive/view/map';
-import { MountModule } from '@rimitive/view/deps/mount';
+const UserProfile = (svc: Service) => {
+  const { resource, el, match, computed } = svc;
 
-const adapter = createDOMAdapter();
+  return (userId: string) => {
+    const user = resource<User>((signal) =>
+      fetch(\`/api/users/\${userId}\`, { signal }).then(r => r.json())
+    );
 
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  ResourceModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  createMapModule(adapter),
-  MountModule
-);
-
-const { el, match, map, resource, mount } = svc;
-\`\`\`
-
-Now render based on resource state:
-
-\`\`\`typescript
-type Product = { id: number; name: string; price: number };
-
-const products = resource<Product[]>((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
-);
-
-const ProductList = () =>
-  match(products, (state) => {
-    switch (state.status) {
-      case 'pending':
-        return el('div')('Loading...');
-      case 'error':
-        return el('div')(\`Error: \${state.error}\`);
-      case 'ready':
-        return el('ul')(
-          map(state.value, (p) => p.id, (product) =>
-            el('li')(computed(() => product().name))
-          )
-        );
-    }
-  });
-\`\`\`
-
-### Using Convenience Accessors
-
-For simpler rendering, use the boolean accessors:
-
-\`\`\`typescript
-const ProductList = () =>
-  el('div')(
-    match(products.loading, (isLoading) =>
-      isLoading ? el('div')('Loading...') : null
-    ),
-    match(products.error, (err) =>
-      err ? el('div')(\`Error: \${err}\`) : null
-    ),
-    match(products.data, (data) =>
-      data
-        ? el('ul')(
-            map(data, (p) => p.id, (product) =>
-              el('li')(computed(() => product().name))
-            )
-          )
-        : null
-    )
-  );
+    return el('div').ref(() => () => user.dispose())(
+      match(user, (state) => {
+        switch (state.status) {
+          case 'idle':
+            return null; // Resource disabled
+          case 'pending':
+            return el('div').props({ className: 'skeleton' })('Loading profile...');
+          case 'error':
+            return el('div').props({ className: 'error' })(
+              \`Failed to load: \${state.error}\`
+            );
+          case 'ready':
+            return el('div')(
+              el('h1')(state.value.name),
+              el('p')(state.value.email)
+            );
+        }
+      })
+    );
+  };
+};
 \`\`\`
 
 ---
@@ -2085,202 +1964,206 @@ const ProductList = () =>
 
 ### Manual Refetch
 
-Trigger a refetch programmatically:
+Trigger a refetch programmatically (useful for "refresh" buttons or after mutations):
 
 \`\`\`typescript
-const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
-);
+const ProductList = (svc: Service) => {
+  const { resource, el, match } = svc;
 
-// Later...
-products.refetch();
-\`\`\`
+  return () => {
+    const products = resource<Product[]>((signal) =>
+      fetch('/api/products', { signal }).then(r => r.json())
+    );
 
-Useful for "refresh" buttons or after mutations.
-
-### Cleanup
-
-When a resource is no longer needed, dispose it to abort any in-flight request and stop tracking:
-
-\`\`\`typescript
-const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
-);
-
-// When done
-products.dispose();
-\`\`\`
-
-In components, clean up when the element is removed:
-
-\`\`\`typescript
-const ProductList = () => {
-  const products = resource((signal) =>
-    fetch('/api/products', { signal }).then(r => r.json())
-  );
-
-  return el('div').ref(() => {
-    // Cleanup callback runs when element is removed
-    return () => products.dispose();
-  })(
-    // ... render products
-  );
+    return el('div').ref(() => () => products.dispose())(
+      el('button').props({ onclick: () => products.refetch() })('Refresh'),
+      match(products, (state) => {
+        // ... render
+      })
+    );
+  };
 };
 \`\`\`
 
----
+### Cleanup
 
-## A Complete Example
-
-A product browser with category filtering:
+Always dispose resources when the component unmounts. The \`.ref()\` callback pattern works well:
 
 \`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import type { Reactive } from '@rimitive/signals';
-import { ResourceModule } from '@rimitive/resource';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createMapModule } from '@rimitive/view/map';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const adapter = createDOMAdapter();
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  ResourceModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  createMapModule(adapter),
-  MountModule
+return el('div').ref(() => {
+  // Return cleanup function
+  return () => products.dispose();
+})(
+  // ... children
 );
-
-const { el, match, map, signal, computed, resource, mount } = svc;
-
-// Types
-type Category = { id: number; name: string };
-type Product = { id: number; name: string; price: number };
-
-// State
-const selectedCategory = signal<number | null>(null);
-
-// Resources
-const categories = resource<Category[]>((signal) =>
-  fetch('/api/categories', { signal }).then(r => r.json())
-);
-
-const products = resource<Product[]>((signal) => {
-  const catId = selectedCategory();
-  const url = catId
-    ? \`/api/products?category=\${catId}\`
-    : '/api/products';
-  return fetch(url, { signal }).then(r => r.json());
-});
-
-// Components
-const CategoryButton = (category: Category) =>
-  el('button').props({
-    className: computed(() =>
-      selectedCategory() === category.id ? 'active' : ''
-    ),
-    onclick: () => selectedCategory(category.id),
-  })(category.name);
-
-const ProductCard = (productSignal: Reactive<Product>) =>
-  el('div').props({ className: 'product' })(
-    el('h3')(computed(() => productSignal().name)),
-    el('p')(computed(() => \`$\${productSignal().price}\`))
-  );
-
-const App = () =>
-  el('div').props({ className: 'app' })(
-    el('h1')('Products'),
-
-    // Category filter
-    el('div').props({ className: 'categories' })(
-      el('button').props({
-        className: computed(() =>
-          selectedCategory() === null ? 'active' : ''
-        ),
-        onclick: () => selectedCategory(null),
-      })('All'),
-      match(categories, (state) =>
-        state.status === 'ready'
-          ? el('span')(
-              ...state.value.map(CategoryButton)
-            )
-          : null
-      )
-    ),
-
-    // Products grid
-    match(products, (state) => {
-      switch (state.status) {
-        case 'pending':
-          return el('div').props({ className: 'loading' })('Loading products...');
-        case 'error':
-          return el('div').props({ className: 'error' })(
-            'Failed to load products',
-            el('button').props({
-              onclick: () => products.refetch()
-            })('Retry')
-          );
-        case 'ready':
-          return state.value.length === 0
-            ? el('div')('No products found')
-            : el('div').props({ className: 'grid' })(
-                map(state.value, (p) => p.id, ProductCard)
-              );
-      }
-    })
-  );
-
-const app = mount(App());
-document.body.appendChild(app.element!);
 \`\`\`
 
-Reactive dependencies, automatic cancellation, clean rendering. The resource handles the complexity; you handle the UI.
+This aborts any in-flight request and stops dependency tracking.
 
 ---
 
-## What About SSR?
+## Options
 
-For server-side rendering with data, Rimitive provides \`load()\` which integrates with the SSR system. That's covered in the SSR guide—for now, \`resource()\` handles client-side data fetching.
+### enabled
 
-Next: [Adding Routing](/guides/adding-routing) for navigation between views.
+Control whether the resource fetches with the \`enabled\` option:
+
+\`\`\`typescript
+const ProductList = (svc: Service) => {
+  const { signal, resource, el } = svc;
+
+  return (selectedId: string | null) => {
+    const id = signal(selectedId);
+
+    // Only fetch when we have an ID
+    const product = resource<Product>(
+      (s) => fetch(\`/api/products/\${id()}\`, { signal: s }).then(r => r.json()),
+      { enabled: () => id() !== null }
+    );
+
+    // product.idle() is true when disabled
+    return el('div').ref(() => () => product.dispose())(
+      product.idle()
+        ? el('p')('Select a product')
+        : el('p')(product.data()?.name ?? 'Loading...')
+    );
+  };
+};
+\`\`\`
+
+\`enabled\` accepts a boolean or a reactive function. When false, the resource stays in \`idle\` state. When it becomes true, fetching begins.
+
+#### Lazy Fetching
+
+Use \`enabled\` to defer fetching until a user action:
+
+\`\`\`typescript
+const ReportViewer = (svc: Service) => {
+  const { signal, resource, el, match } = svc;
+
+  return (reportId: string) => {
+    const shouldLoad = signal(false);
+
+    const report = resource<Report>(
+      (s) => fetch(\`/api/reports/\${reportId}\`, { signal: s }).then(r => r.json()),
+      { enabled: shouldLoad }
+    );
+
+    return el('div').ref(() => () => report.dispose())(
+      match(report, (state) => {
+        if (state.status === 'idle') {
+          return el('button').props({ onclick: () => shouldLoad(true) })(
+            'Load Report'
+          );
+        }
+        if (state.status === 'pending') return el('p')('Loading...');
+        if (state.status === 'error') return el('p')(\`Error: \${state.error}\`);
+        return el('div')(/* render report */);
+      })
+    );
+  };
+};
+\`\`\`
+
+The resource stays idle until the user clicks "Load Report", then fetches.
+
+### flush
+
+Control when refetches execute with the \`flush\` option:
+
+\`\`\`typescript
+import { mt, debounce } from '@rimitive/signals/strategies';
+
+// Defer refetches to microtask (coalesces rapid updates)
+const products = resource(fetcher, { flush: mt });
+
+// Debounce refetches (useful for search-as-you-type)
+const results = resource(
+  (s) => fetch(\`/api/search?q=\${query()}\`, { signal: s }).then(r => r.json()),
+  { flush: (run) => debounce(300, run) }
+);
+\`\`\`
+
+Without \`flush\`, refetches are synchronous—each dependency change triggers an immediate fetch. With a flush strategy, rapid updates are coalesced.
+
+---
+
+## resource() vs load()
+
+Rimitive has two primitives for async data:
+
+| | \`resource()\` | \`load()\` |
+|---|---|---|
+| **Use case** | Client-side data fetching | Server-rendered data with hydration |
+| **Reactive deps** | Yes—refetches when signals change | No—fetches once |
+| **Cancellation** | Automatic via AbortSignal | No |
+| **SSR support** | No | Yes—data serializes for hydration |
+
+**Use \`resource()\` when:**
+- Building a client-only app
+- Data depends on user interaction (filters, pagination, search)
+- You need automatic refetching and cancellation
+
+**Use \`load()\` when:**
+- You're doing SSR and want data in the initial HTML
+- The data should be fetched on the server and reused on the client
+- SEO or first-paint performance matters for this data
+
+<Aside type="caution" title="SSR Note">
+\`resource()\` starts fetching immediately when created. In SSR apps:
+
+- Use \`load()\` for data that should be server-rendered
+- Use \`resource()\` for client-side dynamic data (filters, search, user interactions)
+- For client-only resources, use the \`enabled\` option or a flush strategy:
+
+\`\`\`typescript
+// Option 1: enabled (resource stays idle on server)
+const data = resource(fetcher, {
+  enabled: () => typeof window !== 'undefined'
+});
+
+// Option 2: flush strategy (runs once on server, no re-runs)
+const data = resource(fetcher, { flush: mt });
+\`\`\`
+</Aside>
+
+In an SSR app, you might use both: \`load()\` for the initial page data that should be server-rendered, and \`resource()\` for dynamic data that loads after user interaction.
+
+See [SSR with Data Loading](/guides/ssr-loading) for \`load()\` usage.
 
 ---
 
 ## Server Rendering
 
-Server-side rendering in Rimitive renders your components to HTML on the server, waits for async data to load, then sends the complete page to the browser. The client hydrates the existing DOM instead of recreating it.
-
-Unlike many frameworks, Rimitive effects are synchronous and run on the server too. There's no special "client-only" mode — your reactive code works the same way in both environments. This makes SSR predictable: signals update, effects run, DOM changes, all synchronously.
+This guide covers the practical setup for basic SSR. If you're new to SSR concepts, read [Intro to SSR](/guides/intro-to-ssr) first.
 
 ---
 
-## The Basic Setup
+## Render Functions
 
-You need three pieces:
-1. A server adapter (uses linkedom instead of the real DOM)
-2. A render function that awaits async boundaries
-3. A client that hydrates the SSR HTML
+Rimitive provides three render functions for different SSR needs:
 
-### Server Adapter
+| Function | Use Case |
+|----------|----------|
+| \`renderToString\` | Basic sync SSR — no async data loading |
+| \`renderToStringAsync\` | Waits for all \`load()\` boundaries before returning HTML |
+| \`renderToStream\` | Sends HTML immediately, streams data as it loads |
 
-\`\`\`typescript
-import { createDOMServerAdapter } from '@rimitive/ssr/server';
+This guide covers \`renderToString\`. For async data loading, see [SSR with Data Loading](/guides/ssr-loading). For streaming, see [Streaming SSR](/guides/streaming-ssr).
 
-const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
-\`\`\`
+---
 
-The server adapter creates elements using linkedom (a lightweight DOM implementation). \`serialize\` converts elements to HTML strings. \`insertFragmentMarkers\` adds comment markers for hydration.
+## What You Need
 
-### Creating a Service
+For basic SSR, you need:
+1. A **server adapter** that creates elements using parse5 instead of the real DOM
+2. A **client hydration adapter** that walks existing DOM instead of creating new elements
 
-Your service factory takes an adapter, so both server and client can use the same components:
+---
+
+## Shared Service
+
+Start with creating the service a little differently than normal. This time, \`createService()\` will take an adapter, so both the server and client can use the same service for running:
 
 \`\`\`typescript
 // service.ts
@@ -2288,467 +2171,131 @@ import { compose } from '@rimitive/core';
 import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 import { createElModule } from '@rimitive/view/el';
 import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
 import type { Adapter } from '@rimitive/view/types';
 import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
-export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-};
-
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
+//                            👇 New!
+export function createService(adapter: Adapter<DOMAdapterConfig>) {
   return compose(
     SignalModule,
     ComputedModule,
     EffectModule,
     createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({
-      initialData: options?.loaderData,
-    })
+    createMatchModule(adapter)
   );
 }
 
 export type Service = ReturnType<typeof createService>;
 \`\`\`
 
----
+Now, this file can be shared with both the server and the client ✨
 
-## Loading Data with load()
+## Server Setup
 
-\`load()\` creates async boundaries that work with SSR. It takes three arguments:
+\`createParse5Adapter()\` creates a server-friendly adapter powered by [parse5](https://github.com/inikulin/parse5), a lightweight HTML parser for Node.js. When \`el("div")\` runs on the server, it creates a parse5 element instead of a real DOM element—same structure, no browser required.
 
-1. **id** — A unique string for data lookup during hydration
-2. **fetcher** — An async function that returns data
-3. **renderer** — A function that receives state and returns UI
-
-\`\`\`typescript
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-
-type UserData = { name: string; email: string };
-
-const UserProfile = (svc: Service) => {
-  const { loader, match, el } = svc;
-
-  return loader.load(
-    'user-profile',  // ID for hydration
-    () => fetch('/api/user').then(r => r.json()),
-    (state: LoadState<UserData>) =>
-      match(state.status, (status: LoadStatus) => {
-        switch (status) {
-          case 'pending':
-            return el('div')('Loading...');
-          case 'error':
-            return el('div')(\`Error: \${state.error()}\`);
-          case 'ready':
-            return el('div')(
-              el('h1')(state.data()!.name),
-              el('p')(state.data()!.email)
-            );
-        }
-      })
-  );
-};
-\`\`\`
-
-The state object has reactive properties:
-- \`state.status\` — \`'pending' | 'ready' | 'error'\`
-- \`state.data()\` — The loaded data (undefined until ready)
-- \`state.error()\` — The error (undefined unless error)
-
-### Error Handling
-
-Always handle errors in your renderer. The \`error\` state catches exceptions from your fetcher:
-
-\`\`\`typescript
-loader.load(
-  'stats',
-  async () => {
-    const res = await fetch('/api/stats');
-    if (!res.ok) {
-      throw new Error(\`HTTP \${res.status}: \${res.statusText}\`);
-    }
-    return res.json();
-  },
-  (state) =>
-    match(state.status, (status) => {
-      switch (status) {
-        case 'pending':
-          return Loading();
-        case 'error':
-          return ErrorDisplay(state.error());
-        case 'ready':
-          return StatsView(state.data()!);
-      }
-    })
-)
-\`\`\`
-
----
-
-## Rendering on the Server
-
-Use \`renderToStringAsync\` to render your app and wait for all \`load()\` boundaries:
+Create a fresh adapter and service for each incoming request. Reusing them across requests would cause data from one user to leak into another's response.
 
 \`\`\`typescript
 // server.ts
 import { createServer } from 'node:http';
-import {
-  createDOMServerAdapter,
-  renderToStringAsync,
-} from '@rimitive/ssr/server';
-import type { RefSpec } from '@rimitive/view/types';
+import { createParse5Adapter, renderToString } from '@rimitive/ssr/server';
 import { createService } from './service.js';
 import { App } from './App.js';
 
-const server = createServer(async (req, res) => {
+const server = createServer((req, res) => {
   // Create per-request adapter and service
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize } = createParse5Adapter();
   const service = createService(adapter);
 
-  // Create the app RefSpec
-  const appSpec = App(service);
+  // Create and render the app
+  const root = App(service).create(service);
+  const html = renderToString(root, serialize);
 
-  // Render to string, awaiting all load() boundaries
-  const html = await renderToStringAsync(appSpec, {
-    svc: service,
-    mount: (spec: RefSpec<unknown>) => spec.create(service),
-    serialize,
-    insertFragmentMarkers,
-  });
-
-  // Get loader data for hydration
-  const loaderData = service.loader.getData();
-
-  // Send HTML with embedded data
   res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end(\`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script>window.__RIMITIVE_DATA__ = \${JSON.stringify(loaderData)}</script>
-    </head>
-    <body>
-      <div class="app">\${html}</div>
-      <script src="/client.js"></script>
-    </body>
-    </html>
-  \`);
-});
-
-server.listen(3000);
-\`\`\`
-
-Key points:
-- Create a fresh adapter and service per request (no shared state)
-- \`renderToStringAsync\` awaits all \`load()\` boundaries before returning
-- \`service.loader.getData()\` collects all resolved data
-- Embed the data in a script tag for client hydration
-
----
-
-## Hydrating on the Client
-
-The client hydrates the existing DOM instead of creating new elements:
-
-\`\`\`typescript
-// client.ts
-import { createClientAdapter } from '@rimitive/ssr/client';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-// Create hydration adapter for the SSR root element
-const adapter = createClientAdapter(document.querySelector('.app')!);
-
-// Get loader data from SSR
-const loaderData = window.__RIMITIVE_DATA__;
-
-// Create service with hydrating adapter and loader data
-const service = createService(adapter, { loaderData });
-
-// Hydrate - walks existing DOM, wires up reactivity
-App(service).create(service);
-
-// Switch to normal DOM mode for future updates
-adapter.activate();
-\`\`\`
-
-What happens:
-1. \`createClientAdapter\` creates an adapter that walks existing DOM
-2. \`loaderData\` provides pre-fetched data so \`load()\` doesn't refetch
-3. \`.create(service)\` hydrates the app, connecting signals to existing elements
-4. \`adapter.activate()\` switches to normal DOM mode for subsequent updates
-
----
-
-## A Complete Example
-
-Here's a minimal but complete SSR setup:
-
-### Shared Service
-
-\`\`\`typescript
-// service.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
-import type { Adapter } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
-
-export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-};
-
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
-  return compose(
-    SignalModule,
-    ComputedModule,
-    EffectModule,
-    createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({ initialData: options?.loaderData })
-  );
-}
-
-export type Service = ReturnType<typeof createService>;
-\`\`\`
-
-### App Component
-
-\`\`\`typescript
-// App.ts
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-import type { Service } from './service.js';
-
-type Stats = { users: number; views: number };
-
-async function fetchStats(): Promise<Stats> {
-  const res = await fetch('https://api.example.com/stats');
-  if (!res.ok) throw new Error('Failed to fetch stats');
-  return res.json();
-}
-
-export const App = (svc: Service) => {
-  const { loader, match, el } = svc;
-
-  return el('div').props({ className: 'app' })(
-    el('h1')('My App'),
-
-    loader.load(
-      'stats',
-      fetchStats,
-      (state: LoadState<Stats>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div').props({ className: 'loading' })('Loading stats...');
-            case 'error':
-              return el('div').props({ className: 'error' })(
-                'Failed to load stats: ',
-                String(state.error())
-              );
-            case 'ready': {
-              const data = state.data()!;
-              return el('div').props({ className: 'stats' })(
-                el('p')(\`Users: \${data.users}\`),
-                el('p')(\`Views: \${data.views}\`)
-              );
-            }
-          }
-        })
-    )
-  );
-};
-\`\`\`
-
-### Server
-
-\`\`\`typescript
-// server.ts
-import { createServer } from 'node:http';
-import {
-  createDOMServerAdapter,
-  renderToStringAsync,
-} from '@rimitive/ssr/server';
-import type { RefSpec } from '@rimitive/view/types';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
-  const service = createService(adapter);
-
-  try {
-    const html = await renderToStringAsync(App(service), {
-      svc: service,
-      mount: (spec: RefSpec<unknown>) => spec.create(service),
-      serialize,
-      insertFragmentMarkers,
-    });
-
-    const loaderData = service.loader.getData();
-
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(\`<!DOCTYPE html>
+  res.end(\`<!DOCTYPE html>
 <html>
-<head>
-  <title>My App</title>
-  <script>window.__RIMITIVE_DATA__=\${JSON.stringify(loaderData)}</script>
-</head>
 <body>
   <div class="app">\${html}</div>
   <script src="/client.js"></script>
 </body>
 </html>\`);
-  } catch (err) {
-    console.error('SSR Error:', err);
-    res.writeHead(500);
-    res.end('Server Error');
-  }
 });
 
 server.listen(3000);
 \`\`\`
 
-### Client
+### What happens:
 
-\`\`\`typescript
-// client.ts
-import { createClientAdapter } from '@rimitive/ssr/client';
-import { createService } from './service.js';
-import { App } from './App.js';
+1. \`createParse5Adapter()\` returns an \`adapter\` (for creating elements) and \`serialize\` (for converting individual elements to HTML)
+2. \`createService(adapter)\` wires up your app with the server adapter
+3. \`App(service).create(service)\` runs your app, building a parse5 element tree
+4. \`renderToString(root, serialize)\` walks the tree and converts it to an HTML string
 
-const adapter = createClientAdapter(document.querySelector('.app')!);
-const service = createService(adapter, {
-  loaderData: window.__RIMITIVE_DATA__,
-});
-
-App(service).create(service);
-adapter.activate();
-\`\`\`
-
----
-
-## When Data Fetching Fails
-
-Server-side errors are caught and rendered as the error state. The client receives the error UI, and the error is preserved in the loader data.
-
-For server-level errors (outside of \`load()\` boundaries), wrap \`renderToStringAsync\` in a try/catch:
-
-\`\`\`typescript
-try {
-  const html = await renderToStringAsync(appSpec, options);
-  // ... send HTML
-} catch (err) {
-  console.error('SSR failed:', err);
-  res.writeHead(500);
-  res.end('Internal Server Error');
-}
-\`\`\`
-
----
-
-## Browser-Only Code in Refs
-
-Since effects and refs run on the server, code that relies on browser APIs needs guards. The server uses linkedom, which implements core DOM operations but not browser-specific features like \`focus()\`, \`scrollIntoView()\`, or \`getBoundingClientRect()\`.
-
-### Common Patterns
-
-**Guard with environment check:**
-
-\`\`\`typescript
-el('input').ref((el) => {
-  if (typeof window === 'undefined') return;
-  el.focus();
-})()
-\`\`\`
-
-**Use optional chaining for methods that might not exist:**
-
-\`\`\`typescript
-el('div').ref((el) => {
-  el.scrollIntoView?.({ behavior: 'smooth' });
-})()
-\`\`\`
-
-**Feature detection:**
-
-\`\`\`typescript
-el('div').ref((el) => {
-  if ('animate' in el) {
-    el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
-  }
-})()
-\`\`\`
-
-### What Works Without Guards
-
-- **Event handlers via \`on()\`** — The server adapter skips these automatically
-- **Event handlers via props** (\`onclick\`, \`oninput\`) — Also skipped on server
-- **Basic DOM properties** — \`className\`, \`textContent\`, \`id\`, etc. work fine
-
-### What Needs Guards
-
-- \`focus()\`, \`blur()\`
-- \`scrollIntoView()\`, \`scrollTo()\`
-- \`getBoundingClientRect()\`, \`getClientRects()\`
-- \`animate()\`
-- Browser globals: \`window\`, \`document\`, \`localStorage\`, \`navigator\`
+Finally the HTML is sent to the client (and your \`<script>\` tag loads the client bundle).
 
 ---
 
 ## Next Steps
 
-This covers basic SSR where the server waits for all data before sending HTML. For pages with slow data sources, you might want to send HTML immediately and stream data as it loads. That's covered in [Streaming SSR](/guides/streaming-ssr).
+- **[Client Hydration](/guides/client-hydration)** — Make the server-rendered HTML interactive
+- **[SSR with Data Loading](/guides/ssr-loading)** — Fetch data during SSR with \`load()\`
+- **[Streaming SSR](/guides/streaming-ssr)** — Send HTML progressively as data loads
 
 ---
 
 ## Streaming SSR
 
-With basic SSR, the server waits for all data before sending anything. Streaming SSR sends the page shell immediately, then streams data chunks as each \`load()\` boundary resolves. Users see content faster, especially when some data sources are slow.
+This guide builds on [SSR with Data Loading](/guides/ssr-loading). Make sure you understand \`load()\` and basic SSR setup first.
 
 ---
 
-## How Streaming Works
+## Why Streaming?
 
-1. Server renders the app with \`pending\` states for all \`load()\` boundaries
-2. Initial HTML is sent immediately — users see the loading UI
-3. As each \`load()\` boundary resolves, data is streamed as a script tag
-4. Client receives data via a streaming receiver and updates signals
-5. UI updates reactively — no DOM manipulation needed
+With \`renderToStringAsync\`, the server waits for **all** data before sending anything. That's fine when data loads quickly, but if one API takes 3 seconds, users stare at a blank screen for 3 seconds.
 
-The key insight: signals update the UI. The server streams data, the client pushes it to signals, and Rimitive handles the rest.
+**Streaming SSR** sends the page shell immediately, then streams data chunks as each \`load()\` boundary resolves. Users see content faster, especially when some data sources are slow.
+
+\`\`\`
+SERVER
+  │
+  ├─ App runs, creates load() boundaries with pending states
+  ├─ Sends initial HTML immediately (loading UI visible)
+  │
+  │   ─────────── HTML Shell ───────────►  Users see loading UI
+  │
+  ├─ load() #1 resolves → stream chunk
+  │   ─────────── <script>data1</script> ──►  UI updates
+  │
+  ├─ load() #2 resolves → stream chunk
+  │   ─────────── <script>data2</script> ──►  UI updates
+  │
+  └─ All done, close response
+\`\`\`
+
+Signals update the UI. The server streams data, the client pushes it to signals, and Rimitive handles the rest.
 
 ---
 
-## Setting Up the Stream Writer
+## The Stream Writer
 
-The stream writer generates JavaScript code for the streaming protocol:
+Streaming needs a way to send data from server to client as it becomes available. \`createStreamWriter\` generates the JavaScript for this:
 
 \`\`\`typescript
 import { createStreamWriter } from '@rimitive/ssr/server';
 
-// Create writer with a unique key
 const stream = createStreamWriter('__APP_STREAM__');
 
-// Bootstrap code initializes the receiver
+// Bootstrap code goes in <head> - sets up the receiver
 stream.bootstrapCode();
-// Returns: "window.__APP_STREAM__=(function(){...})();"
+// → "window.__APP_STREAM__=(function(){...})();"
 
-// Chunk code pushes data to the receiver
+// Chunk code is sent as data resolves - pushes to the receiver
 stream.chunkCode('stats', { users: 100 });
-// Returns: "__APP_STREAM__.push("stats",{"users":100});"
+// → "__APP_STREAM__.push(\\"stats\\",{\\"users\\":100});"
 \`\`\`
 
-The receiver queues data chunks until the client connects, then forwards them to the loader.
+The receiver queues data until the client calls \`connectStream()\`, then forwards chunks to the loader.
 
 ---
 
@@ -2760,7 +2307,7 @@ Use \`renderToStream\` instead of \`renderToStringAsync\`:
 // server.ts
 import { createServer } from 'node:http';
 import {
-  createDOMServerAdapter,
+  createParse5Adapter,
   renderToStream,
   createStreamWriter,
 } from '@rimitive/ssr/server';
@@ -2772,7 +2319,7 @@ const STREAM_KEY = '__APP_STREAM__';
 const stream = createStreamWriter(STREAM_KEY);
 
 const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
 
   // Create service with streaming callback
   const service = createService(adapter, {
@@ -2820,183 +2367,108 @@ const server = createServer(async (req, res) => {
 server.listen(3000);
 \`\`\`
 
-Key differences from basic SSR:
-- \`onResolve\` callback streams data as each boundary resolves
-- \`renderToStream\` returns immediately with pending states
-- \`done\` promise resolves when all data has streamed
+### What's different from async SSR:
+
+| Async SSR | Streaming SSR |
+|-----------|---------------|
+| \`renderToStringAsync\` waits for all data | \`renderToStream\` returns immediately |
+| One HTML response at the end | HTML shell + data chunks over time |
+| No \`onResolve\` needed | \`onResolve\` streams each chunk |
+| Simpler setup | More responsive UX |
 
 ---
 
-## Service with Streaming Support
+## Service with Streaming
 
-Your service needs to pass \`onResolve\` to the loader:
+Add \`onResolve\` to your service options and pass it through to \`createLoaderModule\`:
 
 \`\`\`typescript
-// service.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
-import type { Adapter } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
-
+// service.ts - add to your existing ServiceOptions
 export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-  onResolve?: (id: string, data: unknown) => void;
+  hydrationData?: Record<string, unknown>;
+  onResolve?: (id: string, data: unknown) => void;  // 👈 Add this
 };
 
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
-  return compose(
-    SignalModule,
-    ComputedModule,
-    EffectModule,
-    createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({
-      initialData: options?.loaderData,
-      onResolve: options?.onResolve,
-    })
-  );
-}
-
-export type Service = ReturnType<typeof createService>;
+// Pass it through to the loader
+createLoaderModule({
+  initialData: options?.hydrationData,
+  onResolve: options?.onResolve,  // 👈 Add this
+})
 \`\`\`
+
+See the [SSR with Data Loading](/guides/ssr-loading) service setup for the full example.
 
 ---
 
 ## Client Setup
 
-The client connects to the stream after hydration:
+The client hydrates, then connects to the stream to receive data chunks:
 
 \`\`\`typescript
 // client.ts
-import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import {
+  createDOMHydrationAdapter,
+  createHydrationAdapter,
+  connectStream,
+} from '@rimitive/ssr/client';
 import { createService } from './service.js';
 import { App } from './App.js';
 
 const STREAM_KEY = '__APP_STREAM__';
 
-// Create hydration adapter
-const adapter = createClientAdapter(document.querySelector('.app')!);
+// Create hydration adapter (same as basic SSR)
+const hydrationAdapter = createHydrationAdapter(
+  createDOMHydrationAdapter(document.querySelector('.app')!),
+  createDOMAdapter()
+);
 
-// Create service (no loaderData for streaming)
-const service = createService(adapter);
+// Create service (no hydrationData - data comes via stream instead)
+const service = createService(hydrationAdapter);
 
 // Hydrate the app
 App(service).create(service);
 
 // Switch to normal DOM mode
-adapter.activate();
+hydrationAdapter.switchToFallback();
 
-// Connect to the stream - receives queued and future data chunks
+// Connect to the stream to receive data chunks
 connectStream(service, STREAM_KEY);
 \`\`\`
 
-\`connectStream\` does two things:
-1. Flushes any data chunks that arrived before hydration completed
-2. Wires up the loader to receive future chunks
+### What happens:
+
+1. Hydration adapter walks existing DOM, attaches reactivity
+2. \`switchToFallback()\` switches to normal DOM mode for future updates
+3. \`connectStream()\` flushes any queued chunks and wires up the loader to receive future chunks
+4. As chunks arrive, signals update and the UI re-renders automatically
 
 ---
 
 ## Using load() with Streaming
 
-Components use \`load()\` the same way as basic SSR:
+Components use \`load()\` exactly the same as [basic async SSR](/guides/ssr-loading#using-load). The difference is what happens on the server:
 
-\`\`\`typescript
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-import type { Service } from './service.js';
+| Basic Async SSR | Streaming SSR |
+|-----------------|---------------|
+| Server waits for \`fetchStats\` | Server sends \`pending\` HTML immediately |
+| Full HTML sent after 2s | Skeleton UI visible instantly |
+| — | Data chunk streams when ready |
+| — | Signal updates, UI re-renders |
 
-type Stats = { users: number; views: number };
-
-async function fetchStats(): Promise<Stats> {
-  // Simulate slow API
-  await new Promise(r => setTimeout(r, 2000));
-  return { users: 1234, views: 56789 };
-}
-
-export const StatsWidget = (svc: Service) => {
-  const { loader, match, el } = svc;
-
-  return loader.load(
-    'stats',
-    fetchStats,
-    (state: LoadState<Stats>) =>
-      match(state.status, (status: LoadStatus) => {
-        switch (status) {
-          case 'pending':
-            return el('div').props({ className: 'skeleton' })('Loading stats...');
-          case 'error':
-            return el('div').props({ className: 'error' })(
-              'Failed to load: ',
-              String(state.error())
-            );
-          case 'ready': {
-            const data = state.data()!;
-            return el('div').props({ className: 'stats' })(
-              el('span')(\`\${data.users} users\`),
-              el('span')(\`\${data.views} views\`)
-            );
-          }
-        }
-      })
-  );
-};
-\`\`\`
-
-What happens with streaming:
-1. Server renders \`pending\` state immediately
-2. HTML with skeleton UI is sent to browser
-3. 2 seconds later, \`fetchStats\` resolves
-4. \`onResolve\` streams the data chunk
-5. Client receives data, updates the signal
-6. \`match()\` re-renders with \`ready\` state
+Your component code doesn't change—only the server orchestration differs.
 
 ---
 
 ## Error Handling
 
-Errors in \`load()\` boundaries are handled gracefully:
+Errors in \`load()\` boundaries work the same as [basic async SSR](/guides/ssr-loading#error-handling). With streaming:
 
-\`\`\`typescript
-loader.load(
-  'user-data',
-  async () => {
-    const res = await fetch('/api/user');
-    if (!res.ok) {
-      throw new Error(\`Failed: \${res.status}\`);
-    }
-    return res.json();
-  },
-  (state) =>
-    match(state.status, (status) => {
-      switch (status) {
-        case 'pending':
-          return el('div')('Loading...');
-        case 'error':
-          return el('div').props({ className: 'error' })(
-            el('p')('Something went wrong'),
-            el('pre')(String(state.error())),
-            el('button').props({
-              onclick: () => window.location.reload()
-            })('Retry')
-          );
-        case 'ready':
-          return UserProfile(state.data()!);
-      }
-    })
-)
-\`\`\`
+1. If a fetch fails, \`onResolve\` isn't called for that boundary
+2. The \`done\` promise still resolves (one error doesn't break other boundaries)
+3. The error state renders on the client via \`state.error()\`
 
-With streaming, errors still work:
-1. If the fetch fails, \`onResolve\` isn't called for that boundary
-2. The \`done\` promise still resolves (errors don't break the stream)
-3. The error state shows in the UI with no data chunk
-
-For server-level errors, wrap the streaming response:
+For server-level errors, wrap the response:
 
 \`\`\`typescript
 const server = createServer(async (req, res) => {
@@ -3007,13 +2479,11 @@ const server = createServer(async (req, res) => {
     res.end();
   } catch (err) {
     console.error('Streaming error:', err);
-    // If headers haven't been sent, send error page
     if (!res.headersSent) {
       res.writeHead(500);
       res.end('Server Error');
     } else {
-      // Headers already sent, try to close gracefully
-      res.end();
+      res.end(); // Headers sent, close gracefully
     }
   }
 });
@@ -3021,228 +2491,51 @@ const server = createServer(async (req, res) => {
 
 ---
 
-## A Complete Streaming Example
+## Complete Example
 
-### Service
-
-\`\`\`typescript
-// service.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
-import type { Adapter } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
-
-export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-  onResolve?: (id: string, data: unknown) => void;
-};
-
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
-  return compose(
-    SignalModule,
-    ComputedModule,
-    EffectModule,
-    createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({
-      initialData: options?.loaderData,
-      onResolve: options?.onResolve,
-    })
-  );
-}
-
-export type Service = ReturnType<typeof createService>;
-\`\`\`
-
-### App with Multiple Async Boundaries
+A working streaming example with multiple \`load()\` boundaries that resolve at different times:
 
 \`\`\`typescript
-// App.ts
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-import type { Service } from './service.js';
-
-type User = { name: string };
-type Stats = { pageViews: number };
-type News = { headlines: string[] };
-
-// Simulate different API speeds
-const fetchUser = async (): Promise<User> => {
-  await new Promise(r => setTimeout(r, 100));
-  return { name: 'Alice' };
-};
-
-const fetchStats = async (): Promise<Stats> => {
-  await new Promise(r => setTimeout(r, 1500));
-  return { pageViews: 12345 };
-};
-
-const fetchNews = async (): Promise<News> => {
-  await new Promise(r => setTimeout(r, 3000));
-  return { headlines: ['Breaking: Rimitive is fast', 'Streaming SSR works'] };
-};
-
-export const App = (svc: Service) => {
+// App.ts - Multiple load() boundaries with different speeds
+export const App = (svc: Service) => () => {
   const { loader, match, el } = svc;
 
-  return el('div').props({ className: 'app' })(
-    el('h1')('Streaming SSR Demo'),
-
-    // Fast - loads in 100ms
-    loader.load(
-      'user',
-      fetchUser,
-      (state: LoadState<User>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div')('Loading user...');
-            case 'error':
-              return el('div')('Error loading user');
-            case 'ready':
-              return el('div')(\`Welcome, \${state.data()!.name}!\`);
-          }
-        })
+  return el('div')(
+    // Fast - 100ms
+    loader.load('user', fetchUser, (state) =>
+      match(state.status, (s) => {
+        if (s === 'pending') return el('div')('Loading user...');
+        if (s === 'error') return el('div')('Error');
+        return el('div')(\`Welcome, \${state.data()!.name}!\`);
+      })
     ),
 
-    // Medium - loads in 1.5s
-    loader.load(
-      'stats',
-      fetchStats,
-      (state: LoadState<Stats>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div').props({ className: 'skeleton' })('Loading stats...');
-            case 'error':
-              return el('div')('Error loading stats');
-            case 'ready':
-              return el('div')(\`\${state.data()!.pageViews.toLocaleString()} page views\`);
-          }
-        })
-    ),
-
-    // Slow - loads in 3s
-    loader.load(
-      'news',
-      fetchNews,
-      (state: LoadState<News>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div').props({ className: 'skeleton' })('Loading news...');
-            case 'error':
-              return el('div')('Error loading news');
-            case 'ready':
-              return el('ul')(
-                ...state.data()!.headlines.map(h => el('li')(h))
-              );
-          }
-        })
+    // Slow - 3s
+    loader.load('news', fetchNews, (state) =>
+      match(state.status, (s) => {
+        if (s === 'pending') return el('div')('Loading news...');
+        if (s === 'error') return el('div')('Error');
+        return el('ul')(...state.data()!.headlines.map(h => el('li')(h)));
+      })
     )
   );
 };
 \`\`\`
 
-### Server
-
-\`\`\`typescript
-// server.ts
-import { createServer } from 'node:http';
-import {
-  createDOMServerAdapter,
-  renderToStream,
-  createStreamWriter,
-} from '@rimitive/ssr/server';
-import type { RefSpec } from '@rimitive/view/types';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-const STREAM_KEY = '__APP_STREAM__';
-const stream = createStreamWriter(STREAM_KEY);
-
-const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
-
-  const service = createService(adapter, {
-    onResolve: (id, data) => {
-      console.log(\`Streaming: \${id}\`);
-      res.write(\`<script>\${stream.chunkCode(id, data)}</script>\`);
-    },
-  });
-
-  const { initialHtml, done, pendingCount } = renderToStream(
-    App(service),
-    {
-      mount: (spec: RefSpec<unknown>) => spec.create(service),
-      serialize,
-      insertFragmentMarkers,
-    }
-  );
-
-  console.log(\`Initial render: \${pendingCount} pending boundaries\`);
-
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.write(\`<!DOCTYPE html>
-<html>
-<head>
-  <title>Streaming SSR</title>
-  <script>\${stream.bootstrapCode()}</script>
-</head>
-<body>
-  <div class="app">\${initialHtml}</div>
-  <script src="/client.js"></script>\`);
-
-  await done;
-
-  console.log('All boundaries resolved');
-  res.write('</body></html>');
-  res.end();
-});
-
-server.listen(3000);
-\`\`\`
-
-### Client
-
-\`\`\`typescript
-// client.ts
-import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-const STREAM_KEY = '__APP_STREAM__';
-
-const adapter = createClientAdapter(document.querySelector('.app')!);
-const service = createService(adapter);
-
-App(service).create(service);
-adapter.activate();
-connectStream(service, STREAM_KEY);
-
-console.log('Hydration complete, stream connected');
-\`\`\`
+With streaming:
+1. User sees "Loading user..." and "Loading news..." immediately
+2. After 100ms, user greeting appears (first chunk streamed)
+3. After 3s, news list appears (second chunk streamed)
 
 ---
 
 ## When to Use Streaming
 
-**Use streaming when:**
-- Some data sources are slow (> 500ms)
-- You want users to see content as fast as possible
-- Different parts of the page have different data needs
-
-**Use basic SSR when:**
-- All data loads quickly
-- You need the complete page for SEO crawlers
-- Simplicity is more important than speed
-
-Both approaches use the same \`load()\` API in components—only the server setup differs.
+| Use Streaming When | Use Basic Async SSR When |
+|--------------------|--------------------------|
+| Some data sources are slow (> 500ms) | All data loads quickly |
+| Users should see content ASAP | SEO crawlers need complete HTML |
+| Page has independent data regions | Simplicity matters more than speed |
 
 ---
 
@@ -3777,13 +3070,13 @@ Consumers can read whichever view they need:
 
 \`\`\`typescript
 // Only re-renders when active items change
-const ActiveList = (svc: Service, todos: ReturnType<typeof todoList>) => {
+const ActiveList = (svc: Service) => (todos: ReturnType<typeof todoList>) => {
   const { el, map } = svc;
   return map(todos.active, t => t.id, TodoItem);
 };
 
 // Only re-renders when counts change
-const Stats = (svc: Service, todos: ReturnType<typeof todoList>) => {
+const Stats = (svc: Service) => (todos: ReturnType<typeof todoList>) => {
   const { el, computed } = svc;
   return el('div')(
     computed(() => \`\${todos.counts().active} items left\`)
@@ -4046,7 +3339,7 @@ const counter = (svc: SignalsSvc) => (initial = 0) => {
 Usage with \`use()\`:
 
 \`\`\`typescript
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, use, computed } = svc;
   const { count, increment, decrement } = use(counter)(0);
 
@@ -4379,6 +3672,95 @@ describe('counter', () => {
 
 Pure functions, pure tests.
 
+### Testing Behaviors with Dependencies
+
+When a behavior depends on external services, compose with mock modules:
+
+\`\`\`typescript
+import { compose, defineModule } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+// A storage module your behavior depends on
+const StorageModule = defineModule({
+  name: 'storage',
+  create: () => ({
+    get: (key: string) => localStorage.getItem(key),
+    set: (key: string, value: string) => localStorage.setItem(key, value),
+  }),
+});
+
+type StorageImpl = { get: (key: string) => string | null; set: (key: string, value: string) => void };
+
+// Behavior that uses storage
+const persistedCounter = (svc: SignalsSvc & { storage: StorageImpl }) => (key: string) => {
+  const { signal, effect, storage } = svc;
+
+  const saved = storage.get(key);
+  const count = signal(saved ? parseInt(saved, 10) : 0);
+
+  effect(() => storage.set(key, String(count())));
+
+  return {
+    count,
+    increment: () => count(count() + 1),
+  };
+};
+
+// Test with mocked storage
+describe('persistedCounter', () => {
+  it('persists to storage', () => {
+    const stored: Record<string, string> = {};
+
+    // Create mock storage module
+    const MockStorageModule = defineModule({
+      name: 'storage',
+      create: (): StorageImpl => ({
+        get: (key: string) => stored[key] ?? null,
+        set: (key: string, value: string) => { stored[key] = value; },
+      }),
+    });
+
+    // Compose with mock instead of real storage
+    const testSvc = compose(
+      SignalModule,
+      ComputedModule,
+      EffectModule,
+      MockStorageModule
+    );
+
+    const c = persistedCounter(testSvc)('count');
+    c.increment();
+    c.increment();
+
+    expect(stored['count']).toBe('2');
+  });
+});
+\`\`\`
+
+For module dependency chains, use \`override()\` to swap nested dependencies:
+
+\`\`\`typescript
+const DbModule = defineModule({
+  name: 'db',
+  create: () => ({ query: () => fetchFromDatabase() }),
+});
+
+const UserModule = defineModule({
+  name: 'user',
+  dependencies: [DbModule],
+  create: ({ db }) => ({ getUser: (id: string) => db.query() }),
+});
+
+// Test: swap DbModule for a mock inside UserModule
+const MockDb = defineModule({
+  name: 'db',
+  create: () => ({ query: () => ({ id: '1', name: 'Test' }) }),
+});
+
+const testSvc = compose(override(UserModule, { db: MockDb }));
+expect(testSvc.user.getUser('1').name).toBe('Test');
+\`\`\`
+
 ---
 
 ## Anti-patterns
@@ -4422,8 +3804,9 @@ const dropdown = (svc: SignalsSvc) => () => {
 };
 
 // Component uses the behavior
-const Dropdown = (svc: Service) => {
-  const disc = svc.use(dropdown)();
+const Dropdown = (svc: Service) => () => {
+  const { el, match, use } = svc;
+  const disc = use(dropdown)();
   return el('div')(
     el('button').props({ ...disc.triggerProps(), onclick: disc.toggle })('Toggle'),
     match(disc.isOpen, (open) => open ? el('div').props(disc.contentProps())('Content') : null)
@@ -4545,7 +3928,7 @@ A portable component depends on a **service contract**—a set of primitives it 
 \`\`\`typescript
 // This component depends on { el, signal, computed }
 // It doesn't know or care where those come from
-const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: ComputedFactory }) => {
+const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: ComputedFactory }) => () => {
   const { el, signal, computed } = svc;
   const count = signal(0);
 
@@ -4579,7 +3962,7 @@ This shape lets you:
 - Pass the component to \`use()\` for ergonomic instantiation
 
 \`\`\`typescript
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, use } = svc;
 
   return el('div')(
@@ -4712,7 +4095,7 @@ const MyComponent = () => {
 
 \`\`\`typescript
 // ✅ CORRECT - depend on the service contract
-const MyComponent = (svc: Service) => {
+const MyComponent = (svc: Service) => () => {
   const { signal } = svc;
   const count = signal(0);  // Works with any compatible service
 };
@@ -4724,14 +4107,14 @@ Hardcoding URLs, API calls, or other external dependencies makes code untestable
 
 \`\`\`typescript
 // ❌ WRONG - hardcoded URL, can't test without network
-const DataList = (svc: Service) => {
+const DataList = (svc: Service) => () => {
   const items = svc.resource(() => fetch('/api/items'));
 };
 \`\`\`
 
 \`\`\`typescript
 // ✅ CORRECT - accept dependencies via service or props
-const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => {
+const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => () => {
   const items = svc.resource(svc.fetchItems);
 };
 
@@ -4855,7 +4238,7 @@ type AppService = Service & {
   user: Readable<User | null>;
 };
 
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, signal } = svc;
 
   // Create shared state
@@ -4866,9 +4249,9 @@ const App = (svc: Service) => {
   const appSvc: AppService = { ...svc, theme, user };
 
   return el('div')(
-    Header(appSvc),
-    Main(appSvc),
-    Footer(appSvc)
+    Header(appSvc)(),
+    Main(appSvc)(),
+    Footer(appSvc)()
   );
 };
 \`\`\`
@@ -4876,7 +4259,7 @@ const App = (svc: Service) => {
 Child components receive the extended service and can access the shared state directly:
 
 \`\`\`typescript
-const Header = (svc: AppService) => {
+const Header = (svc: AppService) => () => {
   const { el, computed, theme, user } = svc;
 
   return el('header').props({
@@ -4896,7 +4279,7 @@ No magic or implicit tree traversal. You can see exactly what's being passed whe
 Need to override a value for a subtree? Extend the service again:
 
 \`\`\`typescript
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   const { el, signal } = svc;
 
   // Override theme for this subtree
@@ -4904,8 +4287,8 @@ const DarkSection = (svc: AppService) => {
 
   return el('section')(
     // Everything in here sees theme = 'dark'
-    ThemedCard(darkSvc),
-    ThemedButton(darkSvc)
+    ThemedCard(darkSvc)(),
+    ThemedButton(darkSvc)()
   );
 };
 \`\`\`
@@ -4925,7 +4308,7 @@ const ThemedButton = ({ el, computed, theme }: AppService) => (props: { label: s
 };
 
 // Usage with \`use\`
-const App = ({ el, use }: AppService) => {
+const App = ({ el, use }: AppService) => () => {
   return el('div')(
     use(ThemedButton)({ label: 'Click me' })
   );
@@ -4961,10 +4344,10 @@ Components declare what they need:
 
 \`\`\`typescript
 // This component works with any service that has \`theme\`
-const ThemedCard = (svc: ThemedService) => { ... };
+const ThemedCard = (svc: ThemedService) => () => { ... };
 
 // This one needs the full app service
-const UserProfile = (svc: AppService) => { ... };
+const UserProfile = (svc: AppService) => () => { ... };
 \`\`\`
 
 ---
@@ -4993,7 +4376,7 @@ Creating signals at module scope seems convenient, but it causes state to leak a
 const theme = signal<'light' | 'dark'>('light');
 const user = signal<User | null>(null);
 
-const Header = (svc: Service) => {
+const Header = (svc: Service) => () => {
   // Reads global state - can't test in isolation
   return svc.el('header')(theme());
 };
@@ -5001,13 +4384,13 @@ const Header = (svc: Service) => {
 
 \`\`\`typescript
 // ✅ CORRECT - state lives in the service, threaded explicitly
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   const user = svc.signal<User | null>(null);
 
   const appSvc = { ...svc, theme, user };
 
-  return svc.el('div')(Header(appSvc));
+  return svc.el('div')(Header(appSvc)());
 };
 \`\`\`
 
@@ -5019,7 +4402,7 @@ Mutating the service directly instead of creating a new one causes subtle bugs�
 
 \`\`\`typescript
 // ❌ WRONG - mutates shared service object
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   svc.theme = svc.signal('dark');  // Mutates the original!
   return svc.el('section')(/* ... */);
 };
@@ -5027,9 +4410,9 @@ const DarkSection = (svc: AppService) => {
 
 \`\`\`typescript
 // ✅ CORRECT - create a new extended service
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   const darkSvc = { ...svc, theme: svc.signal('dark') };
-  return svc.el('section')(Child(darkSvc));
+  return svc.el('section')(Child(darkSvc)());
 };
 \`\`\`
 
@@ -5039,12 +4422,12 @@ Without proper types, you lose the main benefit of explicit service threading—
 
 \`\`\`typescript
 // ❌ WRONG - untyped extension loses type safety
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal('light');
   const appSvc = { ...svc, theme };  // Type is just Service & { theme: ... }
 
   // Later components have no idea what's in the service
-  return svc.el('div')(Header(appSvc));  // Header type is unclear
+  return svc.el('div')(Header(appSvc)());  // Header type is unclear
 };
 \`\`\`
 
@@ -5054,15 +4437,15 @@ type AppService = Service & {
   theme: Readable<'light' | 'dark'>;
 };
 
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   const appSvc: AppService = { ...svc, theme };
 
   // Header explicitly declares what it needs
-  return svc.el('div')(Header(appSvc));
+  return svc.el('div')(Header(appSvc)());
 };
 
-const Header = (svc: AppService) => {
+const Header = (svc: AppService) => () => {
   // TypeScript knows exactly what's available
   const { el, theme } = svc;
   return el('header')(/* ... */);
@@ -5086,7 +4469,7 @@ const ThemedSection = (svc: Service) => (props: { children: RefSpec }) => {
 
 \`\`\`typescript
 // ✅ CORRECT - shared state created at app level, threaded down
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   // Created once at the app level
   const theme = svc.signal<'light' | 'dark'>('light');
   const appSvc: AppService = { ...svc, theme };
@@ -5121,7 +4504,7 @@ In React and Solid, components are reactive functions that re-run during a rende
 In Rimitive, components are just functions that return specs. They run once, produce a data structure, and that's it. Errors are plain JavaScript errors that propagate normally.
 
 \`\`\`typescript
-const RiskyComponent = (svc: Service) => {
+const RiskyComponent = (svc: Service) => () => {
   const { el } = svc;
 
   // If this throws, it's a normal JS error
@@ -5134,11 +4517,12 @@ const RiskyComponent = (svc: Service) => {
 You handle it with... try/catch:
 
 \`\`\`typescript
-const SafeWrapper = (svc: Service) => {
+const SafeWrapper = (svc: Service) => () => {
   const { el } = svc;
+  const useRiskyComponent = svc(RiskyComponent);
 
   try {
-    return RiskyComponent(svc);
+    return useRiskyComponent();
   } catch (e) {
     return el('div').props({ className: 'error' })(
       'Something went wrong'
@@ -5154,7 +4538,7 @@ const SafeWrapper = (svc: Service) => {
 For async operations, use the \`resource\` primitive. It tracks error state explicitly:
 
 \`\`\`typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match } = svc;
 
   const products = resource((signal) =>
@@ -5245,13 +4629,14 @@ const errorBoundary = (svc: Service) =>
   };
 
 // Usage
-const App = (svc: Service) => {
-  const { el, use } = svc;
-  const withErrorBoundary = use(errorBoundary);
+const App = (svc: Service) => () => {
+  const { el } = svc;
+  const withErrorBoundary = svc(errorBoundary);
+  const useRiskyComponent = svc(RiskyComponent);
 
   return el('div')(
     withErrorBoundary(
-      () => RiskyComponent(svc),
+      () => useRiskyComponent(),
       (e) => el('div')(\`Error: \${e}\`)
     )
   );
@@ -5270,7 +4655,7 @@ Catching errors without logging or re-throwing hides bugs:
 
 \`\`\`typescript
 // ❌ WRONG - error silently disappears
-const LoadData = (svc: Service) => {
+const LoadData = (svc: Service) => () => {
   const { el, signal, effect } = svc;
   const data = signal<Data | null>(null);
 
@@ -5288,7 +4673,7 @@ const LoadData = (svc: Service) => {
 
 \`\`\`typescript
 // ✅ CORRECT - track error state, show it to users, log it
-const LoadData = (svc: Service) => {
+const LoadData = (svc: Service) => () => {
   const { el, signal, effect, match } = svc;
   const data = signal<Data | null>(null);
   const error = signal<Error | null>(null);
@@ -5352,7 +4737,7 @@ Resources track errors automatically. Ignoring them causes crashes:
 
 \`\`\`typescript
 // ❌ WRONG - assumes data is always available
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, map } = svc;
   const products = resource((s) => fetchProducts(s));
 
@@ -5365,7 +4750,7 @@ const ProductList = (svc: Service) => {
 
 \`\`\`typescript
 // ✅ CORRECT - handle error state explicitly
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match, map } = svc;
   const products = resource((s) => fetchProducts(s));
 
@@ -5390,7 +4775,7 @@ Catching an error but continuing as if nothing happened leads to inconsistent st
 
 \`\`\`typescript
 // ❌ WRONG - catches error but leaves state in limbo
-const SaveForm = (svc: Service) => {
+const SaveForm = (svc: Service) => () => {
   const { el, signal } = svc;
   const saving = signal(false);
 
@@ -5405,13 +4790,15 @@ const SaveForm = (svc: Service) => {
     // Only resets if no error - state is inconsistent
     saving(false);
   };
+
+  return el('form')(/* ... */);
 };
 \`\`\`
 
 \`\`\`typescript
 // ✅ CORRECT - always reset state in finally, track error separately
-const SaveForm = (svc: Service) => {
-  const { el, signal } = svc;
+const SaveForm = (svc: Service) => () => {
+  const { el, signal, match } = svc;
   const saving = signal(false);
   const saveError = signal<Error | null>(null);
 
@@ -5516,7 +4903,7 @@ emailField.valid();   // true
 Bind the field to an input element:
 
 \`\`\`typescript
-const EmailInput = (svc: Service) => {
+const EmailInput = (svc: Service) => () => {
   const { el, on, signal, computed } = svc;
 
   const email = svc(field)({
@@ -5603,7 +4990,7 @@ const form = <T extends Record<string, { value: Readable<unknown>; valid: Readab
 ## Full Form Example
 
 \`\`\`typescript
-const SignupForm = (svc: Service) => {
+const SignupForm = (svc: Service) => () => {
   const { el, on, computed, match } = svc;
 
   // Create fields
@@ -5932,344 +5319,6 @@ tags.remove(0);    // Proper reactive update
 
 // Or if you need custom operations, create a new array:
 tags.items(items => items.filter(f => f.valid()));
-\`\`\`
-
----
-
-## Refs and DOM Access
-
-<!-- @tags: ref, dom-access, focus, imperative, third-party, canvas, resize-observer, cleanup -->
-
-Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the \`.ref()\` method on elements.
-
----
-
-## Basic Ref Usage
-
-The \`.ref()\` method takes a callback that runs when the element is mounted:
-
-\`\`\`typescript
-const AutofocusInput = ({ el }: Service) => {
-  return el('input').ref((node) => {
-    node.focus();
-  })();
-};
-\`\`\`
-
----
-
-## Cleanup
-
-Return a cleanup function from the callback:
-
-\`\`\`typescript
-const ResizeObserved = (svc: Service) => {
-  const { el, signal } = svc;
-  const dimensions = signal({ width: 0, height: 0 });
-
-  return el('div').ref((node) => {
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      dimensions({ width, height });
-    });
-
-    observer.observe(node);
-
-    // Return cleanup function
-    return () => observer.disconnect();
-  })(
-    // ... children
-  );
-};
-\`\`\`
-
-The cleanup runs when the element is removed from the DOM.
-
----
-
-## Using Refs in Effects
-
-If you need to access a DOM node from an effect, store it in a signal:
-
-\`\`\`typescript
-const FocusOnCondition = ({ el, signal, effect }: Service) => {
-  const inputRef = signal<HTMLInputElement | null>(null);
-  const shouldFocus = signal(false);
-
-  effect(() => {
-    const node = inputRef();
-    if (shouldFocus() && node) {
-      node.focus();
-    }
-  });
-
-  return el('div')(
-    el('input').ref((node) => inputRef(node))(),
-    el('button').props({
-      onclick: () => shouldFocus(true)
-    })('Focus Input')
-  );
-};
-\`\`\`
-
-The signal-as-ref pattern works because:
-- The signal holds the node reference
-- Effects track the signal
-- When the condition changes, the effect runs and has access to the node
-
----
-
-## Passing Refs to Children
-
-If a parent needs access to a child's DOM node, pass a callback:
-
-\`\`\`typescript
-const Input = ({ el }: Service, props: { onRef?: (node: HTMLInputElement) => void }) => {
-  return el('input').ref((node) => {
-    props.onRef?.(node);
-  })();
-};
-
-const Form = ({ el, use }: Service) => {
-  let inputNode: HTMLInputElement | null = null;
-
-  return el('form')(
-    use(Input)({ onRef: (node) => { inputNode = node; } }),
-    el('button').props({
-      onclick: () => inputNode?.focus()
-    })('Focus Input')
-  );
-};
-\`\`\`
-
-Or with signals for reactive access:
-
-\`\`\`typescript
-const Form = (svc: Service) => {
-  const { el, signal, use } = svc;
-  const inputRef = signal<HTMLInputElement | null>(null);
-
-  return el('form')(
-    use(Input)({ onRef: (node) => inputRef(node) }),
-    el('button').props({
-      onclick: () => inputRef()?.focus()
-    })('Focus Input')
-  );
-};
-\`\`\`
-
----
-
-## Third-Party Library Integration
-
-Use refs to integrate non-reactive libraries:
-
-\`\`\`typescript
-const Chart = (svc: Service, props: { data: Readable<ChartData> }) => {
-  const { el, effect } = svc;
-
-  return el('canvas').ref((canvas) => {
-    // Initialize chart library
-    const chart = new ChartLibrary(canvas, {
-      data: props.data()
-    });
-
-    // Update chart when data changes
-    const disposeEffect = effect(() => {
-      chart.update(props.data());
-    });
-
-    // Return cleanup
-    return () => {
-      disposeEffect();
-      chart.destroy();
-    };
-  })();
-};
-\`\`\`
-
----
-
-## Multiple Refs
-
-For collections, store refs in a map:
-
-\`\`\`typescript
-const ScrollableList = (svc: Service) => {
-  const { el, signal, map } = svc;
-
-  const items = signal(['a', 'b', 'c', 'd', 'e']);
-  const itemRefs = new Map<string, HTMLElement>();
-
-  const scrollToItem = (id: string) => {
-    itemRefs.get(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  return el('div')(
-    el('div')(
-      ...['a', 'b', 'c', 'd', 'e'].map(id =>
-        el('button').props({ onclick: () => scrollToItem(id) })(\`Go to \${id}\`)
-      )
-    ),
-    el('div').props({ style: 'height: 200px; overflow: auto' })(
-      map(items, (item) =>
-        el('div').props({ style: 'height: 100px' }).ref((node) => {
-          itemRefs.set(item(), node);
-          return () => itemRefs.delete(item());
-        })(item)
-      )
-    )
-  );
-};
-\`\`\`
-
----
-
-## Why Not \`createRef()\`?
-
-Some frameworks have a standalone \`createRef()\` that returns an object with a \`.current\` property. Rimitive doesn't have this because:
-
-1. The callback pattern is more explicit about timing
-2. A signal holding the node serves the same purpose and integrates with reactivity
-3. It's one less API to learn
-
-If you want the \`.current\` pattern, it's trivial to create:
-
-\`\`\`typescript
-const createRef = <T>() => {
-  let current: T | null = null;
-  return {
-    get current() { return current; },
-    set current(v: T | null) { current = v; },
-    callback: (node: T) => { current = node; }
-  };
-};
-
-// Usage
-const ref = createRef<HTMLInputElement>();
-el('input').ref(ref.callback)();
-// later: ref.current?.focus()
-\`\`\`
-
-But the signal pattern is usually better because it's reactive.
-
----
-
-## Anti-patterns
-
-### Don't Access Refs Before Mount
-
-Ref callbacks run at mount time. If you try to access the node synchronously or in an effect's first run, it won't exist yet:
-
-\`\`\`typescript
-// ❌ WRONG - ref is null on first effect run
-const FocusInput = (svc: Service) => {
-  const { el, signal, effect } = svc;
-  const inputRef = signal<HTMLInputElement | null>(null);
-
-  // This runs immediately, before the ref callback
-  effect(() => {
-    inputRef()!.focus();  // Error! inputRef() is null
-  });
-
-  return el('input').ref((node) => inputRef(node))();
-};
-\`\`\`
-
-\`\`\`typescript
-// ✅ CORRECT - guard against null, or trigger focus differently
-const FocusInput = (svc: Service) => {
-  const { el, signal, effect } = svc;
-  const inputRef = signal<HTMLInputElement | null>(null);
-
-  effect(() => {
-    const node = inputRef();
-    if (node) {  // Guard against null
-      node.focus();
-    }
-  });
-
-  return el('input').ref((node) => inputRef(node))();
-};
-
-// Or focus directly in the ref callback
-const FocusInput = (svc: Service) => {
-  return svc.el('input').ref((node) => node.focus())();
-};
-\`\`\`
-
-### Don't Forget Cleanup
-
-Refs that set up observers, listeners, or other subscriptions need cleanup to avoid memory leaks:
-
-\`\`\`typescript
-// ❌ WRONG - observer never disconnected
-const Measured = (svc: Service) => {
-  const { el, signal } = svc;
-  const size = signal({ width: 0, height: 0 });
-
-  return el('div').ref((node) => {
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      size({ width, height });
-    });
-    observer.observe(node);
-    // Missing cleanup! Observer lives forever
-  })();
-};
-\`\`\`
-
-\`\`\`typescript
-// ✅ CORRECT - return cleanup function
-const Measured = (svc: Service) => {
-  const { el, signal } = svc;
-  const size = signal({ width: 0, height: 0 });
-
-  return el('div').ref((node) => {
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      size({ width, height });
-    });
-    observer.observe(node);
-
-    return () => observer.disconnect();  // Cleanup when unmounted
-  })();
-};
-\`\`\`
-
-### Don't Use Refs for Declarative Updates
-
-Refs are for imperative DOM access. If you're using refs to update content that could be reactive, you're fighting the framework:
-
-\`\`\`typescript
-// ❌ WRONG - imperatively updating text content via ref
-const Counter = (svc: Service) => {
-  const { el, signal } = svc;
-  const count = signal(0);
-
-  return el('div')(
-    el('span').ref((node) => {
-      // Don't do this! Manually syncing signal to DOM
-      svc.effect(() => {
-        node.textContent = \`Count: \${count()}\`;
-      });
-    })(),
-    el('button').props({ onclick: () => count(count() + 1) })('+')
-  );
-};
-\`\`\`
-
-\`\`\`typescript
-// ✅ CORRECT - let reactivity handle it
-const Counter = (svc: Service) => {
-  const { el, signal, computed } = svc;
-  const count = signal(0);
-
-  return el('div')(
-    el('span')(computed(() => \`Count: \${count()}\`)),  // Reactive!
-    el('button').props({ onclick: () => count(count() + 1) })('+')
-  );
-};
 \`\`\`
 
 ---
@@ -6654,7 +5703,7 @@ Rimitive handles async state explicitly through two primitives: \`resource\` for
 The \`resource\` primitive wraps async operations and exposes their state reactively:
 
 \`\`\`typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match } = svc;
 
   const products = resource((signal) =>
@@ -6738,7 +5787,7 @@ But this is just a function—nothing special about it.
 When loading multiple resources, handle them together:
 
 \`\`\`typescript
-const Dashboard = (svc: Service) => {
+const Dashboard = (svc: Service) => () => {
   const { el, resource, computed, match } = svc;
 
   const user = resource((s) => fetchUser(s));
@@ -6755,15 +5804,15 @@ const Dashboard = (svc: Service) => {
   );
 
   return match(allLoading, (loading) => {
-    if (loading) return Spinner(svc);
+    if (loading) return Spinner(svc)();
 
     const error = anyError();
-    if (error) return ErrorMessage(svc, error);
+    if (error) return ErrorMessage(svc)(error);
 
     return el('div')(
-      UserHeader(svc, user.data()!),
-      StatsPanel(svc, stats.data()!),
-      NotificationList(svc, notifications.data()!)
+      UserHeader(svc)(user.data()!),
+      StatsPanel(svc)(stats.data()!),
+      NotificationList(svc)(notifications.data()!)
     );
   });
 };
@@ -6776,7 +5825,7 @@ const Dashboard = (svc: Service) => {
 When one resource depends on another:
 
 \`\`\`typescript
-const ProductDetail = (svc: Service) => {
+const ProductDetail = (svc: Service) => () => {
   const { el, resource, computed, match } = svc;
 
   const productId = svc.params.id; // from router
@@ -6796,17 +5845,17 @@ const ProductDetail = (svc: Service) => {
 
   return match(product, (state) => {
     if (state.status !== 'ready') {
-      return state.status === 'pending' ? Spinner(svc) : ErrorMessage(svc, state.error);
+      return state.status === 'pending' ? Spinner(svc)() : ErrorMessage(svc)(state.error);
     }
 
     return el('div')(
-      ProductInfo(svc, state.value),
+      ProductInfo(svc)(state.value),
       match(reviews, (reviewState) =>
         reviewState.status === 'pending'
           ? el('div')('Loading reviews...')
           : reviewState.status === 'error'
             ? el('div')('Failed to load reviews')
-            : ReviewList(svc, reviewState.value)
+            : ReviewList(svc)(reviewState.value)
       )
     );
   });
@@ -6846,7 +5895,7 @@ el('button').props({
 For simpler async boundaries—especially in SSR scenarios—use \`load()\`:
 
 \`\`\`typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, load, match } = svc;
 
   return load(
@@ -6854,11 +5903,11 @@ const ProductList = (svc: Service) => {
     (state) => match(state.status, (status) => {
       switch (status) {
         case 'pending':
-          return Spinner(svc);
+          return Spinner(svc)();
         case 'error':
-          return ErrorMessage(svc, state.error());
+          return ErrorMessage(svc)(state.error());
         case 'ready':
-          return ProductGrid(svc, state.data()!);
+          return ProductGrid(svc)(state.data()!);
       }
     })
   );
@@ -6881,7 +5930,7 @@ The key difference: \`load()\` takes a fetcher and a renderer. The renderer rece
 
 \`\`\`typescript
 // load() is ideal for SSR - data and UI are co-located
-const Page = (svc: Service) => {
+const Page = (svc: Service) => () => {
   const { el, load, match } = svc;
 
   return el('main')(
@@ -6889,10 +5938,10 @@ const Page = (svc: Service) => {
       () => fetchPageData(),
       (state) => match(state.status, (status) =>
         status === 'ready'
-          ? PageContent(svc, state.data()!)
+          ? PageContent(svc)(state.data()!)
           : status === 'error'
-            ? ErrorFallback(svc)
-            : LoadingSkeleton(svc)
+            ? ErrorFallback(svc)()
+            : LoadingSkeleton(svc)()
       )
     )
   );
@@ -6906,7 +5955,7 @@ const Page = (svc: Service) => {
 Resources should be disposed when no longer needed:
 
 \`\`\`typescript
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const { el, resource } = svc;
 
   const products = resource((s) => fetchProducts(s));
@@ -6928,21 +5977,21 @@ Only rendering the "ready" case leads to a broken UI during loading or when erro
 
 \`\`\`typescript
 // ❌ WRONG - crashes when data isn't ready, no error handling
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, map } = svc;
 
   const products = resource((s) => fetchProducts(s));
 
   // products.data() is undefined while loading!
   return el('div')(
-    map(products.data()!, (p) => ProductCard(svc, p))
+    map(products.data()!, (p) => ProductCard(svc)(p))
   );
 };
 \`\`\`
 
 \`\`\`typescript
 // ✅ CORRECT - handle all states explicitly
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match, map } = svc;
 
   const products = resource((s) => fetchProducts(s));
@@ -6950,12 +5999,12 @@ const ProductList = (svc: Service) => {
   return match(products, (state) => {
     switch (state.status) {
       case 'pending':
-        return Spinner(svc);
+        return Spinner(svc)();
       case 'error':
-        return ErrorMessage(svc, state.error);
+        return ErrorMessage(svc)(state.error);
       case 'ready':
         return el('div')(
-          map(state.value, (p) => ProductCard(svc, p))
+          map(state.value, (p) => ProductCard(svc)(p))
         );
     }
   });
@@ -6968,7 +6017,7 @@ Resources keep fetching and updating until disposed. Without cleanup, they leak 
 
 \`\`\`typescript
 // ❌ WRONG - resource lives forever, even after component unmounts
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const products = svc.resource((s) => fetchProducts(s));
 
   return svc.el('div')(/* ... */);
@@ -6978,7 +6027,7 @@ const ProductPanel = (svc: Service) => {
 
 \`\`\`typescript
 // ✅ CORRECT - dispose when element unmounts
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const products = svc.resource((s) => fetchProducts(s));
 
   return svc.el('div').ref(() => products.dispose)(/* ... */);
@@ -6991,7 +6040,7 @@ Resources pass an AbortSignal to cancel in-flight requests. Ignoring it causes r
 
 \`\`\`typescript
 // ❌ WRONG - ignores signal, old requests may resolve after new ones
-const Search = (svc: Service) => {
+const Search = (svc: Service) => () => {
   const query = svc.signal('');
 
   const results = svc.resource(() =>  // No signal parameter!
@@ -7002,7 +6051,7 @@ const Search = (svc: Service) => {
 
 \`\`\`typescript
 // ✅ CORRECT - pass signal to fetch for automatic cancellation
-const Search = (svc: Service) => {
+const Search = (svc: Service) => () => {
   const query = svc.signal('');
 
   const results = svc.resource((signal) =>
@@ -7019,7 +6068,7 @@ Resources are for reactive data fetching (GET). For mutations (POST, PUT, DELETE
 
 \`\`\`typescript
 // ❌ WRONG - resource for a mutation doesn't make sense
-const DeleteButton = (svc: Service) => {
+const DeleteButton = (svc: Service) => () => {
   const deletion = svc.resource((s) =>
     fetch('/api/item', { method: 'DELETE', signal: s })
   );  // This fetches immediately on mount!
@@ -7030,7 +6079,7 @@ const DeleteButton = (svc: Service) => {
 
 \`\`\`typescript
 // ✅ CORRECT - use asyncAction for imperative mutations
-const DeleteButton = (svc: Service) => {
+const DeleteButton = (svc: Service) => () => {
   const { el, signal } = svc;
 
   const pending = signal(false);
@@ -7061,7 +6110,7 @@ The \`data()\` accessor returns \`undefined\` until the resource is ready. Using
 
 \`\`\`typescript
 // ❌ WRONG - data() is undefined until ready
-const UserProfile = (svc: Service) => {
+const UserProfile = (svc: Service) => () => {
   const user = svc.resource((s) => fetchUser(s));
 
   // This crashes during loading!
@@ -7071,7 +6120,7 @@ const UserProfile = (svc: Service) => {
 
 \`\`\`typescript
 // ✅ CORRECT - use match to ensure data exists
-const UserProfile = (svc: Service) => {
+const UserProfile = (svc: Service) => () => {
   const { el, resource, match } = svc;
   const user = resource((s) => fetchUser(s));
 
@@ -7095,9 +6144,38 @@ The following sections contain API documentation from each package's README.
 
 ### @rimitive/core
 
-A type-safe composition engine for building modular services. Define modules with dependencies, compose them together, get a fully-wired service.
+Simple, minimal Dependency Injection through module composition. Modules declare dependencies and \`compose()\` wires them together.
 
-This is the backbone of rimitive, but it works entirely on its own! No reactivity required. Use it to build libraries, DI containers, or any system where you want composable, testable modules.
+Additional features:
+
+- [**fork**](#forkbase-freshmodules) - fresh instances of selected modules, shares everything else
+- [**transient**](#transientmodule) - fresh instance per dependent instead of shared singleton
+- [**lazy**](#lazymodule) - async module initialization
+- [**override**](#overridemodule-replacements) - swap dependencies for testing or configuration
+- [**merge**](#mergeservice-additions) - extend context with additional properties
+
+Works standalone or as the foundation for rimitive's reactive system.
+
+## Architecture
+
+This is a **Dependency Injection (DI)** system using the **Composition Root** pattern:
+
+| Concept                   | In @rimitive/core                                                |
+| ------------------------- | ---------------------------------------------------------------- |
+| **Inversion of Control**  | Modules declare dependencies; they don't instantiate them        |
+| **Constructor Injection** | \`create(deps)\` receives resolved dependencies                    |
+| **Composition Root**      | \`compose()\` is the single place where the object graph is wired  |
+| **Scopes**                | Singleton (default), transient, or lazy (async)                  |
+| **Transitive Resolution** | Pass only what you need; dependencies are included automatically |
+| **Async Support**         | \`lazy()\` wrapper for modules with async \`create()\`               |
+
+Think of it like npm for runtime:
+
+\`\`\`
+package.json "dependencies"  →  Module declares dependencies
+npm install / node_modules   →  compose() resolves the graph
+import X from 'x'            →  deps available by name in create()
+\`\`\`
 
 ## Quick Start
 
@@ -7129,19 +6207,17 @@ svc.db.query('SELECT * FROM users');
 // [LOG] Executing: SELECT * FROM users
 \`\`\`
 
-Dependencies resolve automatically. Pass what you need, and rimitive figures out the rest.
-
 ---
 
 ## compose(...modules)
 
-Takes modules, returns a composed service.
+Resolves the dependency graph and returns a composed service. Each module is instantiated once and shared (singleton by default).
 
 \`\`\`typescript
 const svc = compose(Logger, Database, Cache);
 \`\`\`
 
-The returned service is an object with all your modules:
+Access modules as properties:
 
 \`\`\`typescript
 svc.logger.log('hi');
@@ -7227,6 +6303,166 @@ const App = (svc) => {
   return childSvc(Router);
 };
 \`\`\`
+
+---
+
+## override(module, replacements)
+
+Swap dependencies without changing the original module. Useful for testing or environment-specific configurations.
+
+\`\`\`typescript
+import { compose, override } from '@rimitive/core';
+
+// Production uses real database
+const prodSvc = compose(UserService);
+
+// Testing uses mock database
+const MockDB = defineModule({
+  name: 'db',
+  create: () => ({ query: () => mockData }),
+});
+
+const testSvc = compose(override(UserService, { db: MockDB }));
+\`\`\`
+
+Replacements are matched by name. If the replacement has a different name, it's aliased automatically:
+
+\`\`\`typescript
+const FileLogger = defineModule({
+  name: 'fileLogger', // Different name
+  create: () => ({ log: writeToFile }),
+});
+
+// FileLogger is aliased to 'logger' for this composition
+compose(override(App, { logger: FileLogger }));
+\`\`\`
+
+---
+
+## transient(module)
+
+Mark a module as transient - each dependent gets a fresh instance instead of sharing a singleton.
+
+\`\`\`typescript
+import { compose, defineModule, transient } from '@rimitive/core';
+
+const Logger = transient(
+  defineModule({
+    name: 'logger',
+    create: () => new Logger(),
+  })
+);
+
+const ServiceA = defineModule({
+  name: 'serviceA',
+  dependencies: [Logger],
+  create: ({ logger }) => {
+    /* unique logger instance */
+  },
+});
+
+const ServiceB = defineModule({
+  name: 'serviceB',
+  dependencies: [Logger],
+  create: ({ logger }) => {
+    /* different logger instance */
+  },
+});
+
+const svc = compose(ServiceA, ServiceB);
+\`\`\`
+
+Transient modules still share their singleton dependencies:
+
+\`\`\`typescript
+const Config = defineModule({ name: 'config', create: () => loadConfig() });
+
+const Logger = transient(
+  defineModule({
+    name: 'logger',
+    dependencies: [Config],
+    create: ({ config }) => new Logger(config),
+  })
+);
+
+// Each Logger instance shares the same Config
+\`\`\`
+
+---
+
+## fork(base, freshModules)
+
+Create a new composition that shares instances from an existing one, but with fresh instances of specified modules. Useful for per-request contexts, test isolation, or scoped state.
+
+\`\`\`typescript
+import { compose, fork, defineModule } from '@rimitive/core';
+
+const Config = defineModule({ name: 'config', create: () => loadConfig() });
+const DbPool = defineModule({ name: 'dbPool', create: () => createPool() });
+const DbConnection = defineModule({
+  name: 'dbConnection',
+  dependencies: [DbPool],
+  create: ({ dbPool }) => dbPool.getConnection(),
+});
+
+// Long-lived root composition
+const root = compose(Config, DbPool, DbConnection);
+
+// Per-request: fresh DbConnection, inherited Config and DbPool
+const requestCtx = fork(root, [DbConnection]);
+
+requestCtx.config; // Same instance (inherited from root)
+requestCtx.dbPool; // Same instance (inherited from root)
+requestCtx.dbConnection; // Fresh instance (not shared with root)
+
+// Cleanup when done - only disposes fresh instances
+requestCtx.dispose();
+// root is unaffected
+\`\`\`
+
+Fresh modules are:
+
+- **Re-instantiated** - new instance, not shared with the base
+- **Singleton within the fork** - shared by dependents in the forked context
+- **Independently disposable** - disposing the fork only cleans up its fresh instances
+
+**Rebinding dependencies:** Pass a replacement module with the same name to swap implementations:
+
+\`\`\`typescript
+const MockDb = defineModule({ name: 'db', create: () => mockDb });
+
+// UserService now receives MockDb instead of the original
+const testCtx = fork(root, [MockDb, UserService]);
+\`\`\`
+
+---
+
+## lazy(module)
+
+Mark a module with async \`create()\` as lazy. Lazy modules are awaited during composition, allowing async initialization like database connections or remote config loading.
+
+\`\`\`typescript
+import { compose, defineModule, lazy } from '@rimitive/core';
+
+const DbPool = lazy(
+  defineModule({
+    name: 'dbPool',
+    create: async () => {
+      const pool = await createPool();
+      await pool.connect();
+      return pool;
+    },
+  })
+);
+
+// compose() returns a Promise when lazy modules are present
+const svc = await compose(DbPool, UserService);
+
+// After await, everything is resolved - sync access
+svc.dbPool.query('SELECT 1');
+\`\`\`
+
+Async modules **must** be wrapped with \`lazy()\` - you'll get both a type error and runtime error otherwise.
 
 ---
 
@@ -7360,6 +6596,31 @@ Returns a dispose function:
 const dispose = effect(() => console.log(count()));
 dispose(); // stops tracking
 \`\`\`
+
+### Flush Strategies
+
+By default, effects run synchronously—the moment a dependency changes, the effect runs. Sometimes you want to defer execution. That's what flush strategies are for.
+
+\`\`\`typescript
+import { mt, raf, debounce } from '@rimitive/signals/extend';
+
+// Run on next microtask (coalesces rapid updates)
+effect(mt(() => console.log(count())));
+
+// Run on requestAnimationFrame (ideal for DOM reads/writes)
+effect(raf(() => updateCanvas(data())));
+
+// Run after 300ms of no changes
+effect(debounce(300, () => search(query())));
+\`\`\`
+
+| Strategy | Use case |
+|----------|----------|
+| \`mt(fn)\` | Batch multiple synchronous signal updates into one effect run |
+| \`raf(fn)\` | DOM measurements, canvas rendering, animations |
+| \`debounce(ms, fn)\` | User input, search boxes, expensive operations |
+
+Without a strategy, effects are synchronous. Wrap your effect function in a strategy to control timing.
 
 ---
 
@@ -7575,9 +6836,7 @@ import { createPortalModule } from '@rimitive/view/portal';
 const { portal } = compose(...modules, createPortalModule(adapter));
 
 // Portal to document.body (default)
-portal()(
-  el('div').props({ className: 'modal' })('Content')
-);
+portal()(el('div').props({ className: 'modal' })('Content'));
 
 // Portal to specific element
 portal(() => document.getElementById('tooltips'))(Tooltip());
@@ -7640,7 +6899,7 @@ import type { Adapter } from '@rimitive/view/adapter';
 
 const myAdapter: Adapter<MyConfig> = {
   createNode: (tag, props) => { ... },
-  setProperty: (element, key, value) => { ... },
+  setAttribute: (element, key, value) => { ... },
   insertBefore: (parent, node, anchor) => { ... },
   removeChild: (parent, node) => { ... },
   createTextNode: (text) => { ... },
@@ -7948,7 +7207,7 @@ Server-side rendering and hydration. Effects are synchronous and run on the serv
 \`\`\`typescript
 import { createServer } from 'node:http';
 import {
-  createDOMServerAdapter,
+  createParse5Adapter,
   renderToStringAsync,
 } from '@rimitive/ssr/server';
 import { createService } from './service.js';
@@ -7956,7 +7215,7 @@ import { App } from './App.js';
 
 const server = createServer(async (req, res) => {
   const { adapter, serialize, insertFragmentMarkers } =
-    createDOMServerAdapter();
+    createParse5Adapter();
   const service = createService(adapter);
 
   const html = await renderToStringAsync(App(service), {
@@ -7994,8 +7253,8 @@ import { createService } from './service.js';
 import { App } from './App.js';
 
 const adapter = createClientAdapter(document.querySelector('.app')!);
-const loaderData = window.__LOADER_DATA__;
-const service = createService(adapter, { loaderData });
+const ssrData = window.__LOADER_DATA__;
+const service = createService(adapter, { hydrationData: ssrData });
 
 App(service).create(service);
 adapter.activate(); // Switch to normal DOM mode
@@ -8019,7 +7278,7 @@ import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 export function createService(
   adapter: Adapter<DOMAdapterConfig>,
-  options?: { loaderData?: Record<string, unknown>; onResolve?: (id: string, data: unknown) => void }
+  options?: { hydrationData?: Record<string, unknown>; onResolve?: (id: string, data: unknown) => void }
 ) {
   return compose(
     SignalModule,
@@ -8028,7 +7287,7 @@ export function createService(
     createElModule(adapter),
     createMatchModule(adapter),
     createLoaderModule({
-      initialData: options?.loaderData,
+      initialData: options?.hydrationData,
       onResolve: options?.onResolve,
     })
   );
@@ -8076,7 +7335,7 @@ Send HTML immediately, stream data as it loads:
 
 \`\`\`typescript
 import {
-  createDOMServerAdapter,
+  createParse5Adapter,
   renderToStream,
   createStreamWriter,
 } from '@rimitive/ssr/server';
@@ -8085,7 +7344,7 @@ const stream = createStreamWriter('__APP_STREAM__');
 
 const server = createServer(async (req, res) => {
   const { adapter, serialize, insertFragmentMarkers } =
-    createDOMServerAdapter();
+    createParse5Adapter();
 
   const service = createService(adapter, {
     onResolve: (id, data) => {

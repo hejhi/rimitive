@@ -357,13 +357,6 @@ export type HitTestFn = (
 /**
  * Create a canvas node adapter for composable DOM + Canvas rendering
  *
- * This adapter implements the Adapter type, allowing canvas primitives
- * to be composed with DOM elements using the same el()/map()/when() patterns.
- *
- * The 'canvas' element type creates an HTMLCanvasElement that acts as a bridge
- * between DOM and the canvas scene graph. Children of the canvas element are
- * canvas primitives (circle, rect, etc.) that render to the 2D context.
- *
  * Returns an object with:
  * - adapter: The Adapter<CanvasTreeConfig> for use with createView
  * - hitTest: Function for hit testing canvas elements (used by event listeners)
@@ -555,7 +548,7 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
       // This catches errors like: dom.el('div')(canvas.el('circle')()) - missing canvas boundary
       if (parentContext && parentContext.adapter !== adapter) {
         throw new Error(
-          `Canvas primitive '${type}' must be nested inside a canvas element. ` +
+          `Canvas modules '${type}' must be nested inside a canvas element. ` +
             `Use canvas.el('canvas', {...})(...) to create a canvas boundary.`
         );
       }

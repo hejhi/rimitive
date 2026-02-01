@@ -20,7 +20,7 @@ import { OnModule } from '@rimitive/view/deps/addEventListener';
 import { createLoaderModule } from '@rimitive/view/load';
 import { createRouterModule, type RouterOptions } from '@rimitive/router';
 import type { Adapter, RefSpec } from '@rimitive/view/types';
-import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
+import type { TreeConfig } from '@rimitive/view/adapter';
 import { routes } from './routes.js';
 
 /**
@@ -46,8 +46,8 @@ export type ServiceOptions = RouterOptions & {
  * @param adapter - DOM adapter (regular, server, or hydrating)
  * @param options - Optional config (initialPath for SSR, hydrationData for hydration, onResolve for streaming)
  */
-export function createService(
-  adapter: Adapter<DOMTreeConfig>,
+export function createService<TConfig extends TreeConfig>(
+  adapter: Adapter<TConfig>,
   options?: ServiceOptions
 ) {
   return compose(

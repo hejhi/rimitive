@@ -253,6 +253,38 @@ export function createDOMHydrationAdapter(
       path.length = 0;
       path.push(...parentPath, index);
     },
+
+    /**
+     * Handle shadow root hydration for Declarative Shadow DOM.
+     *
+     * After DSD parsing, the host element has no light DOM children -
+     * the content is in the shadow root. We return the existing shadow root
+     * and let the normal element exit flow (appendChild) handle path management.
+     */
+    createShadowRoot: (host, options) => {
+      const element = host as Element;
+      const existingShadow = element.shadowRoot;
+
+      if (existingShadow) {
+        // Return existing shadow root from DSD
+        // Don't pop path here - appendChild handles element exit
+        return {
+          container: existingShadow as unknown as DOMTreeConfig['nodes'][string],
+          shadowRoot: existingShadow,
+        };
+      }
+
+      // No existing shadow - create new one (client-side navigation)
+      const shadowRoot = element.attachShadow({
+        mode: options.mode,
+        delegatesFocus: options.delegatesFocus,
+      });
+
+      return {
+        container: shadowRoot as unknown as DOMTreeConfig['nodes'][string],
+        shadowRoot,
+      };
+    },
   };
 }
 
@@ -278,6 +310,28 @@ export function createHydrationAdapter(
     onAttach: (ref, parent) => a.onAttach?.(ref, parent),
     beforeDestroy: (ref, parent) => a.beforeDestroy?.(ref, parent),
     onDestroy: (ref, parent) => a.onDestroy?.(ref, parent),
+    createShadowRoot: (host, options) => {
+      if (a.createShadowRoot) {
+        return a.createShadowRoot(host, options);
+      }
+      // Fallback for adapters without createShadowRoot
+      const element = host as Element;
+      const existingShadow = element.shadowRoot;
+      if (existingShadow) {
+        return {
+          container: existingShadow as DOMTreeConfig['nodes'][string],
+          shadowRoot: existingShadow,
+        };
+      }
+      const shadowRoot = element.attachShadow({
+        mode: options.mode,
+        delegatesFocus: options.delegatesFocus,
+      });
+      return {
+        container: shadowRoot as unknown as DOMTreeConfig['nodes'][string],
+        shadowRoot,
+      };
+    },
     switchToFallback: () => {
       a = fallbackAdapter;
     },

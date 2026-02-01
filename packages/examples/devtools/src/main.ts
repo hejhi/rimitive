@@ -1,7 +1,7 @@
 /**
  * Devtools Example - Main Entry Point
  *
- * Demonstrates instrumented signals and view primitives for devtools integration.
+ * Demonstrates instrumented signals and view modules for devtools integration.
  * Each example uses a separate service that shows up individually in DevTools.
  */
 import { useCounter } from './behaviors/useCounter';

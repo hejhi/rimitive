@@ -9,7 +9,7 @@ Server-side rendering and hydration. Effects are synchronous and run on the serv
 ```typescript
 import { createServer } from 'node:http';
 import {
-  createLinkedomAdapter,
+  createParse5Adapter,
   renderToStringAsync,
 } from '@rimitive/ssr/server';
 import { createService } from './service.js';
@@ -17,7 +17,7 @@ import { App } from './App.js';
 
 const server = createServer(async (req, res) => {
   const { adapter, serialize, insertFragmentMarkers } =
-    createLinkedomAdapter();
+    createParse5Adapter();
   const service = createService(adapter);
 
   const html = await renderToStringAsync(App(service), {
@@ -137,7 +137,7 @@ Send HTML immediately, stream data as it loads:
 
 ```typescript
 import {
-  createLinkedomAdapter,
+  createParse5Adapter,
   renderToStream,
   createStreamWriter,
 } from '@rimitive/ssr/server';
@@ -146,7 +146,7 @@ const stream = createStreamWriter('__APP_STREAM__');
 
 const server = createServer(async (req, res) => {
   const { adapter, serialize, insertFragmentMarkers } =
-    createLinkedomAdapter();
+    createParse5Adapter();
 
   const service = createService(adapter, {
     onResolve: (id, data) => {

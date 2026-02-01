@@ -77,7 +77,7 @@ export type Resource<T> = {
 
   /**
    * Dispose the resource - aborts in-flight requests and stops tracking.
-   * Call this in onCleanup() for scope integration.
+   * Return this from a `.ref()` callback for automatic cleanup on unmount.
    */
   readonly dispose: () => void;
 };

@@ -35,6 +35,5 @@ const use = compose(
   MountModule
 );
 
-// Export primitives
 export const { signal, computed, effect, resource, el, map, match, mount } =
   use;

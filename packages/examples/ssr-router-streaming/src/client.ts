@@ -20,7 +20,10 @@ import { STREAM_KEY, APP_ROOT } from './config.js';
 const adapter = createClientAdapter(document.querySelector(APP_ROOT)!);
 
 // Create service with hydrating adapter
-const service = createService(adapter);
+// Pass initialPath explicitly to ensure router matches server state during hydration
+const service = createService(adapter, {
+  initialPath: window.location.pathname,
+});
 
 // Hydrate the app - this registers load() boundaries in the loader
 AppLayout(service).create(service);

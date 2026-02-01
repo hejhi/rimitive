@@ -54,7 +54,7 @@ export type {
 } from './types';
 
 /**
- * Create a canvas view service (view primitives for canvas adapter)
+ * Create a canvas view service (view modules for canvas adapter)
  *
  * @example
  * ```ts

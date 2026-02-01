@@ -14,7 +14,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createLinkedomAdapter, renderToString } from '@rimitive/ssr/server';
+import { createParse5Adapter, renderToString } from '@rimitive/ssr/server';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
@@ -49,7 +49,7 @@ const server = createServer((req, res) => {
   );
 
   // Create per-request service with initial path
-  const { adapter, serialize } = createLinkedomAdapter();
+  const { adapter, serialize } = createParse5Adapter();
   const service = createService(adapter, { initialPath: url.pathname });
 
   // Create and render the app

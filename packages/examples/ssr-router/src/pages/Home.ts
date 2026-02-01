@@ -30,11 +30,15 @@ export const Home =
           ),
           el('div').props({ className: 'feature' })(
             el('h3')('🎯 Simple'),
-            el('p')('Same code runs on server and client. No framework lock-in.')
+            el('p')(
+              'Same code runs on server and client. No framework lock-in.'
+            )
           ),
           el('div').props({ className: 'feature' })(
             el('h3')('🔧 Flexible'),
-            el('p')('Add interactivity where you need it, keep static where you don\'t.')
+            el('p')(
+              "Add interactivity where you need it, keep static where you don't."
+            )
           )
         )
       )

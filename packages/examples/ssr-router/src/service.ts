@@ -14,10 +14,11 @@ import {
 import { createElModule } from '@rimitive/view/el';
 import { createMapModule } from '@rimitive/view/map';
 import { createMatchModule } from '@rimitive/view/match';
+import { createShadowModule } from '@rimitive/view/shadow';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
 import { createRouterModule, type RouterOptions } from '@rimitive/router';
 import type { Adapter, RefSpec } from '@rimitive/view/types';
-import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
+import type { TreeConfig } from '@rimitive/view/adapter';
 import { routes } from './routes.js';
 
 /**
@@ -38,8 +39,8 @@ export type ServiceOptions = RouterOptions;
  * @param adapter - DOM adapter (regular, server, or hydrating)
  * @param options - Optional config (initialPath for SSR)
  */
-export function createService(
-  adapter: Adapter<DOMTreeConfig>,
+export function createService<TConfig extends TreeConfig>(
+  adapter: Adapter<TConfig>,
   options?: ServiceOptions
 ) {
   return compose(
@@ -50,6 +51,7 @@ export function createService(
     createElModule(adapter),
     createMapModule(adapter),
     createMatchModule(adapter),
+    createShadowModule(adapter),
     OnModule,
     createRouterModule(routes, options)
   );

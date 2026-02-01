@@ -69,16 +69,14 @@ function isAbortError(error: unknown): boolean {
  * @example With scope cleanup
  * ```ts
  * const ProductList = (svc) => {
- *   const { el, resource, onCleanup } = svc;
+ *   const { el, resource } = svc;
  *
  *   const products = resource((signal) =>
  *     fetch('/api/products', { signal }).then(r => r.json())
  *   );
  *
  *   // Abort in-flight request when element is removed
- *   onCleanup(products.dispose);
- *
- *   return el('ul')(/* ... *\/);
+ *   return el('ul').ref(() => products.dispose)(/* ... *\/);
  * };
  * ```
  */

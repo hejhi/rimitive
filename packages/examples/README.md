@@ -4,18 +4,18 @@ Example applications demonstrating Rimitive features.
 
 ## Examples
 
-| Example           | Description                                 | Run                                                 |
-| ----------------- | ------------------------------------------- | --------------------------------------------------- |
-| **view**          | Core view primitives (`el`, `map`, `match`) | `pnpm --filter @rimitive/example-view dev`          |
-| **react**         | React integration with `@rimitive/react`    | `pnpm --filter @rimitive/example-react dev`         |
-| **router**        | Client-side routing                         | `pnpm --filter @rimitive/example-router dev`        |
-| **resource**              | Async data fetching with `resource()`          | `pnpm --filter @rimitive/example-resource dev`              |
-| **ssr-router**            | Basic SSR with `renderToString`                | `pnpm --filter @rimitive/example-ssr-router dev`            |
-| **ssr-router-async**      | SSR with async data loading (`load()`)         | `pnpm --filter @rimitive/example-ssr-router-async dev`      |
-| **ssr-router-streaming**  | Streaming SSR with `renderToStream`            | `pnpm --filter @rimitive/example-ssr-router-streaming dev`  |
-| **headless**      | Portable headless behaviors                 | `pnpm --filter @rimitive/example-headless dev`      |
-| **canvas**        | Custom canvas adapter                       | `pnpm --filter @rimitive/example-canvas dev`        |
-| **devtools**      | DevTools integration                        | `pnpm --filter @rimitive/example-devtools dev`      |
+| Example                  | Description                              | Run                                                        |
+| ------------------------ | ---------------------------------------- | ---------------------------------------------------------- |
+| **view**                 | Core view modules (`el`, `map`, `match`) | `pnpm --filter @rimitive/example-view dev`                 |
+| **react**                | React integration with `@rimitive/react` | `pnpm --filter @rimitive/example-react dev`                |
+| **router**               | Client-side routing                      | `pnpm --filter @rimitive/example-router dev`               |
+| **resource**             | Async data fetching with `resource()`    | `pnpm --filter @rimitive/example-resource dev`             |
+| **ssr-router**           | Basic SSR with `renderToString`          | `pnpm --filter @rimitive/example-ssr-router dev`           |
+| **ssr-router-async**     | SSR with async data loading (`load()`)   | `pnpm --filter @rimitive/example-ssr-router-async dev`     |
+| **ssr-router-streaming** | Streaming SSR with `renderToStream`      | `pnpm --filter @rimitive/example-ssr-router-streaming dev` |
+| **headless**             | Portable headless behaviors              | `pnpm --filter @rimitive/example-headless dev`             |
+| **canvas**               | Custom canvas adapter                    | `pnpm --filter @rimitive/example-canvas dev`               |
+| **devtools**             | DevTools integration                     | `pnpm --filter @rimitive/example-devtools dev`             |
 
 ## Quick Start
 
@@ -40,7 +40,7 @@ pnpm dev
 
 ### view
 
-Basic Rimitive view example using `el`, `map`, and `match` for DOM rendering. Good starting point for understanding the view primitives.
+Basic Rimitive view example using `el`, `map`, and `match` for DOM rendering. Good starting point for understanding the view modules.
 
 ### react
 
