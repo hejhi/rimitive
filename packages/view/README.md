@@ -1,6 +1,6 @@
 # @rimitive/view
 
-Reactive UI primitives for rimitive. Elements, lists, conditionals, portals.
+View layer tooling for rimitive. Elements, lists, conditionals, portals.
 
 ## Quick Start
 
@@ -30,7 +30,7 @@ const count = signal(0);
 const App = () =>
   el('div')(
     el('p')(computed(() => `Count: ${count()}`)),
-    el('button').props({ onclick: () => count((c) => c + 1) })('Increment')
+    el('button').props({ onclick: () => count(count() + 1) })('Increment')
   );
 
 document.body.appendChild(mount(App()).element!);

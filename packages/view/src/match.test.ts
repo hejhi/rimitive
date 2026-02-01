@@ -24,6 +24,8 @@ describe('match() - reactive element switching', () => {
       adapter: env.adapter,
       disposeScope: env.disposeScope,
       getElementScope: env.getElementScope,
+      withScope: env.withScope,
+      createChildScope: env.createChildScope,
     });
 
     return { ...env, el, match };

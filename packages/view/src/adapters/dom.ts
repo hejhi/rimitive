@@ -153,5 +153,36 @@ export function createDOMAdapter(): Adapter<DOMTreeConfig> {
     removeChild: (parent, child) => (parent as Node).removeChild(child as Node),
     insertBefore: (parent, child, reference) =>
       (parent as Node).insertBefore(child as Node, reference as Node | null),
+
+    /**
+     * Create or reuse a shadow root on the host element.
+     *
+     * During hydration, the browser may have already created a shadow root
+     * from Declarative Shadow DOM (<template shadowrootmode="...">).
+     * This method reuses existing shadow roots instead of failing.
+     */
+    createShadowRoot: (host, options) => {
+      const element = host as Element;
+
+      // Check for existing shadow root (from DSD or previous attachment)
+      const existingShadow = element.shadowRoot;
+      if (existingShadow) {
+        return {
+          container: existingShadow as unknown as DOMTreeConfig['nodes'][string],
+          shadowRoot: existingShadow,
+        };
+      }
+
+      // Create new shadow root
+      const shadowRoot = element.attachShadow({
+        mode: options.mode,
+        delegatesFocus: options.delegatesFocus,
+      });
+
+      return {
+        container: shadowRoot as unknown as DOMTreeConfig['nodes'][string],
+        shadowRoot,
+      };
+    },
   };
 }

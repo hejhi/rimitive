@@ -14,6 +14,8 @@ export type MatchOpts<TConfig extends TreeConfig> = {
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   getElementScope: CreateScopes['getElementScope'];
+  withScope: CreateScopes['withScope'];
+  createChildScope: CreateScopes['createChildScope'];
   adapter: Adapter<TConfig>;
 };
 
@@ -112,6 +114,8 @@ export function createMatchFactory<TConfig extends TreeConfig>({
   adapter,
   disposeScope,
   getElementScope,
+  withScope,
+  createChildScope,
 }: MatchOpts<TConfig>): MatchFactory<NodeOf<TConfig>> {
   type TBaseElement = NodeOf<TConfig>;
   type TFragRef = FragmentRef<TBaseElement>;
@@ -171,6 +175,8 @@ export function createMatchFactory<TConfig extends TreeConfig>({
         attach(parent, nextSibling) {
           let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
           let currentValue: T | undefined;
+          let currentBranchScope: ReturnType<typeof createChildScope> | null =
+            null;
           let isFirstRun = true;
 
           // Update function - called when reactive value changes
@@ -182,7 +188,13 @@ export function createMatchFactory<TConfig extends TreeConfig>({
             isFirstRun = false;
             currentValue = value;
 
-            // Clean up old element or fragment
+            // Dispose old branch scope first (kills component body effects)
+            if (currentBranchScope) {
+              disposeScope(currentBranchScope);
+              currentBranchScope = null;
+            }
+
+            // Clean up old element or fragment (disposes .ref() scopes)
             if (currentNode) removeNode(parent.element, currentNode);
 
             // Get RefSpec from matcher (pure function call)
@@ -194,8 +206,13 @@ export function createMatchFactory<TConfig extends TreeConfig>({
               return;
             }
 
-            // Create the element/fragment from the spec
-            const nodeRef = refSpec.create(svc);
+            // Create branch scope for this render
+            currentBranchScope = createChildScope();
+
+            // Create the element/fragment from the spec within the branch scope
+            const nodeRef = withScope(currentBranchScope, () =>
+              refSpec.create(svc)
+            );
             setFragmentChild(fragment, nodeRef);
             currentNode = nodeRef;
 

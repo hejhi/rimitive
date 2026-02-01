@@ -63,6 +63,37 @@ export type CreateScopes = {
   getElementScope: <TElement extends object>(
     element: TElement
   ) => RenderScope<TElement> | undefined;
+
+  /**
+   * Get the currently active scope, if any.
+   * Used by ScopedEffectModule to register disposables in the current scope.
+   */
+  getActiveScope: () => RenderScope<object> | null;
+
+  /**
+   * Run a function within a scope context.
+   * Effects created within the function will auto-register in the scope.
+   */
+  withScope: <T>(scope: RenderScope<object>, fn: () => T) => T;
+
+  /**
+   * Create a root scope for mount-level scoping.
+   * Used by mount() to create a scope that encompasses the entire component tree.
+   */
+  createRootScope: () => RenderScope<object>;
+
+  /**
+   * Create a child scope that links to the currently active scope.
+   * Used by map/match to create scopes for items/branches that auto-dispose
+   * when the parent scope is disposed.
+   */
+  createChildScope: () => RenderScope<object>;
+
+  /**
+   * Register a dispose function in the currently active scope.
+   * Used by ScopedEffectModule to auto-track effects.
+   */
+  registerDisposable: (dispose: () => void) => void;
 };
 
 /**
@@ -295,12 +326,83 @@ export function createScopes({
     return elementScopes.get(element) as RenderScope<TElem> | undefined;
   };
 
+  /**
+   * Get the currently active scope
+   */
+  const getActiveScope = (): RenderScope<object> | null => activeScope;
+
+  /**
+   * Run a function within a scope context
+   */
+  const withScope = <T>(scope: RenderScope<object>, fn: () => T): T => {
+    const prev = activeScope;
+    activeScope = scope;
+    try {
+      return fn();
+    } finally {
+      activeScope = prev;
+    }
+  };
+
+  /**
+   * Create a root scope for mount-level scoping
+   */
+  const createRootScope = (): RenderScope<object> => {
+    return {
+      __type: 'render-scope',
+      status: RENDER_SCOPE_CLEAN,
+      firstChild: undefined,
+      nextSibling: undefined,
+      firstDisposable: undefined,
+      element: {} as object, // Placeholder element for root scope
+    };
+  };
+
+  /**
+   * Create a child scope that links to the currently active scope.
+   * Used by map/match to create scopes for items/branches.
+   */
+  const createChildScope = (): RenderScope<object> => {
+    const parentScope = activeScope;
+
+    const scope: RenderScope<object> = {
+      __type: 'render-scope',
+      status: RENDER_SCOPE_CLEAN,
+      firstChild: undefined,
+      nextSibling: undefined,
+      firstDisposable: undefined,
+      element: {} as object, // Placeholder element for child scope
+    };
+
+    // Attach to parent's child list so it gets disposed with parent
+    if (parentScope) {
+      scope.nextSibling = parentScope.firstChild;
+      parentScope.firstChild = scope;
+    }
+
+    return scope;
+  };
+
+  /**
+   * Register a dispose function in the currently active scope
+   */
+  const registerDisposable = (dispose: () => void): void => {
+    const scope = activeScope;
+    if (!scope) return;
+    scope.firstDisposable = { dispose, next: scope.firstDisposable };
+  };
+
   return {
     disposeScope,
     createElementScope,
     scopedEffect,
     onCleanup,
     getElementScope,
+    getActiveScope,
+    withScope,
+    createRootScope,
+    createChildScope,
+    registerDisposable,
   };
 }
 

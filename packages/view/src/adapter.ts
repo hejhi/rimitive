@@ -278,4 +278,33 @@ export type Adapter<TConfig extends TreeConfig> = {
    * @param parent - The parent element (may no longer contain node)
    */
   onDestroy?: (ref: NodeRef<NodeOf<TConfig>>, parent: NodeOf<TConfig>) => void;
+
+  // ============================================================================
+  // Shadow DOM Support (optional)
+  // ============================================================================
+
+  /**
+   * Create a shadow root container for the given host element
+   *
+   * This optional method allows adapters to customize shadow root creation:
+   * - DOM adapter: Uses native attachShadow() (or can be omitted to use default)
+   * - SSR adapter: Creates <template shadowrootmode="..."> for Declarative Shadow DOM
+   *
+   * Returns a container node where shadow children should be appended.
+   * For real shadow roots, this is the ShadowRoot itself.
+   * For SSR/DSD, this is the template's content fragment.
+   *
+   * @param host - The host element to attach shadow root to
+   * @param options - Shadow root options (mode, delegatesFocus)
+   * @returns Object with container for children and optional shadowRoot reference
+   */
+  createShadowRoot?: (
+    host: NodeOf<TConfig>,
+    options: { mode: 'open' | 'closed'; delegatesFocus?: boolean }
+  ) => {
+    /** Container to append children to */
+    container: NodeOf<TConfig>;
+    /** The actual shadow root (for callbacks) - may be null for SSR */
+    shadowRoot: ShadowRoot | null;
+  };
 };
