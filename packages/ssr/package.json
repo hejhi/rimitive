@@ -59,7 +59,7 @@
     "@rimitive/resource": "workspace:*",
     "@rimitive/signals": "workspace:*",
     "@rimitive/view": "workspace:*",
-    "linkedom": "0.18.12"
+    "parse5": "8.0.0"
   },
   "devDependencies": {
     "@types/node": "25.0.9",

@@ -16,7 +16,7 @@ import {
   collectAsyncFragments,
   type AsyncFragment,
 } from '../shared/async-fragments';
-import type { Serialize } from './adapter';
+import type { Serialize } from './parse5-adapter';
 
 // =============================================================================
 // Render to String
@@ -26,7 +26,7 @@ import type { Serialize } from './adapter';
  * Render a node tree to HTML string
  *
  * @param nodeRef - The node tree to render
- * @param serialize - Function to serialize elements to HTML (from createLinkedomAdapter)
+ * @param serialize - Function to serialize elements to HTML (from createParse5Adapter)
  */
 export function renderToString(
   nodeRef: NodeRef<unknown>,
@@ -92,7 +92,7 @@ function isNodeRef(value: unknown): value is NodeRef<unknown> {
  *
  * Resolves all async fragments (load() boundaries) before returning HTML.
  * Each async fragment's resolve() fetches data and updates internal signals,
- * which causes the reactive content to update in-place (via linkedom).
+ * which causes the reactive content to update in-place.
  *
  * After all resolves complete, fragment markers are inserted around
  * the final resolved content using tree traversal. The parentElement
@@ -101,7 +101,7 @@ function isNodeRef(value: unknown): value is NodeRef<unknown> {
  *
  * @example
  * ```ts
- * const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
+ * const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
  * const service = createService(adapter);
  * const html = await renderToStringAsync(appSpec, {
  *   svc: service,
@@ -137,7 +137,7 @@ export async function renderToStringAsync<TSvc>(
   const processedFragments = new Set<AsyncFragment<unknown>>();
 
   // Resolve all async fragments iteratively
-  // Each resolve() updates signals, which updates the DOM via linkedom
+  // Each resolve() updates signals, which updates the virtual DOM tree
   let asyncFragments = collectAsyncFragments(nodeRef).filter(
     (f) => !processedFragments.has(f)
   );
@@ -147,7 +147,7 @@ export async function renderToStringAsync<TSvc>(
       asyncFragments.map(async (fragment) => {
         processedFragments.add(fragment);
         // resolve() fetches data and updates internal signals
-        // This causes reactive content to re-render via linkedom
+        // This causes reactive content to re-render
         await fragment[ASYNC_FRAGMENT].resolve();
       })
     );
@@ -185,12 +185,12 @@ export type RenderToStreamOptions = {
   mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
 
   /**
-   * Function to serialize elements to HTML (from createLinkedomAdapter)
+   * Function to serialize elements to HTML (from createParse5Adapter)
    */
   serialize: Serialize;
 
   /**
-   * Function to insert fragment markers (from createLinkedomAdapter)
+   * Function to insert fragment markers (from createParse5Adapter)
    */
   insertFragmentMarkers: (fragment: FragmentRef<unknown>) => void;
 };
@@ -219,9 +219,9 @@ export type StreamResult = {
  *
  * @example
  * ```ts
- * import { createLinkedomAdapter, renderToStream, createStreamWriter } from '@rimitive/ssr/server';
+ * import { createParse5Adapter, renderToStream, createStreamWriter } from '@rimitive/ssr/server';
  *
- * const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
+ * const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
  * const stream = createStreamWriter('__APP_STREAM__');
  *
  * // Create service with streaming callback
@@ -259,7 +259,7 @@ export function renderToStream(
   const asyncFragments = collectAsyncFragments(nodeRef);
 
   // Insert fragment markers for async fragments BEFORE serializing.
-  // This is needed because createLinkedomAdapter.onAttach skips async fragments
+  // This is needed because the adapter's onAttach skips async fragments
   // (they're normally handled by renderToStringAsync after resolution).
   // For streaming, we need markers around the PENDING state content so
   // the hydration adapter can locate these boundaries.

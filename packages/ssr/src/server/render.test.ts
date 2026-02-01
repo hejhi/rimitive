@@ -13,8 +13,7 @@ import { createSignalFactory } from '@rimitive/signals/signal';
 import { createGraphEdges } from '@rimitive/signals/deps/graph-edges';
 import { createScheduler } from '@rimitive/signals/deps/scheduler';
 import { createGraphTraversal } from '@rimitive/signals/deps/graph-traversal';
-import { parseHTML } from 'linkedom';
-import type { Serialize } from './adapter';
+import type { Serialize } from './parse5-adapter';
 
 // ============================================================================
 // Test Fixtures
@@ -24,16 +23,11 @@ const serialize: Serialize = (el: unknown) =>
   (el as { outerHTML: string }).outerHTML;
 
 function createMockRefSpec(html: string): RefSpec<unknown> {
-  const { document } = parseHTML('<!DOCTYPE html><html></html>');
-  const temp = document.createElement('template');
-  temp.innerHTML = html;
-  const element = temp.content.firstChild;
-
   return {
     status: STATUS_REF_SPEC,
     create: () => ({
       status: 1 as const,
-      element,
+      element: { outerHTML: html },
       parent: null,
       prev: null,
       next: null,

@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { renderToString } from './render';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@rimitive/view/types';
 import type { NodeRef, ElementRef, FragmentRef } from '@rimitive/view/types';
-import type { Serialize } from './adapter';
+import type { Serialize } from './parse5-adapter';
 
 // ============================================================================
 // Test Fixtures
@@ -25,7 +25,7 @@ const serialize: Serialize = (el: unknown) => {
   const element = el as { outerHTML?: string };
   if (element.outerHTML === undefined) {
     throw new Error(
-      'Element does not have outerHTML property. Are you using linkedom renderer?'
+      'Element does not have outerHTML property. Are you using an SSR adapter?'
     );
   }
   return element.outerHTML;
@@ -129,7 +129,7 @@ describe('Element Rendering', () => {
       'Element does not have outerHTML property'
     );
     expect(() => renderToString(element, serialize)).toThrow(
-      'Are you using linkedom renderer?'
+      'Are you using an SSR adapter?'
     );
   });
 });
@@ -398,7 +398,6 @@ import { ASYNC_FRAGMENT } from '../shared/async-fragments';
 import type { LoadState } from '@rimitive/view/load';
 import { STATUS_REF_SPEC } from '@rimitive/view/types';
 import type { RefSpec } from '@rimitive/view/types';
-import { createLinkedomAdapter } from './adapter';
 
 /**
  * Create an async fragment for testing.
@@ -568,16 +567,21 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
 }
 
 /**
+ * Mock insertFragmentMarkers that does nothing (for tests using mock elements)
+ */
+function mockInsertFragmentMarkers(): void {
+  // Mock implementation - does nothing for these tests
+}
+
+/**
  * Mock service context with adapter
  */
 function createMockService() {
-  const { adapter, serialize, insertFragmentMarkers } =
-    createLinkedomAdapter();
   const svc = {
     el: (tag: string) => (content: string) =>
       createMockRefSpec(`<${tag}>${content}</${tag}>`),
   };
-  return { svc, adapter, serialize, insertFragmentMarkers };
+  return { svc, adapter: null, serialize, insertFragmentMarkers: mockInsertFragmentMarkers };
 }
 
 describe('Async Rendering - renderToStringAsync', () => {

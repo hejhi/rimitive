@@ -6,7 +6,7 @@
  * @example
  * ```ts
  * import {
- *   createLinkedomAdapter,
+ *   createParse5Adapter,
  *   renderToString,
  *   renderToStringAsync,
  *   renderToStream,
@@ -25,8 +25,16 @@ export type {
 } from './render';
 
 // Server adapter
-export { createLinkedomAdapter } from './adapter';
-export type { Serialize, ServerAdapterResult } from './adapter';
+export { createParse5Adapter } from './parse5-adapter';
+export type {
+  Serialize,
+  Parse5AdapterResult,
+  Parse5TreeConfig,
+  Parse5Element,
+  Parse5TextNode,
+  Parse5CommentNode,
+  Parse5Node,
+} from './parse5-adapter';
 
 // Streaming
 export { createStreamWriter, safeJsonStringify } from './stream';
