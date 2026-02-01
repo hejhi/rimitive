@@ -1,0 +1,289 @@
+---
+import viewBenchmarkData from '../data/view-benchmarks.json';
+
+type Benchmark = {
+  name: string;
+  time: number;
+  min: number;
+  max: number;
+  avg: number;
+  p50: number;
+  p75: number;
+  p99: number;
+  args?: Record<string, unknown>;
+};
+
+type Suite = {
+  name: string;
+  benchmarks: Benchmark[];
+};
+
+type BenchmarkData = {
+  timestamp: string;
+  commit: string;
+  system: {
+    node: string;
+    platform: string;
+    arch: string;
+    cpus: number;
+    memory_gb: number;
+    cpu_model: string;
+  };
+  suites: Suite[];
+};
+
+const data = viewBenchmarkData as BenchmarkData;
+const hasData = data.suites.length > 0;
+
+function formatTime(ns: number): string {
+  if (ns < 1000) return `${ns.toFixed(2)} ns`;
+  if (ns < 1_000_000) return `${(ns / 1000).toFixed(2)} µs`;
+  if (ns < 1_000_000_000) return `${(ns / 1_000_000).toFixed(2)} ms`;
+  return `${(ns / 1_000_000_000).toFixed(2)} s`;
+}
+
+function formatDate(isoString: string): string {
+  if (!isoString) return 'N/A';
+  return new Date(isoString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+// Format suite name for display
+function formatSuiteName(name: string): string {
+  return name
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Check if times scale linearly (within tolerance)
+function checkLinearScaling(benchmarks: Benchmark[]): { isLinear: boolean; ratio: number; complexity: string } {
+  if (benchmarks.length < 2) return { isLinear: true, ratio: 1, complexity: 'O(1)' };
+
+  // Compare first and last benchmark times
+  const first = benchmarks[0];
+  const last = benchmarks[benchmarks.length - 1];
+
+  // Get the scaling factor from args
+  const firstArg = Object.values(first?.args || {})[0] as number || 1;
+  const lastArg = Object.values(last?.args || {})[0] as number || 1;
+  const argRatio = lastArg / firstArg;
+
+  const timeRatio = last!.time / first!.time;
+
+  // Linear if time ratio is close to or less than arg ratio
+  // Allow some overhead for small sizes
+  const isLinear = timeRatio <= argRatio * 1.5 || timeRatio < 2;
+  const normalizedRatio = timeRatio / argRatio;
+
+  let complexity = 'O(1)';
+  if (normalizedRatio > 1.2 && normalizedRatio <= 2) {
+    complexity = 'O(n)';
+  } else if (normalizedRatio > 2 && normalizedRatio <= 3) {
+    complexity = '~O(n)';
+  } else if (normalizedRatio > 3) {
+    complexity = '~O(n^2)';
+  }
+
+  return { isLinear, ratio: normalizedRatio, complexity };
+}
+
+// Get the max time for scaling the bar chart
+function getMaxTime(benchmarks: Benchmark[]): number {
+  return Math.max(...benchmarks.map(b => b.time));
+}
+---
+
+{!hasData ? (
+  <div class="no-data">
+    <p>No view benchmark data available yet.</p>
+    <p>Run <code>pnpm bench --docs</code> from the benchmarks package to generate results.</p>
+  </div>
+) : (
+  <div class="benchmarks">
+    <div class="meta">
+      <p><strong>Last run:</strong> {formatDate(data.timestamp)}</p>
+      <p><strong>Commit:</strong> <code>{data.commit}</code></p>
+      <p><strong>System:</strong> {data.system.cpu_model} ({data.system.cpus} cores, {data.system.memory_gb}GB RAM)</p>
+      <p><strong>Node:</strong> {data.system.node} on {data.system.platform}/{data.system.arch}</p>
+    </div>
+
+    <div class="note">
+      <p>
+        These benchmarks measure how view operations scale with data size.
+        <span class="linear">Linear scaling (O(n))</span> means time grows proportionally with input size.
+        <span class="constant">Constant time (O(1))</span> means time stays the same regardless of size.
+      </p>
+    </div>
+
+    {data.suites.map((suite) => {
+      const { isLinear, complexity } = checkLinearScaling(suite.benchmarks);
+      const maxTime = getMaxTime(suite.benchmarks);
+
+      return (
+        <div class="suite">
+          <h3>
+            {formatSuiteName(suite.name)}
+            <span class={`complexity ${isLinear ? 'good' : 'warn'}`}>
+              {complexity}
+            </span>
+          </h3>
+
+          <div class="chart">
+            {suite.benchmarks.map((bench) => {
+              const argValue = Object.values(bench.args || {})[0];
+              const barWidth = (bench.time / maxTime) * 100;
+
+              return (
+                <div class="bar-row">
+                  <div class="label">{argValue ?? 'default'}</div>
+                  <div class="bar-container">
+                    <div class="bar" style={`width: ${barWidth}%`}></div>
+                    <span class="time">{formatTime(bench.time)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
+
+<style>
+  .no-data {
+    padding: 2rem;
+    background: var(--sl-color-gray-6);
+    border-radius: 0.5rem;
+    text-align: center;
+  }
+
+  .no-data code {
+    background: var(--sl-color-gray-5);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+
+  .benchmarks {
+    margin-top: 1rem;
+  }
+
+  .meta {
+    background: var(--sl-color-gray-6);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .meta p {
+    margin: 0.25rem 0;
+  }
+
+  .meta code {
+    background: var(--sl-color-gray-5);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    font-size: 0.85em;
+  }
+
+  .note {
+    background: var(--sl-color-gray-6);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    border-left: 3px solid var(--sl-color-accent);
+  }
+
+  .note p {
+    margin: 0;
+  }
+
+  .linear {
+    color: #4ade80;
+    font-weight: 500;
+  }
+
+  .constant {
+    color: #60a5fa;
+    font-weight: 500;
+  }
+
+  .suite {
+    margin-bottom: 2.5rem;
+  }
+
+  .suite h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .complexity {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    font-family: monospace;
+  }
+
+  .complexity.good {
+    background: rgba(74, 222, 128, 0.2);
+    color: #4ade80;
+  }
+
+  .complexity.warn {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+  }
+
+  .chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .label {
+    min-width: 80px;
+    font-size: 0.85rem;
+    text-align: right;
+    font-family: monospace;
+    color: var(--sl-color-gray-2);
+  }
+
+  .bar-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 28px;
+  }
+
+  .bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--sl-color-accent) 0%, var(--sl-color-accent-high) 100%);
+    border-radius: 0.25rem;
+    min-width: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .time {
+    font-size: 0.85rem;
+    font-family: monospace;
+    color: var(--sl-color-gray-2);
+    white-space: nowrap;
+  }
+</style>

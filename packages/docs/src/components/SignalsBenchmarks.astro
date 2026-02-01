@@ -1,5 +1,11 @@
 ---
-import benchmarkData from '../data/benchmarks.json';
+// Try signals-specific first, fall back to combined
+let benchmarkData: typeof import('../data/benchmarks.json');
+try {
+  benchmarkData = await import('../data/signals-benchmarks.json');
+} catch {
+  benchmarkData = await import('../data/benchmarks.json');
+}
 
 type Benchmark = {
   name: string;
