@@ -81,7 +81,11 @@ export default defineConfig({
         },
         {
           label: 'Benchmarks',
-          slug: 'benchmarks',
+          items: [
+            { label: 'Overview', slug: 'benchmarks' },
+            { label: 'Signals', slug: 'signals/benchmarks' },
+            { label: 'View', slug: 'view/benchmarks' },
+          ],
         },
         {
           label: 'Why Rimitive?',

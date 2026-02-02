@@ -21,6 +21,7 @@ type BenchmarkResult = {
 // Simplified benchmark result for docs (stripped of samples)
 type BenchmarkEntry = {
   name: string;
+  group?: string; // Group name from mitata group()
   time: number; // p50 in nanoseconds
   min: number;
   max: number;
@@ -418,6 +419,7 @@ ${results
         for (const run of bench.runs) {
           entries.push({
             name: run.name,
+            group: bench.alias, // Group name from mitata group()
             time: run.stats.p50,
             min: run.stats.min,
             max: run.stats.max,
@@ -433,19 +435,9 @@ ${results
       return entries;
     };
 
-    // Separate results by suite type (signals vs view)
-    const signalsResults = results.filter(
-      (r) => !r.error && r.jsonData && !r.name.includes('/')
-    );
-    const viewResults = results.filter(
-      (r) => !r.error && r.jsonData && r.name.includes('/')
-    );
-
-    // Note: The benchmark file paths determine the suite type
-    // rimitive/*.bench.ts -> signals (no slash in name after basename extraction)
-    // view/**/*.bench.ts -> view (has category in path)
-
-    // Actually, let's check by looking at the source directory
+    // Categorize results by checking benchmark names
+    // Signals benchmarks have names like "Rimitive - 10 signals"
+    // View benchmarks have names like "append 100 to $existing existing"
     const categorizeResult = (result: BenchmarkResult): 'signals' | 'view' => {
       // Results from view/ directory will have been found there
       // We can check by looking at benchmark names - view benchmarks have specific patterns

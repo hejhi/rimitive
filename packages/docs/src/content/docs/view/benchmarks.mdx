@@ -1,25 +1,10 @@
 ---
 title: View Benchmarks
-description: Performance benchmarks showing how Rimitive view operations scale with data size.
+description: KPI-driven benchmarks measuring view layer overhead.
 ---
 
 import ViewBenchmarks from '../../../components/ViewBenchmarks.astro';
 
-The view layer is designed for optimal performance at any scale. These benchmarks measure how view operations scale with increasing data sizes.
+These benchmarks measure the propagation overhead of each view primitive compared to pure signals. The view layer is designed to add minimal overhead on top of the reactive core.
 
 <ViewBenchmarks />
-
-## Key Optimizations
-
-1. **Tail pointer tracking** - Append operations are O(1), not O(n)
-2. **LIS-based reconciliation** - Minimal DOM moves when reordering
-3. **Keyed diffing** - Element reuse when items move
-
-## Running Locally
-
-```bash
-cd packages/benchmarks
-pnpm bench                  # Run all benchmarks
-pnpm bench map/append       # Run specific view benchmark
-pnpm bench --docs           # Run and update docs data
-```
