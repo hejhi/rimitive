@@ -1,6 +1,5 @@
 {
   "$schema": "https://nx.dev/schemas/nx-schema.json",
-  "parallel": 1,
   "targetDefaults": {
     "build": {
       "dependsOn": ["^build"],
