@@ -69,8 +69,8 @@
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@types/react": "19.2.8",
-    "@vitest/browser": "4.0.17",
     "@types/react-dom": "19.2.3",
+    "@vitest/browser": "4.0.17",
     "eslint-plugin-react-hooks": "7.0.1",
     "jsdom": "27.4.0",
     "react": "19.2.3",
@@ -78,7 +78,6 @@
     "rimraf": "6.1.2",
     "typescript": "5.9.3",
     "vite": "7.3.1",
-    "vite-plugin-dts": "4.5.4",
     "vitest": "4.0.17"
   },
   "sideEffects": false,
