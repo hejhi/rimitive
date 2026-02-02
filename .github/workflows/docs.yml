@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build dependencies
+        run: pnpm build
+
       - name: Build docs
         run: pnpm --filter @rimitive/docs build
 
