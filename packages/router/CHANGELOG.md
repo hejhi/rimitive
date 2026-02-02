@@ -1,5 +1,13 @@
 # @rimitive/router
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @rimitive/signals@0.4.0
+  - @rimitive/view@0.3.0
+
 ## 0.2.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @rimitive/example-resource
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @rimitive/signals@0.4.0
+  - @rimitive/view@0.3.0
+  - @rimitive/resource@0.3.1
+
 ## 0.0.8
 
 ### Patch Changes

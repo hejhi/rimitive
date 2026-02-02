@@ -1,5 +1,16 @@
 # @rimitive/example-ssr-router
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @rimitive/signals@0.4.0
+  - @rimitive/ssr@0.3.0
+  - @rimitive/view@0.3.0
+  - @rimitive/resource@0.3.1
+  - @rimitive/router@0.2.3
+
 ## 0.0.8
 
 ### Patch Changes

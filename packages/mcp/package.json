@@ -1,6 +1,6 @@
 {
   "name": "@rimitive/mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server exposing Rimitive documentation to coding LLMs",
   "author": "Rimitive Team",
   "license": "MIT",
