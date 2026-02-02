@@ -61,33 +61,12 @@ const PACKAGE_READMES = [
   { folder: 'ssr', name: '@rimitive/ssr' },
 ];
 
-// Docs to include in llms-full.txt, in order
-const DOCS_ORDER = [
-  // Guides - core concepts first
-  'guides/getting-started.mdx',
-  'guides/creating-a-service.mdx',
-  'guides/using-a-service.mdx',
-  'guides/adding-a-ui.mdx',
-  'guides/refs.mdx',
-  'guides/conditional-rendering.mdx',
-  'guides/rendering-lists.mdx',
-  'guides/portals.mdx',
-  'guides/event-handling.mdx',
-  'guides/creating-a-behavior.mdx',
-  'guides/adding-routing.mdx',
-  'guides/loading-data.mdx',
-  'guides/server-rendering.mdx',
-  'guides/streaming-ssr.mdx',
-  'guides/custom-modules.mdx',
-  // Patterns
-  'patterns/signal-patterns.mdx',
-  'patterns/behaviors.mdx',
-  'patterns/portability.mdx',
-  'patterns/shared-state.mdx',
-  'patterns/error-handling.mdx',
-  'patterns/forms.mdx',
-  'patterns/composition-over-stores.mdx',
-  'patterns/async-loading.mdx',
+// Doc sections in priority order (auto-discovers files within each)
+const DOC_SECTIONS = [
+  'guides',
+  'signals',
+  'view',
+  'patterns',
 ];
 
 /**
@@ -282,20 +261,33 @@ This document contains the complete Rimitive documentation for LLM consumption.
     console.warn('Skipping README');
   }
 
-  for (const docPath of DOCS_ORDER) {
+  // Auto-discover docs from each section
+  for (const section of DOC_SECTIONS) {
+    const sectionDir = join(docsDir, section);
+    let files;
     try {
-      const fullPath = join(docsDir, docPath);
-      const content = await readFile(fullPath, 'utf-8');
-      const title = extractTitle(content);
-      const body = stripFrontmatter(content);
-      const markdown = mdxToMarkdown(body);
+      files = await readdir(sectionDir);
+    } catch {
+      console.warn(`Skipping missing section: ${section}`);
+      continue;
+    }
 
-      if (markdown.length > 0) {
-        sections.push(`## ${title}\n\n${markdown}\n\n---\n`);
+    const mdxFiles = files.filter(f => f.endsWith('.mdx') && f !== 'index.mdx').sort();
+
+    for (const file of mdxFiles) {
+      try {
+        const fullPath = join(sectionDir, file);
+        const content = await readFile(fullPath, 'utf-8');
+        const title = extractTitle(content);
+        const body = stripFrontmatter(content);
+        const markdown = mdxToMarkdown(body);
+
+        if (markdown.length > 0) {
+          sections.push(`## ${title}\n\n${markdown}\n\n---\n`);
+        }
+      } catch (err) {
+        console.warn(`Skipping doc: ${section}/${file}: ${err.message}`);
       }
-    } catch (err) {
-      // File doesn't exist, skip it
-      console.warn(`Skipping missing doc: ${docPath}`);
     }
   }
 
