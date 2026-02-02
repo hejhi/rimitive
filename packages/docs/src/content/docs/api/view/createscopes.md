@@ -24,6 +24,11 @@ export type CreateScopes = {
     scopedEffect: (fn: () => void | (() => void)) => () => void;
     onCleanup: (cleanup: () => void) => void;
     getElementScope: <TElement extends object>(element: TElement) => RenderScope<TElement> | undefined;
+    getActiveScope: () => RenderScope<object> | null;
+    withScope: <T>(scope: RenderScope<object>, fn: () => T) => T;
+    createRootScope: () => RenderScope<object>;
+    createChildScope: () => RenderScope<object>;
+    registerDisposable: (dispose: () => void) => void;
 };
 ```
 **References:** [RenderScope](../renderscope/)

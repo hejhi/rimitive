@@ -44,6 +44,13 @@ export type Adapter<TConfig extends TreeConfig> = {
     onAttach?: (ref: NodeRef<NodeOf<TConfig>>, parent: NodeOf<TConfig>) => void;
     beforeDestroy?: (ref: NodeRef<NodeOf<TConfig>>, parent: NodeOf<TConfig>) => void;
     onDestroy?: (ref: NodeRef<NodeOf<TConfig>>, parent: NodeOf<TConfig>) => void;
+    createShadowRoot?: (host: NodeOf<TConfig>, options: {
+        mode: 'open' | 'closed';
+        delegatesFocus?: boolean;
+    }) => {
+        container: NodeOf<TConfig>;
+        shadowRoot: ShadowRoot | null;
+    };
 };
 ```
 **References:** [TreeConfig](../treeconfig/)<!-- -->, [ParentContext](../parentcontext/)<!-- -->, [NodeOf](../nodeof/)<!-- -->, [NodeRef](../noderef/)

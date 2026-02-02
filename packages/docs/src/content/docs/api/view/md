@@ -54,6 +54,28 @@ Create a load factory with the given dependencies.
 </td></tr>
 <tr><td>
 
+[createShadowFactory({ scopedEffect, onCleanup, adapter, })](../createshadowfactory/)
+
+
+</td><td>
+
+Create a shadow factory with the given dependencies.
+
+
+</td></tr>
+<tr><td>
+
+[createShadowModule(adapter)](../createshadowmodule/)
+
+
+</td><td>
+
+Create a Shadow module for a given adapter.
+
+
+</td></tr>
+<tr><td>
+
 [getAsyncMeta(node)](../getasyncmeta/)
 
 
@@ -71,6 +93,19 @@ Get async metadata from a node
 </td><td>
 
 Check if a value is an async fragment
+
+
+</td></tr>
+<tr><td>
+
+[mount(modules)](../mount/)
+
+
+</td><td>
+
+Mount modules and render a component with automatic effect scoping.
+
+Takes modules (same as compose()), and wraps the effect function so that effects created within the component tree are automatically disposed when the returned unmount function is called.
 
 
 </td></tr>
@@ -404,6 +439,17 @@ Load status values
 </td></tr>
 <tr><td>
 
+[MountFn](../mountfn/)
+
+
+</td><td>
+
+Mount function type - returned by mount(...modules)
+
+
+</td></tr>
+<tr><td>
+
 [NodeOf](../nodeof/)
 
 
@@ -450,6 +496,17 @@ Note: adapter uses 'unknown' for variance - any Adapter<T> is assignable
 </td></tr>
 <tr><td>
 
+[PortableComponent](../portablecomponent/)
+
+
+</td><td>
+
+A portable component - a function that receives a service and returns a factory that produces a RefSpec when called.
+
+
+</td></tr>
+<tr><td>
+
 [PortalOpts](../portalopts/)
 
 
@@ -487,6 +544,83 @@ Ref spec - a specification/blueprint for a ref that can be instantiated multiple
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+[ServiceFromModules](../servicefrommodules/)
+
+
+</td><td>
+
+Extract the service type from a tuple of modules. Uses ContainsLazy to handle async module composition.
+
+
+</td></tr>
+<tr><td>
+
+[ShadowFactory](../shadowfactory/)
+
+
+</td><td>
+
+Shadow factory - returned from shadow(options) Callable with children to create RefSpec, or use .ref() to access shadow root
+
+
+</td></tr>
+<tr><td>
+
+[ShadowLifecycleCallback](../shadowlifecyclecallback/)
+
+
+</td><td>
+
+Lifecycle callback for shadow - receives the shadow root
+
+
+</td></tr>
+<tr><td>
+
+[ShadowMode](../shadowmode/)
+
+
+</td><td>
+
+Shadow DOM mode
+
+
+</td></tr>
+<tr><td>
+
+[ShadowOptions](../shadowoptions/)
+
+
+</td><td>
+
+Options for creating a shadow root
+
+
+</td></tr>
+<tr><td>
+
+[ShadowOpts](../shadowopts/)
+
+
+</td><td>
+
+Options passed to shadow factory creator
+
+
+</td></tr>
+<tr><td>
+
+[ShadowService](../shadowservice/)
+
+
+</td><td>
+
+Shadow service type - creates shadow factories
 
 
 </td></tr>
