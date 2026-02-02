@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-02-01T19:21:17.672Z",
-  "commit": "478b8c0",
+  "timestamp": "2026-02-02T00:30:47.829Z",
+  "commit": "97d85e5",
   "system": {
     "node": "v25.2.1",
     "platform": "darwin",
@@ -11,358 +11,1845 @@
   },
   "suites": [
     {
-      "name": "append-algorithmic",
+      "name": "batch-updates",
       "benchmarks": [
         {
-          "name": "append 100 to 0 existing",
-          "time": 2708,
-          "min": 2416,
-          "max": 222250,
-          "avg": 2814.319872662552,
-          "p50": 2708,
-          "p75": 2792,
-          "p99": 4166,
+          "name": "Rimitive BATCHED - 10 signals",
+          "group": "Rimitive BATCHED - $signals signals",
+          "time": 2870125,
+          "min": 2803667,
+          "max": 3877459,
+          "avg": 2898423.7740585753,
+          "p50": 2870125,
+          "p75": 2924625.000000477,
+          "p99": 3642541,
           "args": {
-            "existing": 0
+            "signals": 10
           }
         },
         {
-          "name": "append 100 to 100 existing",
-          "time": 10262.49169921875,
-          "min": 10178.40576171875,
-          "max": 11365.8955078125,
-          "avg": 10531.949481670674,
-          "p50": 10262.49169921875,
-          "p75": 10643.85986328125,
-          "p99": 11354.84814453125,
+          "name": "Rimitive BATCHED - 20 signals",
+          "group": "Rimitive BATCHED - $signals signals",
+          "time": 5573833,
+          "min": 5461084,
+          "max": 5864625,
+          "avg": 5594479.196721312,
+          "p50": 5573833,
+          "p75": 5661208,
+          "p99": 5806625,
           "args": {
-            "existing": 100
+            "signals": 20
           }
         },
         {
-          "name": "append 100 to 1000 existing",
-          "time": 60042,
-          "min": 56916,
-          "max": 278791,
-          "avg": 61245.97311921801,
-          "p50": 60042,
-          "p75": 61167,
-          "p99": 79958,
+          "name": "Rimitive BATCHED - 40 signals",
+          "group": "Rimitive BATCHED - $signals signals",
+          "time": 10399208,
+          "min": 10222917,
+          "max": 11002417,
+          "avg": 10460002.640625,
+          "p50": 10399208,
+          "p75": 10544416,
+          "p99": 10916959,
           "args": {
-            "existing": 1000
+            "signals": 40
           }
         },
         {
-          "name": "append 100 to 10000 existing",
-          "time": 672167,
-          "min": 548125,
-          "max": 1707500,
-          "avg": 715658.2968270215,
-          "p50": 672167,
-          "p75": 792417,
-          "p99": 1233709,
+          "name": "Rimitive UNBATCHED - 10 signals",
+          "group": "Rimitive UNBATCHED - $signals signals",
+          "time": 2929667,
+          "min": 2837792,
+          "max": 4173334,
+          "avg": 2959015.123931624,
+          "p50": 2929667,
+          "p75": 2991000,
+          "p99": 3246583,
           "args": {
-            "existing": 10000
+            "signals": 10
           }
         },
         {
-          "name": "append 100 to 10000 (show counts)",
-          "time": 1119750,
-          "min": 867917,
-          "max": 2420417,
-          "avg": 1207534.719237435,
-          "p50": 1119750,
-          "p75": 1361625,
-          "p99": 2128167,
-          "args": {}
-        }
-      ]
-    },
-    {
-      "name": "append",
-      "benchmarks": [
-        {
-          "name": "append 100 to 0 existing",
-          "time": 2625,
-          "min": 2416,
-          "max": 236333,
-          "avg": 2768.0396915223887,
-          "p50": 2625,
-          "p75": 2749.999999523163,
-          "p99": 4125,
+          "name": "Rimitive UNBATCHED - 20 signals",
+          "group": "Rimitive UNBATCHED - $signals signals",
+          "time": 5531959,
+          "min": 5439542,
+          "max": 6510333,
+          "avg": 5554381.455284553,
+          "p50": 5531959,
+          "p75": 5596375,
+          "p99": 5838666,
           "args": {
-            "existing": 0
+            "signals": 20
           }
         },
         {
-          "name": "append 100 to 100 existing",
-          "time": 10366.902587890625,
-          "min": 10226.826904296875,
-          "max": 11218.109130859375,
-          "avg": 10529.014385516826,
-          "p50": 10366.902587890625,
-          "p75": 10746.805908203125,
-          "p99": 11177.55126953125,
+          "name": "Rimitive UNBATCHED - 40 signals",
+          "group": "Rimitive UNBATCHED - $signals signals",
+          "time": 10288709,
+          "min": 10178375,
+          "max": 10659375.000000954,
+          "avg": 10312322.492307633,
+          "p50": 10288709,
+          "p75": 10383666,
+          "p99": 10542625,
           "args": {
-            "existing": 100
+            "signals": 40
           }
         },
         {
-          "name": "append 100 to 1000 existing",
-          "time": 59209,
-          "min": 55791,
-          "max": 301541,
-          "avg": 60816.23759881852,
-          "p50": 59209,
-          "p75": 60833,
-          "p99": 86375,
+          "name": "Preact BATCHED - 10 signals",
+          "group": "Preact BATCHED - $signals signals",
+          "time": 2602999.9999990463,
+          "min": 2554666,
+          "max": 3030750,
+          "avg": 2620515.7283018795,
+          "p50": 2602999.9999990463,
+          "p75": 2638000,
+          "p99": 2905708,
           "args": {
-            "existing": 1000
+            "signals": 10
           }
         },
         {
-          "name": "append 100 to 10000 existing",
-          "time": 646875,
-          "min": 529750,
-          "max": 1418542,
-          "avg": 695472.6646825396,
-          "p50": 646875,
-          "p75": 774792,
-          "p99": 1292458,
+          "name": "Preact BATCHED - 20 signals",
+          "group": "Preact BATCHED - $signals signals",
+          "time": 5373792,
+          "min": 5273208,
+          "max": 5627375,
+          "avg": 5378943.858267716,
+          "p50": 5373792,
+          "p75": 5436208,
+          "p99": 5584541,
           "args": {
-            "existing": 10000
+            "signals": 20
           }
         },
         {
-          "name": "append 10 to 1000",
-          "time": 71291,
-          "min": 68000,
-          "max": 985125,
-          "avg": 73240.96623105071,
-          "p50": 71291,
-          "p75": 73250,
-          "p99": 102333,
+          "name": "Preact BATCHED - 40 signals",
+          "group": "Preact BATCHED - $signals signals",
+          "time": 10096250,
+          "min": 9931708,
+          "max": 11213000,
+          "avg": 10120040.424242424,
+          "p50": 10096250,
+          "p75": 10163916,
+          "p99": 10448000,
           "args": {
-            "count": 10
+            "signals": 40
           }
         },
         {
-          "name": "append 100 to 1000",
-          "time": 69042,
-          "min": 60832.999999046326,
-          "max": 296166,
-          "avg": 69073.62229223513,
-          "p50": 69042,
-          "p75": 70375.00000095367,
-          "p99": 92208,
+          "name": "Preact UNBATCHED - 10 signals",
+          "group": "Preact UNBATCHED - $signals signals",
+          "time": 2853958,
+          "min": 2801334,
+          "max": 3110708,
+          "avg": 2861581.588477366,
+          "p50": 2853958,
+          "p75": 2883167,
+          "p99": 3019000,
           "args": {
-            "count": 100
+            "signals": 10
           }
         },
         {
-          "name": "append 1000 to 1000",
-          "time": 141708,
-          "min": 136250,
-          "max": 433125,
-          "avg": 145564.54211618257,
-          "p50": 141708,
-          "p75": 146708,
-          "p99": 207667,
+          "name": "Preact UNBATCHED - 20 signals",
+          "group": "Preact UNBATCHED - $signals signals",
+          "time": 5172625,
+          "min": 5091125,
+          "max": 5416125,
+          "avg": 5194133.507575758,
+          "p50": 5172625,
+          "p75": 5250375,
+          "p99": 5360500,
           "args": {
-            "count": 1000
-          }
-        }
-      ]
-    },
-    {
-      "name": "prepend",
-      "benchmarks": [
-        {
-          "name": "prepend 100 to 0 existing",
-          "time": 2791.0000009536743,
-          "min": 2541,
-          "max": 268000,
-          "avg": 2902.2813753274468,
-          "p50": 2791.0000009536743,
-          "p75": 2875,
-          "p99": 4166,
-          "args": {
-            "existing": 0
+            "signals": 20
           }
         },
         {
-          "name": "prepend 100 to 100 existing",
-          "time": 9167,
-          "min": 8666,
-          "max": 211417,
-          "avg": 9517.30830034054,
-          "p50": 9167,
-          "p75": 9791,
-          "p99": 12000,
+          "name": "Preact UNBATCHED - 40 signals",
+          "group": "Preact UNBATCHED - $signals signals",
+          "time": 9837459,
+          "min": 9663958,
+          "max": 10500333,
+          "avg": 9849402.588235294,
+          "p50": 9837459,
+          "p75": 9923917,
+          "p99": 10321459,
           "args": {
-            "existing": 100
+            "signals": 40
           }
         },
         {
-          "name": "prepend 100 to 1000 existing",
-          "time": 58916,
-          "min": 55917,
-          "max": 291125,
-          "avg": 60224.998882585525,
-          "p50": 58916,
-          "p75": 60334,
-          "p99": 80916,
+          "name": "Alien BATCHED - 10 signals",
+          "group": "Alien BATCHED - $signals signals",
+          "time": 3618333,
+          "min": 3545042,
+          "max": 4048584,
+          "avg": 3632820.1315789474,
+          "p50": 3618333,
+          "p75": 3661083,
+          "p99": 3961125,
           "args": {
-            "existing": 1000
+            "signals": 10
           }
         },
         {
-          "name": "prepend 100 to 10000 existing",
-          "time": 880875,
-          "min": 739542,
-          "max": 2664875,
-          "avg": 965062.6745152355,
-          "p50": 880875,
-          "p75": 1032542,
-          "p99": 1938291,
+          "name": "Alien BATCHED - 20 signals",
+          "group": "Alien BATCHED - $signals signals",
+          "time": 6783875,
+          "min": 6709125,
+          "max": 7160750,
+          "avg": 6813558.72,
+          "p50": 6783875,
+          "p75": 6865333,
+          "p99": 7013958,
           "args": {
-            "existing": 10000
+            "signals": 20
           }
         },
         {
-          "name": "prepend 100 to 1000",
-          "time": 72500,
-          "min": 68084,
-          "max": 1343834,
-          "avg": 75166.28658929723,
-          "p50": 72500,
-          "p75": 75042,
-          "p99": 106333,
+          "name": "Alien BATCHED - 40 signals",
+          "group": "Alien BATCHED - $signals signals",
+          "time": 12832167,
+          "min": 12662625,
+          "max": 13235125,
+          "avg": 12844442.80392157,
+          "p50": 12832167,
+          "p75": 12911167,
+          "p99": 13096375,
           "args": {
-            "existing": 1000
+            "signals": 40
           }
         },
         {
-          "name": "prepend 100 to 10000",
-          "time": 1465416.0000009537,
-          "min": 1135333,
-          "max": 3016583.9999990463,
-          "avg": 1547795.8359202577,
-          "p50": 1465416.0000009537,
-          "p75": 1712041,
-          "p99": 2713125,
+          "name": "Alien UNBATCHED - 10 signals",
+          "group": "Alien UNBATCHED - $signals signals",
+          "time": 4048833,
+          "min": 3970000,
+          "max": 4912250,
+          "avg": 4070960.573964497,
+          "p50": 4048833,
+          "p75": 4110458,
+          "p99": 4326458,
           "args": {
-            "existing": 10000
+            "signals": 10
           }
         },
         {
-          "name": "append 100 to 1000",
-          "time": 68458,
-          "min": 60500,
-          "max": 421541,
-          "avg": 68498.75019531185,
-          "p50": 68458,
-          "p75": 69750,
-          "p99": 93166,
+          "name": "Alien UNBATCHED - 20 signals",
+          "group": "Alien UNBATCHED - $signals signals",
+          "time": 7632833,
+          "min": 7511959,
+          "max": 7845292,
+          "avg": 7631514.955056179,
+          "p50": 7632833,
+          "p75": 7680125,
+          "p99": 7827958,
           "args": {
-            "existing": 1000
+            "signals": 20
           }
         },
         {
-          "name": "append 100 to 10000",
-          "time": 1200500,
-          "min": 931458,
-          "max": 2445625,
-          "avg": 1269642.3952641166,
-          "p50": 1200500,
-          "p75": 1442375,
-          "p99": 2127500,
+          "name": "Alien UNBATCHED - 40 signals",
+          "group": "Alien UNBATCHED - $signals signals",
+          "time": 14466084,
+          "min": 14247791.999998093,
+          "max": 14999208.000001907,
+          "avg": 14484147.155555725,
+          "p50": 14466084,
+          "p75": 14573250.000001907,
+          "p99": 14962917.000001907,
           "args": {
-            "existing": 10000
+            "signals": 40
           }
         }
       ]
     },
     {
-      "name": "remove",
+      "name": "chain-deep",
       "benchmarks": [
         {
-          "name": "remove middle from 100",
-          "time": 20128.835205078125,
-          "min": 18402.994873046875,
-          "max": 22228.841064453125,
-          "avg": 20102.823059082042,
-          "p50": 20128.835205078125,
-          "p75": 20461.3544921875,
-          "p99": 22224.700927734375,
+          "name": "Rimitive - 10 levels",
+          "group": "Rimitive - $depth levels",
+          "time": 2421500,
+          "min": 2393709,
+          "max": 2596916,
+          "avg": 2435135.5543859685,
+          "p50": 2421500,
+          "p75": 2452583,
+          "p99": 2578541,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "Rimitive - 20 levels",
+          "group": "Rimitive - $depth levels",
+          "time": 4917750,
+          "min": 4854541,
+          "max": 5132541,
+          "avg": 4940770.338129496,
+          "p50": 4917750,
+          "p75": 4986667,
+          "p99": 5127625,
+          "args": {
+            "depth": 20
+          }
+        },
+        {
+          "name": "Rimitive - 50 levels",
+          "group": "Rimitive - $depth levels",
+          "time": 12325958,
+          "min": 12106375,
+          "max": 13517833,
+          "avg": 12391841.169811321,
+          "p50": 12325958,
+          "p75": 12483834,
+          "p99": 12810333,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "Rimitive - 100 levels",
+          "group": "Rimitive - $depth levels",
+          "time": 24218209,
+          "min": 24057792,
+          "max": 24590000,
+          "avg": 24267338.4,
+          "p50": 24218209,
+          "p75": 24298042,
+          "p99": 24552334,
+          "args": {
+            "depth": 100
+          }
+        },
+        {
+          "name": "Preact - 10 levels",
+          "group": "Preact - $depth levels",
+          "time": 2301958,
+          "min": 2253791,
+          "max": 3181375,
+          "avg": 2317627.26,
+          "p50": 2301958,
+          "p75": 2345375,
+          "p99": 2505875,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "Preact - 20 levels",
+          "group": "Preact - $depth levels",
+          "time": 5106791,
+          "min": 4865167,
+          "max": 8734542,
+          "avg": 5299992.796875,
+          "p50": 5106791,
+          "p75": 5214875,
+          "p99": 7551375,
+          "args": {
+            "depth": 20
+          }
+        },
+        {
+          "name": "Preact - 50 levels",
+          "group": "Preact - $depth levels",
+          "time": 15504667,
+          "min": 15019625.000000954,
+          "max": 18812542,
+          "avg": 16059228.075000023,
+          "p50": 15504667,
+          "p75": 16894916,
+          "p99": 18608500.000000954,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "Preact - 100 levels",
+          "group": "Preact - $depth levels",
+          "time": 30463667,
+          "min": 30200750,
+          "max": 32367291,
+          "avg": 30719598.684210528,
+          "p50": 30463667,
+          "p75": 30663750,
+          "p99": 32148833,
+          "args": {
+            "depth": 100
+          }
+        },
+        {
+          "name": "Alien - 10 levels",
+          "group": "Alien - $depth levels",
+          "time": 2498666,
+          "min": 2419292,
+          "max": 8392833,
+          "avg": 2617017.25,
+          "p50": 2498666,
+          "p75": 2548750,
+          "p99": 4973042,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "Alien - 20 levels",
+          "group": "Alien - $depth levels",
+          "time": 4867458,
+          "min": 4769208,
+          "max": 5177084,
+          "avg": 4869536.397163121,
+          "p50": 4867458,
+          "p75": 4905166,
+          "p99": 5063125,
+          "args": {
+            "depth": 20
+          }
+        },
+        {
+          "name": "Alien - 50 levels",
+          "group": "Alien - $depth levels",
+          "time": 12042458,
+          "min": 11839041,
+          "max": 12369250,
+          "avg": 12060998.50909091,
+          "p50": 12042458,
+          "p75": 12136125,
+          "p99": 12331583,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "Alien - 100 levels",
+          "group": "Alien - $depth levels",
+          "time": 24112542,
+          "min": 23860750,
+          "max": 24846875,
+          "avg": 24153982.307692308,
+          "p50": 24112542,
+          "p75": 24218291,
+          "p99": 24511041,
+          "args": {
+            "depth": 100
+          }
+        }
+      ]
+    },
+    {
+      "name": "chain-shallow",
+      "benchmarks": [
+        {
+          "name": "Rimitive - 10 wide",
+          "group": "Rimitive - $width wide",
+          "time": 3299917,
+          "min": 3225708,
+          "max": 4134666,
+          "avg": 3324691.730769233,
+          "p50": 3299917,
+          "p75": 3344709,
+          "p99": 3654000,
+          "args": {
+            "width": 10
+          }
+        },
+        {
+          "name": "Rimitive - 20 wide",
+          "group": "Rimitive - $width wide",
+          "time": 7527042,
+          "min": 7375542,
+          "max": 7817250,
+          "avg": 7525768.055555556,
+          "p50": 7527042,
+          "p75": 7564875,
+          "p99": 7707041,
+          "args": {
+            "width": 20
+          }
+        },
+        {
+          "name": "Rimitive - 50 wide",
+          "group": "Rimitive - $width wide",
+          "time": 18260167,
+          "min": 17962542,
+          "max": 18888959,
+          "avg": 18325521.485714287,
+          "p50": 18260167,
+          "p75": 18400833,
+          "p99": 18845791,
+          "args": {
+            "width": 50
+          }
+        },
+        {
+          "name": "Rimitive - 100 wide",
+          "group": "Rimitive - $width wide",
+          "time": 36165750,
+          "min": 35860334,
+          "max": 36945125,
+          "avg": 36242961.125,
+          "p50": 36165750,
+          "p75": 36445709,
+          "p99": 36658584,
+          "args": {
+            "width": 100
+          }
+        },
+        {
+          "name": "Preact - 10 wide",
+          "group": "Preact - $width wide",
+          "time": 2941000,
+          "min": 2874375,
+          "max": 6547458,
+          "avg": 2981247.860869565,
+          "p50": 2941000,
+          "p75": 2971667,
+          "p99": 3468334,
+          "args": {
+            "width": 10
+          }
+        },
+        {
+          "name": "Preact - 20 wide",
+          "group": "Preact - $width wide",
+          "time": 6455958.999999046,
+          "min": 6334333,
+          "max": 6659958,
+          "avg": 6463801.171428571,
+          "p50": 6455958.999999046,
+          "p75": 6500458.000000954,
+          "p99": 6591833,
+          "args": {
+            "width": 20
+          }
+        },
+        {
+          "name": "Preact - 50 wide",
+          "group": "Preact - $width wide",
+          "time": 15983542,
+          "min": 15759000,
+          "max": 16178917,
+          "avg": 15980286.585365761,
+          "p50": 15983542,
+          "p75": 16051208,
+          "p99": 16133916,
+          "args": {
+            "width": 50
+          }
+        },
+        {
+          "name": "Preact - 100 wide",
+          "group": "Preact - $width wide",
+          "time": 31672708,
+          "min": 31427750,
+          "max": 32674542,
+          "avg": 31785844.263157893,
+          "p50": 31672708,
+          "p75": 31872208,
+          "p99": 32289791,
+          "args": {
+            "width": 100
+          }
+        },
+        {
+          "name": "Alien - 10 wide",
+          "group": "Alien - $width wide",
+          "time": 3058667,
+          "min": 2989709,
+          "max": 3357459,
+          "avg": 3067156.6769911502,
+          "p50": 3058667,
+          "p75": 3080916,
+          "p99": 3278125,
+          "args": {
+            "width": 10
+          }
+        },
+        {
+          "name": "Alien - 20 wide",
+          "group": "Alien - $width wide",
+          "time": 7361916,
+          "min": 7213750,
+          "max": 7753917,
+          "avg": 7369684.760869565,
+          "p50": 7361916,
+          "p75": 7418917,
+          "p99": 7686958,
+          "args": {
+            "width": 20
+          }
+        },
+        {
+          "name": "Alien - 50 wide",
+          "group": "Alien - $width wide",
+          "time": 17655167,
+          "min": 17486750,
+          "max": 17903333,
+          "avg": 17664763.777777776,
+          "p50": 17655167,
+          "p75": 17723666,
+          "p99": 17883375,
+          "args": {
+            "width": 50
+          }
+        },
+        {
+          "name": "Alien - 100 wide",
+          "group": "Alien - $width wide",
+          "time": 34801167,
+          "min": 34535667,
+          "max": 35342708,
+          "avg": 34816149.4117647,
+          "p50": 34801167,
+          "p75": 34901542,
+          "p99": 35098084,
+          "args": {
+            "width": 100
+          }
+        }
+      ]
+    },
+    {
+      "name": "conditional",
+      "benchmarks": [
+        {
+          "name": "Rimitive - 2 branches",
+          "group": "Rimitive - $branches branches",
+          "time": 27184625,
+          "min": 27027250,
+          "max": 28133667,
+          "avg": 27269232.90909082,
+          "p50": 27184625,
+          "p75": 27298167,
+          "p99": 27601083,
+          "args": {
+            "branches": 2
+          }
+        },
+        {
+          "name": "Rimitive - 4 branches",
+          "group": "Rimitive - $branches branches",
+          "time": 27948542,
+          "min": 27866625,
+          "max": 28386541,
+          "avg": 28039943.136363637,
+          "p50": 27948542,
+          "p75": 28106500,
+          "p99": 28382041,
+          "args": {
+            "branches": 4
+          }
+        },
+        {
+          "name": "Rimitive - 8 branches",
+          "group": "Rimitive - $branches branches",
+          "time": 29061042,
+          "min": 28885000,
+          "max": 29772042,
+          "avg": 29149009.85714286,
+          "p50": 29061042,
+          "p75": 29309541,
+          "p99": 29593625,
+          "args": {
+            "branches": 8
+          }
+        },
+        {
+          "name": "Preact - 2 branches",
+          "group": "Preact - $branches branches",
+          "time": 27685250,
+          "min": 27561833,
+          "max": 28334458,
+          "avg": 27777075.772727273,
+          "p50": 27685250,
+          "p75": 27877542,
+          "p99": 28081917,
+          "args": {
+            "branches": 2
+          }
+        },
+        {
+          "name": "Preact - 4 branches",
+          "group": "Preact - $branches branches",
+          "time": 27853875,
+          "min": 27694584,
+          "max": 28560333,
+          "avg": 27900823.863636363,
+          "p50": 27853875,
+          "p75": 27897375,
+          "p99": 28285125,
+          "args": {
+            "branches": 4
+          }
+        },
+        {
+          "name": "Preact - 8 branches",
+          "group": "Preact - $branches branches",
+          "time": 28536416.999999046,
+          "min": 28412875,
+          "max": 29577666.000000954,
+          "avg": 28739406.76190476,
+          "p50": 28536416.999999046,
+          "p75": 28968917,
+          "p99": 29576000.000000954,
+          "args": {
+            "branches": 8
+          }
+        },
+        {
+          "name": "Alien - 2 branches",
+          "group": "Alien - $branches branches",
+          "time": 27559500,
+          "min": 27444125,
+          "max": 28409250,
+          "avg": 27653863.59090909,
+          "p50": 27559500,
+          "p75": 27658833,
+          "p99": 28094375,
+          "args": {
+            "branches": 2
+          }
+        },
+        {
+          "name": "Alien - 4 branches",
+          "group": "Alien - $branches branches",
+          "time": 28711416,
+          "min": 28580000,
+          "max": 29621375,
+          "avg": 28857882.95238095,
+          "p50": 28711416,
+          "p75": 29085416,
+          "p99": 29207583,
+          "args": {
+            "branches": 4
+          }
+        },
+        {
+          "name": "Alien - 8 branches",
+          "group": "Alien - $branches branches",
+          "time": 30506541,
+          "min": 30051250,
+          "max": 31915458,
+          "avg": 30505081.15,
+          "p50": 30506541,
+          "p75": 30572208,
+          "p99": 30928209,
+          "args": {
+            "branches": 8
+          }
+        }
+      ]
+    },
+    {
+      "name": "deep-wide",
+      "benchmarks": [
+        {
+          "name": "Rimitive - small tree",
+          "group": "Rimitive - $size tree",
+          "time": 56334,
+          "min": 55041,
+          "max": 201916,
+          "avg": 57580.23840460358,
+          "p50": 56334,
+          "p75": 57125,
+          "p99": 71959,
+          "args": {
+            "size": "small"
+          }
+        },
+        {
+          "name": "Rimitive - medium tree",
+          "group": "Rimitive - $size tree",
+          "time": 89708,
+          "min": 87583,
+          "max": 192042,
+          "avg": 90407.11005277385,
+          "p50": 89708,
+          "p75": 90750,
+          "p99": 104292,
+          "args": {
+            "size": "medium"
+          }
+        },
+        {
+          "name": "Rimitive - large tree",
+          "group": "Rimitive - $size tree",
+          "time": 89542,
+          "min": 87500,
+          "max": 194417,
+          "avg": 90306.48231966054,
+          "p50": 89542,
+          "p75": 90583,
+          "p99": 105792,
+          "args": {
+            "size": "large"
+          }
+        },
+        {
+          "name": "Preact - small tree",
+          "group": "Preact - $size tree",
+          "time": 57750,
+          "min": 55875,
+          "max": 145500,
+          "avg": 58555.89708576186,
+          "p50": 57750,
+          "p75": 58375,
+          "p99": 75167,
+          "args": {
+            "size": "small"
+          }
+        },
+        {
+          "name": "Preact - medium tree",
+          "group": "Preact - $size tree",
+          "time": 82042,
+          "min": 80166,
+          "max": 563875,
+          "avg": 83445.09620886981,
+          "p50": 82042,
+          "p75": 83333,
+          "p99": 101208,
+          "args": {
+            "size": "medium"
+          }
+        },
+        {
+          "name": "Preact - large tree",
+          "group": "Preact - $size tree",
+          "time": 82375,
+          "min": 80541,
+          "max": 256208.00000095367,
+          "avg": 83165.76082058545,
+          "p50": 82375,
+          "p75": 83250,
+          "p99": 98792,
+          "args": {
+            "size": "large"
+          }
+        },
+        {
+          "name": "Alien - small tree",
+          "group": "Alien - $size tree",
+          "time": 64833,
+          "min": 63290.99999809265,
+          "max": 203291,
+          "avg": 65759.6302820246,
+          "p50": 64833,
+          "p75": 65583,
+          "p99": 82083.00000190735,
+          "args": {
+            "size": "small"
+          }
+        },
+        {
+          "name": "Alien - medium tree",
+          "group": "Alien - $size tree",
+          "time": 80333,
+          "min": 77625,
+          "max": 178125,
+          "avg": 83268.37341095402,
+          "p50": 80333,
+          "p75": 88417,
+          "p99": 102708,
+          "args": {
+            "size": "medium"
+          }
+        },
+        {
+          "name": "Alien - large tree",
+          "group": "Alien - $size tree",
+          "time": 81792,
+          "min": 78500,
+          "max": 330875,
+          "avg": 84427.41857659831,
+          "p50": 81792,
+          "p75": 88333,
+          "p99": 99291,
+          "args": {
+            "size": "large"
+          }
+        }
+      ]
+    },
+    {
+      "name": "diamond",
+      "benchmarks": [
+        {
+          "name": "Rimitive - 1 diamonds",
+          "group": "Rimitive - $diamonds diamonds",
+          "time": 5728833,
+          "min": 5617833,
+          "max": 6004083,
+          "avg": 5736308.151260484,
+          "p50": 5728833,
+          "p75": 5787292,
+          "p99": 5892750,
+          "args": {
+            "diamonds": 1
+          }
+        },
+        {
+          "name": "Rimitive - 2 diamonds",
+          "group": "Rimitive - $diamonds diamonds",
+          "time": 10397083,
+          "min": 10197958,
+          "max": 10801666,
+          "avg": 10401822.859375,
+          "p50": 10397083,
+          "p75": 10465583,
+          "p99": 10702333,
+          "args": {
+            "diamonds": 2
+          }
+        },
+        {
+          "name": "Rimitive - 3 diamonds",
+          "group": "Rimitive - $diamonds diamonds",
+          "time": 12931625,
+          "min": 12718667,
+          "max": 13168458,
+          "avg": 12937825.11764706,
+          "p50": 12931625,
+          "p75": 13007834,
+          "p99": 13118250,
+          "args": {
+            "diamonds": 3
+          }
+        },
+        {
+          "name": "Rimitive - 4 diamonds",
+          "group": "Rimitive - $diamonds diamonds",
+          "time": 15345250,
+          "min": 15178167,
+          "max": 15592792,
+          "avg": 15363210.42857143,
+          "p50": 15345250,
+          "p75": 15406250,
+          "p99": 15579209,
+          "args": {
+            "diamonds": 4
+          }
+        },
+        {
+          "name": "Preact - 1 diamonds",
+          "group": "Preact - $diamonds diamonds",
+          "time": 6508667,
+          "min": 6373166,
+          "max": 8302708,
+          "avg": 6541530.028846154,
+          "p50": 6508667,
+          "p75": 6585625,
+          "p99": 6833250,
+          "args": {
+            "diamonds": 1
+          }
+        },
+        {
+          "name": "Preact - 2 diamonds",
+          "group": "Preact - $diamonds diamonds",
+          "time": 9138167,
+          "min": 8970250,
+          "max": 9547292,
+          "avg": 9152376.657534195,
+          "p50": 9138167,
+          "p75": 9227917,
+          "p99": 9433875,
+          "args": {
+            "diamonds": 2
+          }
+        },
+        {
+          "name": "Preact - 3 diamonds",
+          "group": "Preact - $diamonds diamonds",
+          "time": 11463875,
+          "min": 11285750.000000954,
+          "max": 11787083,
+          "avg": 11481751.431034598,
+          "p50": 11463875,
+          "p75": 11548292,
+          "p99": 11742208.000000954,
+          "args": {
+            "diamonds": 3
+          }
+        },
+        {
+          "name": "Preact - 4 diamonds",
+          "group": "Preact - $diamonds diamonds",
+          "time": 13806666,
+          "min": 13556167,
+          "max": 14110375,
+          "avg": 13828791.574468086,
+          "p50": 13806666,
+          "p75": 13885791,
+          "p99": 14015000,
+          "args": {
+            "diamonds": 4
+          }
+        },
+        {
+          "name": "Alien - 1 diamonds",
+          "group": "Alien - $diamonds diamonds",
+          "time": 6307209,
+          "min": 6183416,
+          "max": 6619709,
+          "avg": 6313321.722222222,
+          "p50": 6307209,
+          "p75": 6364875,
+          "p99": 6537584,
+          "args": {
+            "diamonds": 1
+          }
+        },
+        {
+          "name": "Alien - 2 diamonds",
+          "group": "Alien - $diamonds diamonds",
+          "time": 10525000,
+          "min": 10343667,
+          "max": 10919125,
+          "avg": 10539010.57142857,
+          "p50": 10525000,
+          "p75": 10604375,
+          "p99": 10793041,
+          "args": {
+            "diamonds": 2
+          }
+        },
+        {
+          "name": "Alien - 3 diamonds",
+          "group": "Alien - $diamonds diamonds",
+          "time": 13277375,
+          "min": 13027583,
+          "max": 13538500,
+          "avg": 13274250.06122449,
+          "p50": 13277375,
+          "p75": 13344500,
+          "p99": 13522500,
+          "args": {
+            "diamonds": 3
+          }
+        },
+        {
+          "name": "Alien - 4 diamonds",
+          "group": "Alien - $diamonds diamonds",
+          "time": 16612208,
+          "min": 16359833,
+          "max": 17136334,
+          "avg": 16615149.487179488,
+          "p50": 16612208,
+          "p75": 16679334,
+          "p99": 16969541,
+          "args": {
+            "diamonds": 4
+          }
+        }
+      ]
+    },
+    {
+      "name": "fan-in",
+      "benchmarks": [
+        {
+          "name": "Rimitive - 10 sources",
+          "group": "Rimitive - $sources sources",
+          "time": 10082167.000000477,
+          "min": 9900749.999999523,
+          "max": 10897708,
+          "avg": 10115507.000000007,
+          "p50": 10082167.000000477,
+          "p75": 10168209,
+          "p99": 10498666,
+          "args": {
+            "sources": 10
+          }
+        },
+        {
+          "name": "Rimitive - 25 sources",
+          "group": "Rimitive - $sources sources",
+          "time": 24299292,
+          "min": 24108500,
+          "max": 24631334,
+          "avg": 24291815.04,
+          "p50": 24299292,
+          "p75": 24347208,
+          "p99": 24427209,
+          "args": {
+            "sources": 25
+          }
+        },
+        {
+          "name": "Rimitive - 50 sources",
+          "group": "Rimitive - $sources sources",
+          "time": 47596667,
+          "min": 47426375,
+          "max": 48029167,
+          "avg": 47612174.36363637,
+          "p50": 47596667,
+          "p75": 47662500,
+          "p99": 47752333,
+          "args": {
+            "sources": 50
+          }
+        },
+        {
+          "name": "Rimitive - 100 sources",
+          "group": "Rimitive - $sources sources",
+          "time": 94295208,
+          "min": 93501041,
+          "max": 96306458,
+          "avg": 94585020.75,
+          "p50": 94295208,
+          "p75": 95315167,
+          "p99": 95797875,
+          "args": {
+            "sources": 100
+          }
+        },
+        {
+          "name": "Preact - 10 sources",
+          "group": "Preact - $sources sources",
+          "time": 8791292,
+          "min": 8729417,
+          "max": 9175042,
+          "avg": 8828660.657894736,
+          "p50": 8791292,
+          "p75": 8868750,
+          "p99": 9126833,
+          "args": {
+            "sources": 10
+          }
+        },
+        {
+          "name": "Preact - 25 sources",
+          "group": "Preact - $sources sources",
+          "time": 21703750.000000954,
+          "min": 21551458,
+          "max": 21883625.000000954,
+          "avg": 21683918.000000097,
+          "p50": 21703750.000000954,
+          "p75": 21731750,
+          "p99": 21835583,
+          "args": {
+            "sources": 25
+          }
+        },
+        {
+          "name": "Preact - 50 sources",
+          "group": "Preact - $sources sources",
+          "time": 43242542,
+          "min": 42737167,
+          "max": 43595333,
+          "avg": 43240391,
+          "p50": 43242542,
+          "p75": 43486500,
+          "p99": 43552375,
+          "args": {
+            "sources": 50
+          }
+        },
+        {
+          "name": "Preact - 100 sources",
+          "group": "Preact - $sources sources",
+          "time": 84898250,
+          "min": 84494667,
+          "max": 87135042,
+          "avg": 85318330,
+          "p50": 84898250,
+          "p75": 85486000,
+          "p99": 86667625,
+          "args": {
+            "sources": 100
+          }
+        },
+        {
+          "name": "Alien - 10 sources",
+          "group": "Alien - $sources sources",
+          "time": 11919583,
+          "min": 11772958,
+          "max": 12095750,
+          "avg": 11930933.309090909,
+          "p50": 11919583,
+          "p75": 12007250,
+          "p99": 12088125,
+          "args": {
+            "sources": 10
+          }
+        },
+        {
+          "name": "Alien - 25 sources",
+          "group": "Alien - $sources sources",
+          "time": 29923084,
+          "min": 29718625,
+          "max": 30502667,
+          "avg": 29994160.5,
+          "p50": 29923084,
+          "p75": 30009167,
+          "p99": 30480333,
+          "args": {
+            "sources": 25
+          }
+        },
+        {
+          "name": "Alien - 50 sources",
+          "group": "Alien - $sources sources",
+          "time": 58517167,
+          "min": 58064125,
+          "max": 62304000,
+          "avg": 59091142.25,
+          "p50": 58517167,
+          "p75": 58980125,
+          "p99": 61749125,
+          "args": {
+            "sources": 50
+          }
+        },
+        {
+          "name": "Alien - 100 sources",
+          "group": "Alien - $sources sources",
+          "time": 116507375,
+          "min": 115073958,
+          "max": 118809375,
+          "avg": 116525548.58333333,
+          "p50": 116507375,
+          "p75": 117026709,
+          "p99": 118378791,
+          "args": {
+            "sources": 100
+          }
+        }
+      ]
+    },
+    {
+      "name": "fan-out",
+      "benchmarks": [
+        {
+          "name": "Rimitive - 10 subscribers",
+          "group": "Rimitive - $sources subscribers",
+          "time": 4902500,
+          "min": 4815375,
+          "max": 5523290.999999523,
+          "avg": 4930662.755395697,
+          "p50": 4902500,
+          "p75": 4962584,
+          "p99": 5137417,
+          "args": {
+            "sources": 10
+          }
+        },
+        {
+          "name": "Rimitive - 25 subscribers",
+          "group": "Rimitive - $sources subscribers",
+          "time": 12815042,
+          "min": 12656417,
+          "max": 13157167,
+          "avg": 12835716.509803921,
+          "p50": 12815042,
+          "p75": 12887166,
+          "p99": 13069833,
+          "args": {
+            "sources": 25
+          }
+        },
+        {
+          "name": "Rimitive - 50 subscribers",
+          "group": "Rimitive - $sources subscribers",
+          "time": 25318875,
+          "min": 25201458,
+          "max": 25688792,
+          "avg": 25364074.5,
+          "p50": 25318875,
+          "p75": 25385542,
+          "p99": 25606375,
+          "args": {
+            "sources": 50
+          }
+        },
+        {
+          "name": "Rimitive - 100 subscribers",
+          "group": "Rimitive - $sources subscribers",
+          "time": 55635791,
+          "min": 55205500,
+          "max": 56077208,
+          "avg": 55610050.88888889,
+          "p50": 55635791,
+          "p75": 56001708,
+          "p99": 56047917,
+          "args": {
+            "sources": 100
+          }
+        },
+        {
+          "name": "Rimitive - 200 subscribers",
+          "group": "Rimitive - $sources subscribers",
+          "time": 123826000.00000095,
+          "min": 122895375,
+          "max": 126097292,
+          "avg": 124114250.16666682,
+          "p50": 123826000.00000095,
+          "p75": 124311542,
+          "p99": 125951250,
+          "args": {
+            "sources": 200
+          }
+        },
+        {
+          "name": "Preact - 10 subscribers",
+          "group": "Preact - $sources subscribers",
+          "time": 5550250,
+          "min": 5484750,
+          "max": 5947209,
+          "avg": 5576287.341463415,
+          "p50": 5550250,
+          "p75": 5579083,
+          "p99": 5791625,
+          "args": {
+            "sources": 10
+          }
+        },
+        {
+          "name": "Preact - 25 subscribers",
+          "group": "Preact - $sources subscribers",
+          "time": 12469292,
+          "min": 12343625,
+          "max": 12661750,
+          "avg": 12473606.867924528,
+          "p50": 12469292,
+          "p75": 12531958,
+          "p99": 12654583,
+          "args": {
+            "sources": 25
+          }
+        },
+        {
+          "name": "Preact - 50 subscribers",
+          "group": "Preact - $sources subscribers",
+          "time": 24651208,
+          "min": 24481875,
+          "max": 24936250,
+          "avg": 24674038.44,
+          "p50": 24651208,
+          "p75": 24790584,
+          "p99": 24934666,
+          "args": {
+            "sources": 50
+          }
+        },
+        {
+          "name": "Preact - 100 subscribers",
+          "group": "Preact - $sources subscribers",
+          "time": 49130042,
+          "min": 48777875,
+          "max": 49914416,
+          "avg": 49130197,
+          "p50": 49130042,
+          "p75": 49190500,
+          "p99": 49321875,
+          "args": {
+            "sources": 100
+          }
+        },
+        {
+          "name": "Preact - 200 subscribers",
+          "group": "Preact - $sources subscribers",
+          "time": 102977500,
+          "min": 102107333,
+          "max": 107883292,
+          "avg": 103521211.83333333,
+          "p50": 102977500,
+          "p75": 103639625,
+          "p99": 104926250,
+          "args": {
+            "sources": 200
+          }
+        },
+        {
+          "name": "Alien - 10 subscribers",
+          "group": "Alien - $sources subscribers",
+          "time": 4660334,
+          "min": 4561208,
+          "max": 4907625,
+          "avg": 4681683.659863946,
+          "p50": 4660334,
+          "p75": 4706625,
+          "p99": 4844417,
+          "args": {
+            "sources": 10
+          }
+        },
+        {
+          "name": "Alien - 25 subscribers",
+          "group": "Alien - $sources subscribers",
+          "time": 12514750,
+          "min": 12423041,
+          "max": 12937167,
+          "avg": 12558386.98076923,
+          "p50": 12514750,
+          "p75": 12625083,
+          "p99": 12796209,
+          "args": {
+            "sources": 25
+          }
+        },
+        {
+          "name": "Alien - 50 subscribers",
+          "group": "Alien - $sources subscribers",
+          "time": 24809792,
+          "min": 24651541,
+          "max": 25308458,
+          "avg": 24840725.08,
+          "p50": 24809792,
+          "p75": 24839458,
+          "p99": 25153667,
+          "args": {
+            "sources": 50
+          }
+        },
+        {
+          "name": "Alien - 100 subscribers",
+          "group": "Alien - $sources subscribers",
+          "time": 49404791,
+          "min": 49133834,
+          "max": 49852500,
+          "avg": 49450321.90909091,
+          "p50": 49404791,
+          "p75": 49602375,
+          "p99": 49787750,
+          "args": {
+            "sources": 100
+          }
+        },
+        {
+          "name": "Alien - 200 subscribers",
+          "group": "Alien - $sources subscribers",
+          "time": 106467583.0000019,
+          "min": 105682750,
+          "max": 108651417,
+          "avg": 106790121.58333366,
+          "p50": 106467583.0000019,
+          "p75": 107059084,
+          "p99": 108378834,
+          "args": {
+            "sources": 200
+          }
+        }
+      ]
+    },
+    {
+      "name": "el",
+      "benchmarks": [
+        {
+          "name": "pure signals - 10 deep",
+          "group": "pure signals - $depth deep",
+          "time": 12261583,
+          "min": 11944750,
+          "max": 15571167,
+          "avg": 12917834.882352969,
+          "p50": 12261583,
+          "p75": 13583167,
+          "p99": 15501208,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "pure signals - 50 deep",
+          "group": "pure signals - $depth deep",
+          "time": 60564959,
+          "min": 60099000,
+          "max": 71683666,
+          "avg": 62795551.916666664,
+          "p50": 60564959,
+          "p75": 62823333,
+          "p99": 71428833,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "el binding - 10 deep",
+          "group": "el binding - $depth deep",
+          "time": 17657000,
+          "min": 17377083,
+          "max": 26577250,
+          "avg": 18532998.852941178,
+          "p50": 17657000,
+          "p75": 17995292,
+          "p99": 25914917,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "el binding - 50 deep",
+          "group": "el binding - $depth deep",
+          "time": 90649542,
+          "min": 89572958,
+          "max": 94687458,
+          "avg": 91065802,
+          "p50": 90649542,
+          "p75": 91474166,
+          "p99": 92663625,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "1 bindings on 50-deep chain",
+          "group": "$bindings bindings on 50-deep chain",
+          "time": 77998667,
+          "min": 77792625,
+          "max": 81427749.99999905,
+          "avg": 78699264.08333318,
+          "p50": 77998667,
+          "p75": 79313542,
+          "p99": 79967583,
+          "args": {
+            "bindings": 1
+          }
+        },
+        {
+          "name": "5 bindings on 50-deep chain",
+          "group": "$bindings bindings on 50-deep chain",
+          "time": 105199084,
+          "min": 104272458,
+          "max": 112370708,
+          "avg": 105790677.08333333,
+          "p50": 105199084,
+          "p75": 105633500,
+          "p99": 107298500,
+          "args": {
+            "bindings": 5
+          }
+        },
+        {
+          "name": "25 bindings on 50-deep chain",
+          "group": "$bindings bindings on 50-deep chain",
+          "time": 163305708,
+          "min": 161841375,
+          "max": 165496875,
+          "avg": 163747975.75,
+          "p50": 163305708,
+          "p75": 165121209,
+          "p99": 165248834,
+          "args": {
+            "bindings": 25
+          }
+        }
+      ]
+    },
+    {
+      "name": "map",
+      "benchmarks": [
+        {
+          "name": "pure signals - 10 deep",
+          "group": "pure signals - $depth deep",
+          "time": 11998250,
+          "min": 11891167,
+          "max": 13607209,
+          "avg": 12108520.870370379,
+          "p50": 11998250,
+          "p75": 12123667,
+          "p99": 13188417.000000477,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "pure signals - 50 deep",
+          "group": "pure signals - $depth deep",
+          "time": 59906833,
+          "min": 59644250,
+          "max": 62120541,
+          "avg": 60139777.75,
+          "p50": 59906833,
+          "p75": 60130542,
+          "p99": 60320125,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "through map - 10 items",
+          "group": "through map - $depth items",
+          "time": 41563708,
+          "min": 41273417,
+          "max": 41996625,
+          "avg": 41591384.538461536,
+          "p50": 41563708,
+          "p75": 41790458,
+          "p99": 41868083,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "through map - 50 items",
+          "group": "through map - $depth items",
+          "time": 233531833,
+          "min": 231269000,
+          "max": 237668792,
+          "avg": 234017014.0833334,
+          "p50": 233531833,
+          "p75": 236071334,
+          "p99": 236288084.00000095,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "update 1 item in 10 list",
+          "group": "update 1 item in $size list",
+          "time": 2300750,
+          "min": 2255791,
+          "max": 2866084,
+          "avg": 2320674.6053511705,
+          "p50": 2300750,
+          "p75": 2316041,
+          "p99": 2626667,
+          "args": {
+            "size": 10
+          }
+        },
+        {
+          "name": "update 1 item in 100 list",
+          "group": "update 1 item in $size list",
+          "time": 2885833,
+          "min": 2821833,
+          "max": 3197875,
+          "avg": 2906876.9037656905,
+          "p50": 2885833,
+          "p75": 2921125,
+          "p99": 3112958,
           "args": {
             "size": 100
           }
         },
         {
-          "name": "remove middle from 1000",
-          "time": 251667,
-          "min": 221208,
-          "max": 1623959,
-          "avg": 268386.5438529299,
-          "p50": 251667,
-          "p75": 265083,
-          "p99": 791875,
+          "name": "update 1 item in 1000 list",
+          "group": "update 1 item in $size list",
+          "time": 2874875,
+          "min": 2802417,
+          "max": 3223166,
+          "avg": 2896611.719665272,
+          "p50": 2874875,
+          "p75": 2920333,
+          "p99": 3135917,
           "args": {
             "size": 1000
           }
         },
         {
-          "name": "remove middle from 10000",
-          "time": 4423833,
-          "min": 3575875,
-          "max": 6495709,
-          "avg": 4476017.392156863,
-          "p50": 4423833,
-          "p75": 4853833,
-          "p99": 6231500,
+          "name": "append 10 to 100 list",
+          "group": "append 10 to $size list",
+          "time": 16937167,
+          "min": 14487542,
+          "max": 21321417,
+          "avg": 17365373.777777776,
+          "p50": 16937167,
+          "p75": 18857666,
+          "p99": 21060667,
           "args": {
-            "size": 10000
+            "size": 100
           }
         },
         {
-          "name": "remove from start (1000 items)",
-          "time": 256000,
-          "min": 228916,
-          "max": 1163625,
-          "avg": 272493.7535950253,
-          "p50": 256000,
-          "p75": 268500,
-          "p99": 708666,
+          "name": "append 10 to 1000 list",
+          "group": "append 10 to $size list",
+          "time": 138574208,
+          "min": 124429583,
+          "max": 150009083,
+          "avg": 136777201.33333334,
+          "p50": 138574208,
+          "p75": 141181459,
+          "p99": 145801708,
           "args": {
             "size": 1000
           }
         },
         {
-          "name": "remove from middle (1000 items)",
-          "time": 254042,
-          "min": 225708,
-          "max": 1684833,
-          "avg": 269784.7050886662,
-          "p50": 254042,
-          "p75": 265917,
-          "p99": 806458,
+          "name": "remove 10 from 100 list",
+          "group": "remove 10 from $size list",
+          "time": 17511750,
+          "min": 13978000,
+          "max": 22387250,
+          "avg": 17101183.62162162,
+          "p50": 17511750,
+          "p75": 18780667,
+          "p99": 21217666,
+          "args": {
+            "size": 100
+          }
+        },
+        {
+          "name": "remove 10 from 1000 list",
+          "group": "remove 10 from $size list",
+          "time": 134681792,
+          "min": 132657292,
+          "max": 137681208.0000019,
+          "avg": 134780600.75000033,
+          "p50": 134681792,
+          "p75": 135164458,
+          "p99": 135661459,
           "args": {
             "size": 1000
           }
         },
         {
-          "name": "remove from end (1000 items)",
-          "time": 67833,
-          "min": 57250,
-          "max": 1408959,
-          "avg": 73915.1372714794,
-          "p50": 67833,
-          "p75": 70417,
-          "p99": 390541,
+          "name": "swap first/last in 100 list",
+          "group": "swap first/last in $size list",
+          "time": 15273042,
+          "min": 14986042,
+          "max": 16562625.000003815,
+          "avg": 15341994.071428299,
+          "p50": 15273042,
+          "p75": 15397500.000003815,
+          "p99": 16085250,
+          "args": {
+            "size": 100
+          }
+        },
+        {
+          "name": "swap first/last in 1000 list",
+          "group": "swap first/last in $size list",
+          "time": 248302209,
+          "min": 244701292,
+          "max": 262539292,
+          "avg": 250096052.41666666,
+          "p50": 248302209,
+          "p75": 251870959,
+          "p99": 252928917,
           "args": {
             "size": 1000
           }
+        }
+      ]
+    },
+    {
+      "name": "match",
+      "benchmarks": [
+        {
+          "name": "pure signals - 10 deep",
+          "group": "pure signals - $depth deep",
+          "time": 15563041,
+          "min": 15456583.000000477,
+          "max": 15810625,
+          "avg": 15571912.714285737,
+          "p50": 15563041,
+          "p75": 15612000,
+          "p99": 15747541,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "pure signals - 50 deep",
+          "group": "pure signals - $depth deep",
+          "time": 69197958,
+          "min": 68872625,
+          "max": 71660958,
+          "avg": 69435819.25,
+          "p50": 69197958,
+          "p75": 69380250,
+          "p99": 69917708,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "through match - 10 deep",
+          "group": "through match - $depth deep",
+          "time": 17553375,
+          "min": 17382417,
+          "max": 18082541,
+          "avg": 17614318.64864865,
+          "p50": 17553375,
+          "p75": 17718708,
+          "p99": 18042292,
+          "args": {
+            "depth": 10
+          }
+        },
+        {
+          "name": "through match - 50 deep",
+          "group": "through match - $depth deep",
+          "time": 91209416,
+          "min": 90763916,
+          "max": 94747875,
+          "avg": 91797083.33333333,
+          "p50": 91209416,
+          "p75": 92105250,
+          "p99": 92797250,
+          "args": {
+            "depth": 50
+          }
+        },
+        {
+          "name": "switch 1 element branch",
+          "group": "switch $size element branch",
+          "time": 1425417,
+          "min": 1352624.9999990463,
+          "max": 4756459,
+          "avg": 1497103.0583153595,
+          "p50": 1425417,
+          "p75": 1491750,
+          "p99": 3276542,
+          "args": {
+            "size": 1
+          }
+        },
+        {
+          "name": "switch 10 element branch",
+          "group": "switch $size element branch",
+          "time": 5123292,
+          "min": 4883167,
+          "max": 6657375,
+          "avg": 5192012.389312912,
+          "p50": 5123292,
+          "p75": 5286708,
+          "p99": 6039624.999999046,
+          "args": {
+            "size": 10
+          }
+        },
+        {
+          "name": "switch 50 element branch",
+          "group": "switch $size element branch",
+          "time": 21652000,
+          "min": 21042166,
+          "max": 22968791,
+          "avg": 21741044.655172415,
+          "p50": 21652000,
+          "p75": 22085875,
+          "p99": 22526208,
+          "args": {
+            "size": 50
+          }
+        },
+        {
+          "name": "value change (no switch)",
+          "group": "value change (no switch)",
+          "time": 2296583,
+          "min": 2233417,
+          "max": 2954500,
+          "avg": 2318712.6588628762,
+          "p50": 2296583,
+          "p75": 2333250,
+          "p99": 2622000,
+          "args": {}
+        },
+        {
+          "name": "branch switch",
+          "group": "branch switch",
+          "time": 694500,
+          "min": 670458,
+          "max": 1541292,
+          "avg": 722662.6759834369,
+          "p50": 694500,
+          "p75": 715209,
+          "p99": 1014459,
+          "args": {}
         }
       ]
     }

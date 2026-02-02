@@ -15,52 +15,63 @@ This document contains the complete Rimitive documentation for LLM consumption.
 
 ## Project Overview (README)
 
-Reactive primitives and composable libraries that work with them for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity. An awkward name but a lot of personality 🌝
+Type-safe reactive primitives, atomic tooling, and compositional patterns you can use anywhere:
 
-Start with signals, add what you need as you go, and swap out anything you want.
+- Add signals to your no-build vanilla js project
+- Build a headless design system with portable, reactive UI logic
+- Write UI components for any javascript environment or platform
+- Create a full stack SSR-with-streaming app
+
+All constructed on a foundation of reactive primitives. Rimitive is built for low commitment and no framework lock-in. Take as much or as little of it as you want, and easily customize, extend, or replace along the way.
+
+## Quickstart
+
+### Install and Create a Service
 
 \`\`\`bash
 npm install @rimitive/core @rimitive/signals
 \`\`\`
 
-Rimitive grows with you starting from your most simple reactive use cases:
+Rimitive allows you to create isolated reactive services (with no leakage or pollution of global state) through composition:
 
 \`\`\`ts
 import { compose } from '@rimitive/core';
+
+// 1. Import the modules you want to use
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
 } from '@rimitive/signals/extend';
 
+// 2. Create a reactive service for your app or portable component
 const { signal, computed, effect } = compose(
   SignalModule,
   ComputedModule,
   EffectModule
 );
 
-const you = signal('🫸');
-const rimitive = signal('🫷');
-const highFive = computed(() => \`\${you()}💥\${rimitive()}\`);
+// 3. Use it wherever you want, no build or transpilation required
+const count = signal(0);
+const doubled = computed(() => count() * 2);
 
-effect(() => console.log(highFive())); // 🫸💥🫷
+effect(() => console.log(doubled())); // logs: 0
+
+count(1); // logs: 2
+count(2); // logs: 4
 \`\`\`
 
-\`compose()\` wires modules together into a tiny, encapsulated, reactive service, with only what you asked for. But Rimitive takes primitives to another level, so hold onto your butts!
+If that's what you came for, you can stop here and use this in your vanilla js app or use/write bindings to bring Rimitive signals to other frameworks!
 
----
+### Add Some UI
 
-## Add a view layer
+If you don't want to opt-in to a reactive framework like React, you can use Rimitive to tack on only the UI you need, complete with **fine-grained reactivity**:
 
-If you want to add a UI, sprinkle in some UI primitives:
+\`\`\`bash
+npm install @rimitive/view
+\`\`\`
 
 \`\`\`ts
-import { compose } from '@rimitive/core';
-import {
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-} from '@rimitive/signals/extend';
 import { createElModule } from '@rimitive/view/el';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import { MountModule } from '@rimitive/view/deps/mount';
@@ -69,62 +80,171 @@ const { signal, computed, el, mount } = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  // Add these 👇
+  // 👇 As easy as adding some new modules or module factories to your service
   createElModule(createDOMAdapter()),
   MountModule
 );
 
-const App = () => {
-  const together = signal(false);
+const Counter = () => {
+  const count = signal(0);
 
   return el('div')(
-    el('p').props({
-      textContent: computed(() => (together() ? '🫸💥🫷' : '🫸   🫷')),
-    }),
-    el('button').props({ onclick: () => together(!together()) })('High five!')
+    el('span')(computed(() => \`Count: \${count()}\`)),
+    el('button').props({ onclick: () => count(count() + 1) })('Increment')
   );
 };
 
-document.body.appendChild(mount(App()).element!);
+document.body.appendChild(mount(Counter()).element!);
 \`\`\`
 
-Rimitive does things _a little differently_:
+Fun fact: UI "components" in Rimitive are just a function—they never re-render. They return a **spec** of a UI that can be mounted and unmounted...that's it. No build or transpilation required!
 
-1. The component function runs once
-2. The DOM structure is created once
-3. When \`together\` changes, only that one text node updates (no diffing, reconciliation, or component re-renders)
+### Create Some Behaviors
 
-Reactivity lives in the primitives, not in components. No component re-renders! Just mounting and unmounting.
+A **behavior** is a pattern for encapsulating reactive state and actions into a reusable function (inspired by [SAM](https://sam.js.org/) and [downshift](https://www.downshift-js.com/)):
 
-Rimitive primitives (yes it sounds absurd) are environment-agnostic, which is where adapters come into play—which is why \`createElModule\` takes an adapter.
+\`\`\`ts
+const useDisclosure = (initialOpen = false) => {
+  const isOpen = signal(initialOpen);
 
-Rimitive ships DOM, SSR, and hydration adapters, but you can write your own for whatever you want (Canvas, WebGL, or anything tree-shaped).
+  return {
+    isOpen,
+    open: () => isOpen(true),
+    close: () => isOpen(false),
+    toggle: () => isOpen(!isOpen()),
+  };
+};
 
-But that's just the beginning. Rimitive provides common tooling that utilizes these primitives, including routing, async loading, SSR, and streaming—all on-demand, swappable, extensible, and completely optional.
+// Use it anywhere
+const disc = useDisclosure();
+disc.open();
+\`\`\`
 
-For the full picture, check out the [docs](https://rimitive.dev/guides/getting-started)!
+\`use*\` is just a naming convention; it doesn't confer any reactive superpowers like other frameworks, and there's no rules. This is just a pattern.
+
+### Composition and Portability
+
+Instead of directly importing from a shared service, you can wrap functions for service injection:
+
+\`\`\`ts
+// Instead of importing directly...
+const useDisclosure = (initialOpen = false) => {
+  const isOpen = signal(initialOpen); // signal comes from somewhere
+  // ...
+};
+
+// ...receive what you need
+const disclosure =
+  ({ signal }: Service) =>
+  (initialOpen = false) => {
+    const isOpen = signal(initialOpen);
+    // ...
+  };
+
+// Then wire it up
+const useDisclosure = svc(counter); // svc provides signal, computed, etc.
+\`\`\`
+
+The same pattern works for components and ergonomic composition:
+
+\`\`\`ts
+const dropdown = (svc: Service) => {
+  // Compose other components or behaviors in the service closure
+  // Runs a single time (not on every mount/unmount)
+  const useDisclosure = svc(disclosure);
+
+  return (options?: { initialOpen?: boolean }) => {
+    const disc = useDisclosure(options?.initialOpen ?? false);
+
+    // Add keyboard handling
+    // Look ma, no memoization required! Remember? No re-rendering?
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      disc.toggle();
+    };
+
+    return {
+      ...disc,
+      onKeyDown,
+    };
+  };
+};
+
+// Wire it up
+const Dropdown = svc(dropdown);
+const app = svc.mount(Dropdown());
+\`\`\`
+
+Typing is a breeze:
+
+\`\`\`ts
+export const svc = compose(SignalModule, ComputedModule);
+export type Service = typeof svc;
+
+const myComponent = ({ signal, computed }: Service) => {
+  return () => // ...
+};
+\`\`\`
+
+Now you're a Rimitive expert! Everything else simply builds on top of this. Routing, data fetching, even SSR (with or without streaming)—they all work the same way. This just demonstrates the beginnings of what's possible with Rimitive.
+
+---
+
+## The stack
+
+Rimitive is intentionally layered, allowing you to opt-in only as needed.
+
+\`\`\`
+┌─────────────────────────────────────────┐
+│  Domain Tooling                         │
+│  view (el, map), router, resource, etc  │
+├─────────────────────────────────────────┤
+│  Adapters                               │
+│  DOM, SSR, canvas, your own             │
+├─────────────────────────────────────────┤
+│  Reactive Core                          │
+│  signal, computed, effect, etc          │
+└─────────────────────────────────────────┘
+\`\`\`
+
+- **Reactive core** — \`signal\`, \`computed\`, \`effect\`, etc. The foundation everything else is built with.
+- **Domain tooling** — \`el\`, \`map\`, etc for views, \`matches\` for routing, \`resource\` for data. Each domain provides (but does not prescribe) tools built on the reactive core. Create your own!
+- **Adapters** — Plug in where you want it to run, and the types flow through. DOM, SSR, logic-only (for hydration or testing), or roll your own. Any UI that can be modeled as a tree can have an adapter.
+
+Each layer is tiny, opt-in, swappable, and extensible. Use just the signals, plug in only the views you need later, or bring behaviors to other frameworks like React.
 
 ---
 
 ## Packages
 
-| Package                                                       | Description                                                                                                           |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| [\`@rimitive/core\`](packages/core)                             | Composition engine — \`compose()\`, \`defineModule()\`                                                                    |
-| [\`@rimitive/signals\`](packages/signals)                       | Reactive primitives — \`signal\`, \`computed\`, \`effect\`, \`batch\`                                                         |
-| [\`@rimitive/view\`](packages/view)                             | UI primitives — \`el\`, \`map\`, \`match\`, \`portal\`, \`load\`                                                                |
-| [\`@rimitive/router\`](packages/router)                         | Reactive routing — \`matches\`, \`navigate()\`, \`query\`                                                                   |
-| [\`@rimitive/resource\`](packages/resource)                     | Async data fetching with \`resource()\`                                                                                 |
-| [\`@rimitive/ssr\`](packages/ssr)                               | Server-side rendering and streaming                                                                                   |
-| [\`@rimitive/react\`](packages/react)                           | React bindings                                                                                                        |
-| [\`@rimitive/mcp\`](packages/mcp)                               | MCP server exposing Rimitive docs to LLMs                                                                             |
-| [\`@rimitive/devtools-extension\`](packages/devtools-extension) | Chrome DevTools extension ([download](https://github.com/hejhi/rimitive/releases?q=devtools-extension&expanded=true)) |
+| Package                                   | Layer          | What it does                         |
+| ----------------------------------------- | -------------- | ------------------------------------ |
+| [\`@rimitive/core\`](packages/core)         | Core           | Wires modules together — \`compose()\` |
+| [\`@rimitive/signals\`](packages/signals)   | Reactive core  | \`signal\`, \`computed\`, \`effect\`       |
+| [\`@rimitive/view\`](packages/view)         | Domain tooling | View layer — \`el\`, \`map\`, \`match\`    |
+| [\`@rimitive/router\`](packages/router)     | Domain tooling | Routing — \`matches\`, \`navigate()\`    |
+| [\`@rimitive/resource\`](packages/resource) | Domain tooling | Async data fetching                  |
+| [\`@rimitive/ssr\`](packages/ssr)           | Adapters       | Server-side rendering and streaming  |
+| [\`@rimitive/react\`](packages/react)       | Bindings       | Use Rimitive behaviors in React      |
 
----
+Start with \`@rimitive/core\` and \`@rimitive/signals\`. Add the rest as you need them.
 
-## Extending
+## Advanced
 
-The modules that ship with Rimitive are built with the same \`defineModule()\` that's available to you:
+### Adapters
+
+Same code, different targets:
+
+\`\`\`ts
+createElModule(createDOMAdapter()); // Browser
+createElModule(createParse5Adapter()); // Server (SSR)
+createElModule(myCanvasAdapter()); // Your own
+\`\`\`
+
+### Extending
+
+Create your own modules with \`defineModule()\`:
 
 \`\`\`ts
 import { defineModule } from '@rimitive/core';
@@ -137,33 +257,7 @@ const LoggerModule = defineModule({
 const { signal, log } = compose(SignalModule, LoggerModule);
 \`\`\`
 
-Create your own primitives! Swap out the entire reactive system if you want, or build adapters for new renderers. See the [Custom Modules](https://rimitive.dev/guides/custom-modules/) guide.
-
----
-
-## AI
-
-Just because Rimitive is brand new shouldn't mean an AI stumbles while trying to write idiomatic Rimitive code. [\`@rimitive/mcp\`](packages/mcp) provides an MCP server that exposes the entire Rimitive docs as meticulously tagged, searchable tools.
-
-If you use [Claude Code](https://claude.ai/code), there are on-demand plugins too:
-
-| Plugin                                           | Purpose                                      |
-| ------------------------------------------------ | -------------------------------------------- |
-| [\`rimitive-behavior\`](plugins/rimitive-behavior) | Headless behaviors — portable reactive logic |
-| [\`rimitive-module\`](plugins/rimitive-module)     | Custom modules with \`defineModule()\`         |
-| [\`rimitive-view\`](plugins/rimitive-view)         | Views with \`el\`, \`map\`, \`match\`              |
-
----
-
-## Inspirations
-
-Rimitive builds on ideas from _brilliant_ people who've thought deeply about reactivity and composition:
-
-- [alien-signals](https://github.com/stackblitz/alien-signals), [reactively](https://github.com/milomg/reactively): push-pull reactivity, graph coloring, primitives in general
-- [solidjs](https://www.solidjs.com), [radix](https://www.radix-ui.com): beautiful implementations of primitives in their respective domains
-- [downshift](https://www.downshift-js.com/use-select): headless, portable UI patterns
-- [jotai](https://jotai.org/docs/core/atom): treating atoms as configs rather than values
-- [ProseMirror](https://prosemirror.net): extensibility and determinism
+See [Custom Modules](https://rimitive.dev/guides/custom-modules/) for the full picture.
 
 ---
 
@@ -172,6 +266,8 @@ Rimitive builds on ideas from _brilliant_ people who've thought deeply about rea
 Alpha. Tested, benchmarked, used in personal projects. Not yet battle-tested in production.
 
 [Why Rimitive?](https://rimitive.dev/why/) — the story behind the project.
+
+[Get started →](https://rimitive.dev/guides/getting-started)
 
 
 ---
@@ -198,41 +294,6 @@ npm install @rimitive/core @rimitive/signals @rimitive/view
 
 Then, create the app:
 
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(createDOMAdapter()),
-  MountModule
-);
-
-const { signal, computed, el, mount } = svc;
-
-const App = () => {
-  const count = signal(0);
-  const doubled = computed(() => count() * 2);
-
-  return el('div')(
-    el('h1')('Counter'),
-    el('p')(computed(() => \`Count: \${count()}\`)),
-    el('p')(computed(() => \`Doubled: \${doubled()}\`)),
-    el('button').props({
-      onclick: () => count(count() + 1)
-    })('Increment')
-  );
-}
-
-const app = mount(App());
-document.body.appendChild(app.element!);
-\`\`\`
-
 That's it! Click the button, the count updates, the DOM updates automatically.
 
 ## What Just Happened?
@@ -245,7 +306,7 @@ That's it! Click the button, the count updates, the DOM updates automatically.
 
 If you're lost already, don't worry. We'll start from the very basics. These docs also cover reactive patterns in-depth, so you can jump around if you get confused at any time.
 
-Rimitive is as much about patterns as it is about reactive primitives and tooling, so if at any point you hate it, you can always take any patterns that inspired you elsewhere!
+Rimitive is as much about patterns as it is about reactive modules and tooling, so if at any point you hate it, you can always take any patterns that inspired you elsewhere!
 
 ---
 
@@ -253,9 +314,9 @@ Rimitive is as much about patterns as it is about reactive primitives and toolin
 
 <!-- @tags: service, compose, setup, configuration, modules, dependency-injection -->
 
-Every Rimitive app begins with a reactive service composed of modules. Services and modules are constructs of our lightweight dependency injection (DI) system in [\`core\`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
+To use Rimitive, start by creating a **reactive service**. Services and modules are constructs of our flyweight dependency injection (DI) system in [\`core\`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
 
-A simple example:
+The simplest example of a reactive service:
 
 \`\`\`typescript
 import { compose } from '@rimitive/core';
@@ -265,8 +326,8 @@ const svc = compose(SignalModule);
 const { signal } = svc;
 \`\`\`
 
-- A **service** is the result of calling \`compose()\`. It bundles your chosen primitives into an isolated reactive context.
-- A **module** is what you provide to \`compose()\`. Each module provides one or more primitives or tooling—\`SignalModule\` provides \`signal\`, \`ComputedModule\` provides \`computed\`, and so on. Modules can depend on other modules, and \`compose()\` bundles everything up into a service where they all share the same underlying reactive graph.
+- A **service** is the result of calling \`compose()\`. It bundles selected modules into an isolated reactive context.
+- A **module** is what you provide to \`compose()\`. Modules can depend on other modules, and \`compose()\` bundles everything up into a service where they all share the same underlying reactive graph.
 
 Using \`svc\` to represent a service is a convention you'll see used throughout these docs.
 
@@ -274,9 +335,9 @@ This service wouldn't do much on its own—nothing is connected to react to sign
 
 ---
 
-## Adding More Primitives
+## Adding More Modules
 
-We can add some more primitives that _would_ react to signal updates:
+We can add some more modules that _would_ react to signal updates:
 
 \`\`\`typescript
 import { compose } from '@rimitive/core';
@@ -304,8 +365,6 @@ Reactive dependencies are automatically tracked in Rimitive, so you don't need t
 
 ## Why \`compose()\`?
 
-You might wonder: why not just export these functions directly?
-
 Each \`compose()\` call creates an independent reactive context with no global leakage. This means:
 
 - **Isolation**: Multiple services don't interfere with each other
@@ -323,15 +382,24 @@ Once you've [created a service](/guides/creating-a-service), there are a few way
 
 ## Exporting a Service
 
-You can safely destructure anything in Rimitive from a service, so it's idiomatic to export the service as well as the service type directly, which comes in handy _a lot_:
+You can safely destructure anything in Rimitive from a service, so for simpler use cases, you can export the return of a service:
 
 \`\`\`typescript
 // myService.ts
 
-export const svc = compose(SignalModule, ComputedModule, EffectModule);
-export const { signal, computed, effect, batch, el, mount } = svc;
+export const { signal, computed } = compose(SignalModule, ComputedModule);
+\`\`\`
+
+But \`svc\` is also call-able. So it's more idiomatic to export the service and service type if you're looking for a more durable pattern:
+
+\`\`\`typescript
+// myService.ts
+
+export const svc = compose(SignalModule, ComputedModule);
 export type Service = typeof svc;
 \`\`\`
+
+For now though, we'll continue exporting the destructured parts for simplicity.
 
 ---
 
@@ -342,23 +410,23 @@ Rimitive makes heavy usage of factory functions that look like components or hoo
 \`\`\`typescript
 import { signal } from './myService.ts'
 
-const myCounter = () => {
+const useCounter = () => {
   const count = signal(0);
   const increment = () => count(count() + 1);
 
   return { count, increment };
 };
 
-const counter = myCounter();
+const counter = useCounter();
 counter.increment();
 counter.count(); // 1
 \`\`\`
 
-But a nuance here is that the above is **simply a factory** that instantiates reactive state and returns an api to drive it 🚗. In Rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with \`use*\` for clarity (ie \`useCounter\` instead of \`myCounter\`).
+A nuance here is that the above is **a plain function** that instantiates reactive state and returns an api to drive it 🚗. In Rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with \`use*\` for clarity (ie \`useCounter\` instead of \`myCounter\` or something).
 
-You can stop right here, if that's all you need! For plenty of apps simple apps, behaviors might be enough.
+You can stop right here, if that's all you need! For plenty of apps simple apps, direct service exports and simple behaviors might be enough.
 
-If you want to drive a reactive ui with state, Rimitive also has primitives and patterns to help you with that.
+If you want to drive a reactive ui with state, Rimitive also has modules and patterns to help you with that.
 
 Next up though, let's talk more about the [behavior pattern](/guides/creating-a-behavior).
 
@@ -366,13 +434,11 @@ Next up though, let's talk more about the [behavior pattern](/guides/creating-a-
 
 ## Adding a UI
 
-You have signals, and maybe some behaviors, so perhaps now we want to add a reactive UI on top of it.
-
-Rimitive provides the \`view\` package that contains view-specific primitives, with \`el()\` being the foundation: \`el()\` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
-
----
-
 ## Extending the Service
+
+You have signals and behaviors, so perhaps now we want to layer on some reactive UI.
+
+Rimitive provides the \`view\` package that contains view-specific modules, with \`el()\` being the foundation: \`el()\` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
 
 Add the view modules to your service:
 
@@ -388,7 +454,7 @@ export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  // Let's add the \`el\` and \`mount\` primitives from the \`view\` package, and provide the
+  // Let's add the \`el\` and \`mount\` modules from the \`view\` package, and provide the
   // DOM adapter to make DOM elements 👇
   createElModule(createDOMAdapter()),
   MountModule
@@ -418,7 +484,7 @@ el('div')(
 );
 \`\`\`
 
-If you provided a different adapter, then you'd pass different (strongly typed!) strings (like \`el('mySpecialElement')\`).
+If you provided a different adapter, then you'd pass different (strongly typed!) strings (like \`el("mySpecialElement")\`). \`el\` returns a UI **spec** with a stable reference to the underlying element—it doesn't "re-render".
 
 ---
 
@@ -438,7 +504,7 @@ const button = el('button').props({
 isDisabled(true);  // button becomes disabled, class changes
 \`\`\`
 
-Props are typesafe and typed based on the element. \`el('button')\` knows about \`disabled\`, \`onclick\`, \`type\`, etc. These types are driven by the adapter provided, so for the DOM you get things like \`button\`, whatever, but swap it out or customize the adapter and then you can get all sorts of other things, like custom elements, svg or canvas abstractions, hydration abstractions...whatever you want really.
+Props are type-safe, driven by the adapter provided.
 
 ---
 
@@ -460,7 +526,7 @@ count(5);  // display updates to "Count: 5"
 
 ## UI Components
 
-The star of the show, UI components in rimitive are...just functions that return elements:
+The star of the show, UI components in Rimitive are...just functions that return UI specs:
 
 \`\`\`typescript
 const Greeting = (name: string) =>
@@ -475,41 +541,13 @@ const DoubleGreeting = () => el('div')(
 );
 \`\`\`
 
-That's it, kind of anticlimactic.
+That's it, kind of anticlimactic. Here's a working example:
 
 ---
 
-## With Behaviors
+## Wrapping Components in Service Functions
 
-Drive UIs with reactive behavior:
-
-\`\`\`typescript
-import { svc, el, computed } from './service';
-import { useCounter } from './behaviors/counter';
-
-const Counter = (initial: number) => {
-  const { count, doubled, increment, decrement, reset } = useCounter(initial);
-
-  return el('div')(
-    el('div')(computed(() => \`Count: \${count()} (doubled: \${doubled()})\`)),
-    el('div')(
-      el('button').props({ onclick: decrement })('-'),
-      el('button').props({ onclick: increment })('+'),
-      el('button').props({ onclick: reset })('Reset')
-    )
-  );
-};
-\`\`\`
-
-Again, \`Counter\` itself is not a reactive closure, so it's not going to re-render!
-
-But wait, there's more!
-
----
-
-## Portable Components
-
-Just like behaviors, components can be made portable by wrapping them in a function that receives the service:
+Just like behaviors, components can be wrapped in a service function for portability:
 
 \`\`\`typescript
 import type { Service } from './service';
@@ -518,7 +556,7 @@ import { counter } from './behaviors/counter';
 const Counter = (svc: Service) => {
   const { el, computed } = svc;
 
-  // The service layer is so cyute isn't it??
+  // The service function is so cyute isn't it??
   const useCounter = svc(counter);
 
   return (initial: number) => {
@@ -535,27 +573,20 @@ const Counter = (svc: Service) => {
   };
 };
 
-// Components can compose both behaviors AND components in the service layer
+// Components can compose other components in the service function
 const Counters = (svc: Service) => {
-  const { el, computed } = svc;
+  const { el } = svc;
   const CounterComponent = svc(Counter);
 
-  return (initial: number) => {
-    const { count, doubled, increment, decrement, reset } = useCounter(initial);
-
-    return el('div')(
+  return () =>
+    el('div')(
       CounterComponent(0),
       CounterComponent(100)
     );
-  };
 };
 \`\`\`
 
-Same shape as portable behaviors: \`(svc) => (args) => result\`. The outer function is the service layer, the inner function is the component factory.
-
-The service layer is where you wire up your dependencies—behaviors, other components, whatever you need. Then the inner function just uses them.
-
-This is useful for testing, SSR, or sharing components across different service contexts.
+Same shape as portable behaviors: \`(svc) => (args) => result\`. This is useful for testing, SSR, or sharing components across different service contexts.
 
 ---
 
@@ -629,7 +660,7 @@ The cleanup runs when the element is removed from the DOM.
 If a parent needs access to a child's DOM node, pass a callback:
 
 \`\`\`typescript
-const Input = ({ el }: Service) => (props: { onRef?: (node: HTMLInputElement) => void }) => {
+const input = ({ el }: Service) => (props: { onRef?: (node: HTMLInputElement) => void }) => {
   return el('input').ref((node) => {
     props.onRef?.(node);
   })();
@@ -637,11 +668,11 @@ const Input = ({ el }: Service) => (props: { onRef?: (node: HTMLInputElement) =>
 
 const Form = (svc: Service) => () => {
   const { el } = svc;
-  const useInput = svc(Input);
+  const Input = svc(input);  // Wired component gets PascalCase
   let inputNode: HTMLInputElement | null = null;
 
   return el('form')(
-    useInput({ onRef: (node) => { inputNode = node; } }),
+    Input({ onRef: (node) => { inputNode = node; } }),
     el('button').props({
       onclick: () => inputNode?.focus()
     })('Focus Input')
@@ -654,11 +685,11 @@ Or with signals for reactive access:
 \`\`\`typescript
 const Form = (svc: Service) => () => {
   const { el, signal } = svc;
-  const useInput = svc(Input);
+  const Input = svc(input);
   const inputRef = signal<HTMLInputElement | null>(null);
 
   return el('form')(
-    useInput({ onRef: (node) => inputRef(node) }),
+    Input({ onRef: (node) => inputRef(node) }),
     el('button').props({
       onclick: () => inputRef()?.focus()
     })('Focus Input')
@@ -772,519 +803,17 @@ const Measured = (svc: Service) => () => {
 
 ---
 
-## Conditional Rendering
-
-<!-- @tags: match, conditional, show-hide, toggle, switch, if-else, visibility -->
-
-\`match()\` swaps elements based on a reactive value. When the value changes, the old element is disposed and a new one takes its place.
-
----
-
-## Adding the Module
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const adapter = createDOMAdapter();
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(adapter),
-  // Add this 👇
-  createMatchModule(adapter),
-  MountModule
-);
-
-export type Service = typeof svc;
-\`\`\`
-
----
-
-## Show/Hide
-
-Toggle visibility by returning \`null\`:
-
-\`\`\`typescript
-const ToggleMessage = ({ el, signal, match }: Service) => () => {
-  const showMessage = signal(true);
-
-  return el('div')(
-    el('button').props({
-      onclick: () => showMessage(!showMessage())
-    })('Toggle'),
-    match(showMessage, (show) =>
-      show ? el('div')('Hello!') : null
-    )
-  );
-};
-\`\`\`
-
----
-
-## Switching Views
-
-Switch between different element types:
-
-\`\`\`typescript
-const EditableText = ({ el, signal, computed, match }: Service) => () => {
-  const isEditMode = signal(false);
-  const text = signal('Click edit to change');
-
-  return el('div')(
-    match(isEditMode, (editing) =>
-      editing
-        ? el('input').props({ value: text })()
-        : el('span')(text)
-    ),
-    el('button').props({
-      onclick: () => isEditMode(!isEditMode())
-    })(
-      computed(() => isEditMode() ? 'Save' : 'Edit')
-    )
-  );
-};
-\`\`\`
-
----
-
-## Multi-Way Switch
-
-Use a discriminated value for multiple branches:
-
-\`\`\`typescript
-type Tab = 'home' | 'settings' | 'profile';
-
-const TabPanel = ({ el, signal, match }: Service) => () => {
-  const currentTab = signal<Tab>('home');
-
-  return match(currentTab, (tab) => {
-    switch (tab) {
-      case 'home': return el('div')('Welcome home');
-      case 'settings': return el('div')('Settings panel');
-      case 'profile': return el('div')('Your profile');
-    }
-  });
-};
-\`\`\`
-
----
-
-## Rendering Lists
-
-<!-- @tags: map, list, array, foreach, loop, keyed-list, reconciliation, todo-list -->
-
-\`map()\` renders a reactive list efficiently (_very efficiently_). When items change, it updates only what's necessary. \`map()\` contains ONLY the reconciliation logic required to deal with rendering dynamic lists efficiently, so again, a small bundle addition.
-
----
-
-## Adding the Module
-
-First, add the map module to your service:
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const adapter = createDOMAdapter();
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(adapter),
-  // map takes an adapter as well
-  createMapModule(adapter),
-  MountModule
-);
-
-const { el, map, signal, mount } = svc;
-\`\`\`
-
-### Basic Usage
-
-For primitive arrays (strings, numbers), just pass the array and a render function:
-
-\`\`\`typescript
-const items = signal(['Apple', 'Banana', 'Cherry']);
-
-const list = el('ul')(
-  map(items, (item) => el('li')(item))
-);
-\`\`\`
-
-The render function receives a **reactive signal** wrapping each item. You can pass it directly as a child:
-
-\`\`\`typescript
-map(items, (item) =>
-  el('li')(item)  // item is a signal, cool!
-)
-\`\`\`
-
-When \`items\` updates, \`map()\` reconciles the DOM efficiently, adding, removing, and reordering elements as needed.
-
-### Keyed Lists
-
-For object arrays, provide a key function so \`map()\` can track identity:
-
-\`\`\`typescript
-type Todo = { id: number; text: string; done: boolean };
-
-const todos = signal<Todo[]>([
-  { id: 1, text: 'Learn Rimitive', done: false },
-  { id: 2, text: 'Build something', done: false },
-]);
-
-const list = el('ul')(
-  map(
-    todos,
-    (todo) => todo.id,  // key function
-    (todo) => el('li')(
-      el('span')(computed(() => todo().text)),
-      el('input').props({
-        type: 'checkbox',
-        checked: computed(() => todo().done),
-      })()
-    )
-  )
-);
-\`\`\`
-
-The key function receives the plain item value and returns a unique identifier. This lets \`map()\` efficiently update items when the array changes.
-
-### Reactive Item Updates
-
-Each item is wrapped in a signal. When you update an item in the source array, the item signal updates too—no element recreation needed:
-
-\`\`\`typescript
-const toggleTodo = (id: number) => {
-  todos(todos().map(t =>
-    t.id === id ? { ...t, done: !t.done } : t
-  ));
-};
-
-// The checkbox updates reactively without recreating the <li>
-\`\`\`
-
----
-
-## Portals
-
-\`portal()\` renders content into a different DOM location—useful for modals, tooltips, and overlays that need to escape their parent's overflow or z-index context.
-
----
-
-## Adding the Module
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createPortalModule } from '@rimitive/view/portal';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const adapter = createDOMAdapter();
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  // Add this module 👇
-  createPortalModule(adapter),
-  MountModule
-);
-
-const { el, match, portal, signal, mount } = svc;
-\`\`\`
-
----
-
-## Basic Portal
-
-Render to \`document.body\` (the default):
-
-\`\`\`typescript
-const App = ({ el, signal, match, portal }: Service) => () => {
-  const showModal = signal(false);
-
-  return el('div')(
-    el('button').props({
-      onclick: () => showModal(true)
-    })('Open Modal'),
-
-    // Modal rendered to body, not inside this div
-    match(showModal, (show) =>
-      show
-        ? portal()(
-            el('div').props({ className: 'modal-backdrop' })(
-              el('div').props({ className: 'modal' })(
-                el('h2')('Modal Title'),
-                el('p')('Modal content here...'),
-                el('button').props({
-                  onclick: () => showModal(false)
-                })('Close')
-              )
-            )
-          )
-        : null
-    )
-  );
-};
-\`\`\`
-
----
-
-## Custom Target
-
-Portal to a specific element:
-
-\`\`\`typescript
-// Portal to a getter
-portal(() => document.getElementById('tooltip-root'))(
-  el('div').props({ className: 'tooltip' })('Tooltip content')
-)
-\`\`\`
-
-Or use a signal ref:
-
-\`\`\`typescript
-const TooltipContainer = ({ el, signal, portal }: Service) => () => {
-  const targetRef = signal<HTMLElement | null>(null);
-
-  return el('div')(
-    el('div').ref((node) => {
-      targetRef(node);
-      return () => targetRef(null);
-    })(),
-    portal(targetRef)(
-      el('div').props({ className: 'tooltip' })('Tooltip content')
-    )
-  );
-};
-\`\`\`
-
----
-
-## Event Handling
-
-You've seen \`onclick\` in props. That works for simple cases. For more complex event handling—multiple listeners, automatic cleanup, batched updates—use \`on()\`.
-
----
-
-## Basic Props Events
-
-For simple click handlers, props work fine:
-
-\`\`\`typescript
-const count = signal(0);
-
-el('button').props({
-  onclick: () => count(count() + 1)
-})('Click me')
-\`\`\`
-
-This attaches the handler directly to the element. Simple and direct.
-
----
-
-## The on() Helper
-
-\`on()\` provides automatic cleanup and batching. When multiple signals update in a handler, batching ensures only one re-render.
-
-Add the on module:
-
-\`\`\`typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { OnModule } from '@rimitive/view/deps/addEventListener';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const adapter = createDOMAdapter();
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  BatchModule,
-  createElModule(adapter),
-  OnModule,
-  MountModule
-);
-
-const { el, on, signal, mount } = svc;
-\`\`\`
-
-### Using on() with .ref()
-
-\`on()\` returns a lifecycle callback for use with \`.ref()\`:
-
-\`\`\`typescript
-const count = signal(0);
-
-const button = el('button').ref(
-  on('click', () => count(count() + 1))
-)('Click me');
-\`\`\`
-
-When the element is removed from the DOM, the listener is automatically cleaned up.
-
-### Multiple Listeners
-
-Stack multiple \`on()\` calls:
-
-\`\`\`typescript
-const input = el('input')
-  .ref(
-    on('focus', () => console.log('focused')),
-    on('blur', () => console.log('blurred')),
-    on('input', (e) => handleInput(e))
-  )();
-\`\`\`
-
-Each listener is independently attached and cleaned up.
-
----
-
-## Input Handling
-
-A common pattern—controlled inputs with \`on()\`:
-
-\`\`\`typescript
-const text = signal('');
-
-const input = el('input')
-  .props({
-    type: 'text',
-    value: text,
-  })
-  .ref(
-    on('input', (e) => text((e.target as HTMLInputElement).value))
-  )();
-\`\`\`
-
-The \`value\` prop binds the input's value to the signal. The \`on('input')\` handler updates the signal when the user types.
-
-### Form Submission
-
-Handle Enter key and form submission:
-
-\`\`\`typescript
-const searchQuery = signal('');
-
-const handleSubmit = () => {
-  console.log('Searching for:', searchQuery());
-  // perform search...
-};
-
-const searchInput = el('input')
-  .props({
-    type: 'text',
-    placeholder: 'Search...',
-    value: searchQuery,
-  })
-  .ref(
-    on('input', (e) => searchQuery((e.target as HTMLInputElement).value)),
-    on('keydown', (e) => {
-      if (e.key === 'Enter') handleSubmit();
-    })
-  )();
-
-const searchButton = el('button').ref(
-  on('click', handleSubmit)
-)('Search');
-\`\`\`
-
----
-
-## Automatic Batching
-
-When a handler updates multiple signals, \`on()\` batches them into a single update:
-
-\`\`\`typescript
-const firstName = signal('');
-const lastName = signal('');
-const loading = signal(false);
-
-const handleSubmit = () => {
-  // All three updates batched into one render
-  firstName('');
-  lastName('');
-  loading(true);
-};
-
-el('button').ref(
-  on('click', handleSubmit)
-)('Submit')
-\`\`\`
-
-Without batching, this would trigger three separate updates. With \`on()\`, it's one.
-
-### Why Batching Matters
-
-Consider a form with derived state:
-
-\`\`\`typescript
-const firstName = signal('John');
-const lastName = signal('Doe');
-const fullName = computed(() => \`\${firstName()} \${lastName()}\`);
-
-// Display updates once, not twice
-el('button').ref(
-  on('click', () => {
-    firstName('Jane');
-    lastName('Smith');
-  })
-)('Change Name')
-\`\`\`
-
-The \`fullName\` computed only recalculates once after both signals update.
-
----
-
-## Event Options
-
-Pass standard addEventListener options as the third argument:
-
-\`\`\`typescript
-// Capture phase
-on('click', handler, { capture: true })
-
-// Once only
-on('click', handler, { once: true })
-
-// Passive (for scroll performance)
-on('scroll', handler, { passive: true })
-\`\`\`
-
----
-
 ## Creating a Behavior
 
 <!-- @tags: behavior, hook, reusable-logic, headless, state-management, portable -->
 
-A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to encapsulate reactive logic.
+A **behavior** is a pattern for encapsulating reactive state and actions into a reusable function (inspired by [SAM](https://sam.js.org/) and [downshift](https://www.downshift-js.com/)).
 
 ---
 
 ## The Simple Approach
 
-The easiest way to create a behavior is to import primitives directly from your service:
+The easiest way to create a behavior is to import directly from your service:
 
 \`\`\`typescript
 // behaviors/useCounter.ts
@@ -1319,22 +848,20 @@ counter.count();  // 11
 
 <!-- @tags: portable, service-injection, testable, ssr, dependency-injection -->
 
-## The Portable Pattern
+## Using a Service Wrapper for Portability
 
 When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern. This is, generally speaking, the preferred pattern.
-
-### The Shape
 
 \`\`\`typescript
 // Remember how we exported \`typeof svc\` in the previous guide example?
 import type { Service } from './service';
 
-// The "portable" pattern is...just wrapping your behavior in an outer
-// function that injects the service
-const myPortableBehavior = (svc: Service) => (options?) => {
-  // Create state
-  // Return API
-};
+const myBehavior = (svc: Service) => {
+  // This would be called during composition like \`const useMyBehavior = svc(myBehavior)\`.
+  // This is colloquially known as the **service function** or **service closure**. 
+  // It's also where you'd compose other behaviors or components.
+  return (options?) => // ...
+}
 \`\`\`
 
 This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. It also decouples your function from Rimitive! you could pass in whatever you want for \`svc\` later, as long as it matches the Service type. So from now on, we'll be working with portable functions.
@@ -1363,7 +890,7 @@ const counter = ({ signal, computed }: Service) => (initial = 0) => {
 \`\`\`typescript
 import { svc } from './service';
 
-// Oh look! svc itself is callable and injects the svc for you! Neat!
+// As mentioned before, \`svc\` itself is callable, injects the service, and returns the inner component
 const useCounter = svc(counter);
 const c = useCounter(10);
 
@@ -1372,7 +899,7 @@ c.increment();
 c.doubled();
 \`\`\`
 
-\`svc(counter)\` provides (or injects) the service (and is type safe). Then you have a ready-to-use behavior bound to your service that you can name whatever you want. Again, by convention (NOT prescription) we prefix with \`use*\` for nice semantics and ergonomics.
+\`svc(counter)\` provides (or injects) the service, and is type-safe. Then you have a ready-to-use behavior or component bound to your service.
 
 ---
 
@@ -1380,7 +907,7 @@ c.doubled();
 
 ## Composing Behaviors
 
-The double-function behavior pattern is quite powerful for composition. Behaviors can easily compose other behaviors. To demonstrate this, let's start with a basic portable behavior:
+Behaviors ergonomically compose other behaviors. To demonstrate this, let's start with a basic portable behavior:
 
 \`\`\`typescript
 const disclosure = ({ signal }: Service) => (initialOpen = false) => {
@@ -1399,8 +926,7 @@ Now, we can compose it:
 
 \`\`\`typescript
 const dropdown = (svc: Service) => {
-  // Another convention is to use the outer function as a "service layer", but you could
-  // do this in the return function if you don't mind it running on every mount.
+  // Utilize the service closure as a space to compose
   const useDisclosure = svc(disclosure);
 
   return (options?: { initialOpen?: boolean }) => {
@@ -1422,7 +948,7 @@ const dropdown = (svc: Service) => {
 };
 \`\`\`
 
-Now \`dropdown\` composes \`disclosure\`! They both use the same behavior shape of \`(svc) => (args) => api\`, but one composes the other. In rimitive, we call the outer function the **service layer**. It's a convenient place to inject services a single time.
+Now \`dropdown\` composes \`disclosure\`! They both use the same behavior shape of \`(svc) => (args) => api\`, but one composes the other. The outer service function is a convenient place to inject services a single time.
 
 ---
 
@@ -1733,40 +1259,13 @@ Data loading in Rimitive is reactive. When dependencies change, data refetches. 
 
 ## The Manual Way
 
-You _could_ manage async state yourself with signals and effects:
-
-\`\`\`typescript
-const ProductList = ({ signal, effect, el }: Service) => 
-  () => {
-    const loading = signal(true);
-    const data = signal<Product[]>([]);
-    const error = signal<Error | null>(null);
-
-    effect(() => {
-      loading(true);
-      fetch('/api/products')
-        .then(r => r.json())
-        .then(items => {
-          data(items);
-          loading(false);
-        })
-        .catch(err => {
-          error(err);
-          loading(false);
-        });
-    });
-
-    return el('div')(/* render based on loading/data/error */);
-  };
-\`\`\`
-
-This works, but you're managing three signals, handling errors, and there's no cancellation. When dependencies change mid-flight, you get race conditions.
+You _could_ manage async state yourself with signals and effects, but you'd likely end up manually setting loading, error, and data states as signals, as well as cancellation. When dependencies change mid-flight, if you're not careful, you could also end up with race conditions.
 
 ---
 
-## The resource() Primitive
+## Using resource()
 
-\`resource()\` handles all of that. Add the resource module to your service:
+\`resource()\` handles all of this in a tiny module. Add the resource module to your service:
 
 \`\`\`typescript
 // service.ts
@@ -1804,7 +1303,7 @@ const ProductList = ({ resource, el, match }: Service) => {
       fetch('/api/products', { signal }).then(r => r.json())
     );
 
-    return el('div').ref(() => () => products.dispose())(
+    return el('div').ref(() => products.dispose)(
       match(products, (state) => {
         switch (state.status) {
           case 'pending':
@@ -1822,10 +1321,10 @@ const ProductList = ({ resource, el, match }: Service) => {
 };
 \`\`\`
 
-Key points:
-- The fetcher receives an \`AbortSignal\` - pass it to \`fetch()\` for automatic cancellation
-- Create resources **inside the factory function**, not at module level
-- Call \`dispose()\` when the component unmounts to abort in-flight requests
+Notice that:
+- the fetcher receives an \`AbortSignal\` - pass it to \`fetch()\` for automatic cancellation
+- we create resources **inside the component function**, not at module level
+- we call \`dispose()\` when the component unmounts to abort in-flight requests
 
 ### Reading State
 
@@ -2090,7 +1589,7 @@ Without \`flush\`, refetches are synchronous—each dependency change triggers a
 
 ## resource() vs load()
 
-Rimitive has two primitives for async data:
+Rimitive has two modules for async data:
 
 | | \`resource()\` | \`load()\` |
 |---|---|---|
@@ -2541,7 +2040,7 @@ With streaming:
 
 ## Custom Modules
 
-Rimitive's composition system isn't limited to the built-in primitives. You can define your own modules with \`defineModule\` and compose them alongside signals, view, or anything else.
+You can define your own modules with \`defineModule\` and compose them alongside signals, view, or anything else.
 
 ---
 
@@ -2702,7 +2201,7 @@ const svc = compose(SignalModule, ComputedModule);
 
 Create a module when you want to:
 
-- **Add new primitives** to the composed service
+- **Add new modules** to a composed service
 - **Share infrastructure** (logging, http, storage) across behaviors
 - **Encapsulate setup/teardown** with lifecycle hooks
 - **Build your own libraries** on top of composition
@@ -2713,44 +2212,32 @@ For reusable reactive logic, prefer [behaviors](/guides/creating-a-behavior). Be
 
 ## Signal Patterns
 
-<!-- @tags: signal, updater, toggle, previous-value, debounce, async-action, derived-state -->
+<!-- @tags: signal, toggle, previous-value, debounce, async-action, derived-state -->
+
+## Try It
 
 Signals are simple—read with \`sig()\`, write with \`sig(value)\`. But there are patterns that make them more ergonomic for common use cases.
 
 ---
 
-## Updater Functions
+## Working with Arrays and Objects
 
-Signals accept functions for updates based on the previous value:
-
-\`\`\`typescript
-const count = signal(0);
-
-// Direct update
-count(5);
-
-// Updater function: receives previous value, returns new value
-count(c => c + 1);  // increment
-count(c => c * 2);  // double
-count(c => Math.max(0, c - 1));  // decrement, minimum 0
-\`\`\`
-
-This is particularly useful for arrays and objects:
+When updating arrays and objects, read the current value and write the new value:
 
 \`\`\`typescript
 const items = signal<Item[]>([]);
 
 // Append
-items(arr => [...arr, newItem]);
+items([...items(), newItem]);
 
 // Remove by id
-items(arr => arr.filter(x => x.id !== id));
+items(items().filter(x => x.id !== id));
 
 // Update one item
-items(arr => arr.map(x => x.id === id ? { ...x, done: true } : x));
+items(items().map(x => x.id === id ? { ...x, done: true } : x));
 
 // Toggle a property
-items(arr => arr.map(x => x.id === id ? { ...x, done: !x.done } : x));
+items(items().map(x => x.id === id ? { ...x, done: !x.done } : x));
 \`\`\`
 
 ---
@@ -2779,8 +2266,8 @@ const counter = (svc: SignalsSvc) => (initial = 0) => {
   const count = svc.signal(initial);
 
   return Object.assign(count, {
-    increment: () => count(c => c + 1),
-    decrement: () => count(c => c - 1),
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
     reset: () => count(initial),
   });
 };
@@ -2809,7 +2296,7 @@ const toggle = (svc: SignalsSvc) => (initial = false) => {
   return Object.assign(value, {
     on: () => value(true),
     off: () => value(false),
-    toggle: () => value(v => !v),
+    toggle: () => value(!value()),
   });
 };
 
@@ -2873,7 +2360,7 @@ const withHistory = <T>(svc: SignalsSvc) => (initial: T, maxHistory = 10) => {
   const canRedo = computed(() => future().length > 0);
 
   const set = (value: T) => {
-    past(p => [...p.slice(-(maxHistory - 1)), current()]);
+    past([...past().slice(-(maxHistory - 1)), current()]);
     future([]);
     current(value);
   };
@@ -2883,7 +2370,7 @@ const withHistory = <T>(svc: SignalsSvc) => (initial: T, maxHistory = 10) => {
     const prev = past();
     const last = prev[prev.length - 1];
     past(prev.slice(0, -1));
-    future(f => [...f, current()]);
+    future([...future(), current()]);
     current(last!);
   };
 
@@ -2892,7 +2379,7 @@ const withHistory = <T>(svc: SignalsSvc) => (initial: T, maxHistory = 10) => {
     const fut = future();
     const next = fut[fut.length - 1];
     future(fut.slice(0, -1));
-    past(p => [...p, current()]);
+    past([...past(), current()]);
     current(next!);
   };
 
@@ -3058,10 +2545,10 @@ const todoList = (svc: SignalsSvc) => () => {
     counts,
     allDone,
     // Actions...
-    add: (text: string) => items(arr => [...arr, { id: crypto.randomUUID(), text, done: false }]),
-    toggle: (id: string) => items(arr => arr.map(t => t.id === id ? { ...t, done: !t.done } : t)),
-    remove: (id: string) => items(arr => arr.filter(t => t.id !== id)),
-    clear: () => items(arr => arr.filter(t => !t.done)),
+    add: (text: string) => items([...items(), { id: crypto.randomUUID(), text, done: false }]),
+    toggle: (id: string) => items(items().map(t => t.id === id ? { ...t, done: !t.done } : t)),
+    remove: (id: string) => items(items().filter(t => t.id !== id)),
+    clear: () => items(items().filter(t => !t.done)),
   };
 };
 \`\`\`
@@ -3190,10 +2677,10 @@ items();  // Still returns the same reference - no reactive update!
 \`\`\`
 
 \`\`\`typescript
-// ✅ CORRECT - use updater functions to create new values
+// ✅ CORRECT - create new values with explicit read/write
 const items = signal<string[]>([]);
 
-items(arr => [...arr, 'new item']);  // New array, signal updates
+items([...items(), 'new item']);  // New array, signal updates
 \`\`\`
 
 The same applies to objects:
@@ -3204,7 +2691,7 @@ const user = signal({ name: 'Alice', age: 30 });
 user().age = 31;  // Mutation - no reactive update
 
 // ✅ CORRECT
-user(u => ({ ...u, age: 31 }));  // New object - reactive update
+user({ ...user(), age: 31 });  // New object - reactive update
 \`\`\`
 
 ### Don't Read Signals Outside Reactive Context
@@ -3311,7 +2798,7 @@ const behaviorName = (svc: SignalsSvc) => (options?: Options) => {
 \`\`\`
 
 Three levels:
-1. **Service injection**: \`(svc) =>\` — receives primitives
+1. **Service injection**: \`(svc) =>\` — receives modules
 2. **Factory**: \`(options?) =>\` — configures the instance
 3. **API**: \`{ ... }\` — the reactive interface consumers use
 
@@ -3921,9 +3408,9 @@ Rimitive is designed around this insight. The same code can run in different con
 
 ---
 
-## The Key: Depend on Contracts, Not Frameworks
+## Depend on Contracts, Not Frameworks
 
-A portable component depends on a **service contract**—a set of primitives it needs—not a specific framework:
+A portable component depends on a **service contract**—a set of dependencies it needs—not a specific framework:
 
 \`\`\`typescript
 // This component depends on { el, signal, computed }
@@ -4082,7 +3569,7 @@ Same component, different targets.
 
 ### Don't Import Framework-Specific Code Directly
 
-Importing primitives directly couples your code to a specific setup:
+Importing directly couples your code to a specific setup:
 
 \`\`\`typescript
 // ❌ WRONG - hardcoded dependency, not portable
@@ -4221,15 +3708,13 @@ No DOM mocking, no framework test utilities—just functions and assertions.
 
 <!-- @tags: context, shared-state, global-state, service-threading, theme, user, prop-drilling -->
 
-Other frameworks have "context"—a way to pass values down the component tree without threading them through every intermediate component. In React, it's \`createContext\` and \`useContext\`. In Solid, it's similar.
-
-Rimitive doesn't have a separate context primitive. It doesn't need one.
+Other frameworks have "context"—a way to pass values down the component tree without threading them through every intermediate component.
 
 ---
 
 ## The Pattern: Service Threading
 
-In Rimitive, the **service is the context**. Components receive a service object containing the primitives they need. You can extend that service with additional state at any point in the tree.
+In Rimitive, the **service is the context**. Components receive a service object containing the modules they need. You can extend that service with additional state at any point in the tree.
 
 \`\`\`typescript
 // Define your app-level shared state
@@ -4352,7 +3837,7 @@ const UserProfile = (svc: AppService) => () => { ... };
 
 ---
 
-## Why Not a Context Primitive?
+## Why Not a Context Module?
 
 I considered adding one. The problem: context in other frameworks works through implicit tree traversal—a component "finds" the nearest provider by walking up the tree at render time.
 
@@ -4497,7 +3982,7 @@ It doesn't—because it doesn't need one.
 
 ---
 
-## Why No Error Boundary Primitive?
+## Why No Error Boundary Module?
 
 In React and Solid, components are reactive functions that re-run during a render cycle. Errors can happen mid-render, and the framework needs a way to catch them and show fallback UI.
 
@@ -4535,7 +4020,7 @@ const SafeWrapper = (svc: Service) => () => {
 
 ## Handling Async Errors
 
-For async operations, use the \`resource\` primitive. It tracks error state explicitly:
+For async operations, use the \`resource\` module. It tracks error state explicitly:
 
 \`\`\`typescript
 const ProductList = (svc: Service) => () => {
@@ -4827,7 +4312,7 @@ const SaveForm = (svc: Service) => () => {
 
 ## Forms
 
-Forms are one of the most common UI patterns. Rimitive doesn't have a built-in form primitive—you compose form behavior from signals and computeds.
+Forms are one of the most common UI patterns. Rimitive doesn't have a built-in form module—you compose form behavior from signals and computeds.
 
 ---
 
@@ -5318,7 +4803,7 @@ tags.add('c');     // Proper reactive update
 tags.remove(0);    // Proper reactive update
 
 // Or if you need custom operations, create a new array:
-tags.items(items => items.filter(f => f.valid()));
+tags.items(tags.items().filter(f => f.valid()));
 \`\`\`
 
 ---
@@ -5342,7 +4827,7 @@ Deep reactivity requires proxies. Proxies have costs:
 - **Complexity**: Edge cases around arrays, Maps, Sets, class instances, etc.
 - **Encourages sprawl**: Big nested state objects instead of focused, composable units.
 
-There's nothing saying you can't create your own primitive—it's just that rimitive doesn't ship one by default.
+There's nothing saying you can't create your own module—it's just that Rimitive doesn't ship one by default.
 
 ---
 
@@ -5567,7 +5052,7 @@ const userSettings = (svc: SignalsSvc) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   return {
     theme,
-    toggleTheme: () => theme(t => t === 'light' ? 'dark' : 'light'),
+    toggleTheme: () => theme(theme() === 'light' ? 'dark' : 'light'),
   };
 };
 
@@ -5647,8 +5132,8 @@ const counter = (svc: SignalsSvc) => () => {
 
   return {
     count,  // Read access
-    increment: () => count(c => c + 1),
-    decrement: () => count(c => Math.max(0, c - 1)),  // Validated
+    increment: () => count(count() + 1),
+    decrement: () => count(Math.max(0, count() - 1)),  // Validated
     reset: () => count(0),
   };
 };
@@ -5694,13 +5179,13 @@ const ch = checkout(svc)(c);
 
 React has Suspense. Solid has \`<Suspense>\` and \`<Show>\`. These handle async loading states declaratively.
 
-Rimitive handles async state explicitly through two primitives: \`resource\` for reactive data fetching with automatic refetch, and \`load\` for simpler async boundaries. Both use \`match\` for rendering. No magic, no special components—just reactive state.
+Rimitive handles async state explicitly through two modules: \`resource\` for reactive data fetching with automatic refetch, and \`load\` for simpler async boundaries. Both use \`match\` for rendering. No magic, no special components—just reactive state.
 
 ---
 
 ## The Resource Pattern
 
-The \`resource\` primitive wraps async operations and exposes their state reactively:
+The \`resource\` module wraps async operations and exposes their state reactively:
 
 \`\`\`typescript
 const ProductList = (svc: Service) => () => {
@@ -6543,16 +6028,12 @@ name(); // 'Alice'
 name('Bob');
 name(); // 'Bob'
 name.peek(); // read without tracking
-\`\`\`
 
-Updater functions work too:
-
-\`\`\`typescript
 const count = signal(0);
-count((c) => c + 1);
+count(count() + 1); // read then write
 
 const items = signal<string[]>([]);
-items((arr) => [...arr, 'new']);
+items([...items(), 'new']); // spread and append
 \`\`\`
 
 ---
@@ -6614,11 +6095,11 @@ effect(raf(() => updateCanvas(data())));
 effect(debounce(300, () => search(query())));
 \`\`\`
 
-| Strategy | Use case |
-|----------|----------|
-| \`mt(fn)\` | Batch multiple synchronous signal updates into one effect run |
-| \`raf(fn)\` | DOM measurements, canvas rendering, animations |
-| \`debounce(ms, fn)\` | User input, search boxes, expensive operations |
+| Strategy           | Use case                                                      |
+| ------------------ | ------------------------------------------------------------- |
+| \`mt(fn)\`           | Batch multiple synchronous signal updates into one effect run |
+| \`raf(fn)\`          | DOM measurements, canvas rendering, animations                |
+| \`debounce(ms, fn)\` | User input, search boxes, expensive operations                |
 
 Without a strategy, effects are synchronous. Wrap your effect function in a strategy to control timing.
 
@@ -6661,7 +6142,6 @@ Subscribe without creating a reactive context.
 import { SubscribeModule } from '@rimitive/signals/extend';
 
 const { signal, subscribe } = compose(SignalModule, SubscribeModule);
-
 const count = signal(0);
 const unsubscribe = subscribe(count, (value) => {
   console.log('Count changed to:', value);
@@ -6701,9 +6181,96 @@ result(); // 15 (recomputes, reads current b)
 
 ---
 
+## iter
+
+Reactive collection with O(1) mutations. Like a signal, but for lists.
+
+\`\`\`typescript
+import { IterModule } from '@rimitive/signals/extend';
+
+const { signal, computed, effect, iter } = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  IterModule
+);
+
+type Todo = { id: number; text: string };
+
+const todos = iter<Todo>(
+  (todo) => todo.id,
+  [
+    { id: 1, text: 'Buy milk' },
+    { id: 2, text: 'Walk dog' },
+  ]
+);
+\`\`\`
+
+### Reading (tracks dependency)
+
+\`\`\`typescript
+// Callable - returns array
+todos(); // [{ id: 1, ... }, { id: 2, ... }]
+
+// Iterable - works with for...of
+for (const todo of todos) {
+  console.log(todo.text);
+}
+
+// In computed/effect - auto-tracks
+const count = computed(() => todos().length);
+effect(() => console.log('Todos:', [...todos]));
+\`\`\`
+
+### O(1) Mutations
+
+\`\`\`typescript
+todos.append({ id: 3, text: 'New todo' });
+todos.prepend({ id: 0, text: 'First' });
+todos.insertAfter(refTodo, newTodo);
+todos.insertBefore(refTodo, newTodo);
+todos.remove(todo); // by item
+todos.remove(1); // by key
+todos.update({ id: 1, text: 'Updated' });
+todos.clear();
+\`\`\`
+
+### Bulk Replace (with reconciliation)
+
+\`\`\`typescript
+// Callable with array - reconciles efficiently
+todos([
+  { id: 2, text: 'Walk dog' },
+  { id: 3, text: 'New item' },
+]);
+// Removes id:1, adds id:3, reorders - minimal operations
+\`\`\`
+
+### Lookups
+
+\`\`\`typescript
+todos.get(1); // { id: 1, text: '...' } | undefined
+todos.has(1); // true
+todos.size; // 2 (reactive)
+todos.peek(); // [...] without tracking (like signal.peek())
+\`\`\`
+
+### Why iter?
+
+| Operation   | \`signal<T[]>\` | \`iter<T>\` |
+| ----------- | ------------- | --------- |
+| Append      | O(n) copy     | O(1)      |
+| Remove      | O(n) copy     | O(1)      |
+| Update item | O(n) copy     | O(1)      |
+| Read all    | O(1)          | O(n)      |
+
+Use \`iter\` when you frequently mutate lists. Use \`signal<T[]>\` for small, rarely-changed arrays.
+
+---
+
 ### @rimitive/view
 
-Reactive UI primitives for rimitive. Elements, lists, conditionals, portals.
+View layer tooling for rimitive. Elements, lists, conditionals, portals.
 
 ## Quick Start
 
@@ -6733,7 +6300,7 @@ const count = signal(0);
 const App = () =>
   el('div')(
     el('p')(computed(() => \`Count: \${count()}\`)),
-    el('button').props({ onclick: () => count((c) => c + 1) })('Increment')
+    el('button').props({ onclick: () => count(count() + 1) })('Increment')
   );
 
 document.body.appendChild(mount(App()).element!);
@@ -7406,8 +6973,8 @@ el('input').ref((el) => {
 ## Package Reference
 
 - [@rimitive/core](https://github.com/hejhi/rimitive/tree/main/packages/rimitive): Core composition (\`compose\`, \`defineModule\`, \`merge\`)
-- [@rimitive/signals](https://github.com/hejhi/rimitive/tree/main/packages/signals): Reactive primitives (\`signal\`, \`computed\`, \`effect\`, \`batch\`)
-- [@rimitive/view](https://github.com/hejhi/rimitive/tree/main/packages/view): UI primitives (\`el\`, \`map\`, \`match\`, \`portal\`, \`load\`)
+- [@rimitive/signals](https://github.com/hejhi/rimitive/tree/main/packages/signals): Reactive core (\`signal\`, \`computed\`, \`effect\`, \`batch\`)
+- [@rimitive/view](https://github.com/hejhi/rimitive/tree/main/packages/view): View layer (\`el\`, \`map\`, \`match\`, \`portal\`, \`load\`)
 - [@rimitive/router](https://github.com/hejhi/rimitive/tree/main/packages/router): Reactive routing (\`matches\`, \`navigate()\`, \`query\`)
 - [@rimitive/resource](https://github.com/hejhi/rimitive/tree/main/packages/resource): Async data fetching with \`resource()\`
 - [@rimitive/ssr](https://github.com/hejhi/rimitive/tree/main/packages/ssr): Server-side rendering and streaming
