@@ -1,22 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  plugins: [
-    dts({
-      insertTypesEntry: true,
-      outDir: 'dist',
-      include: ['src/**/*.ts', 'src/**/*.tsx'],
-      exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.test.tsx',
-        'src/**/*.test.d.ts',
-        'src/**/test-*.ts',
-        'src/test-setup.ts',
-      ],
-    }),
-  ],
   build: {
     lib: {
       entry: {
