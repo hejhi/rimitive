@@ -145,7 +145,7 @@ function getLayoutedElements(
   Dagre.layout(g);
 
   const layoutedNodes = nodes.map((node) => {
-    const position = g.node(node.id);
+    const position = g.node(node.id) as Dagre.Node;
     return {
       ...node,
       position: { x: position.x - 75, y: position.y - 25 },

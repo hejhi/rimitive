@@ -82,7 +82,7 @@ export function computeStratifiedLayout(
 
   // Extract positions and create React Flow nodes
   for (const node of filteredNodes) {
-    const nodeWithPosition = g.node(node.id);
+    const nodeWithPosition = g.node(node.id) as dagre.Node;
     const nodeMetrics = metrics.get(node.id) ?? { connectionCount: 0, isOrphaned: false };
 
     resultNodes.push({
