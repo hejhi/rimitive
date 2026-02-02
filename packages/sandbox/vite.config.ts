@@ -24,11 +24,7 @@ export default defineConfig({
       external: [
         'vitest',
         /^vitest/,
-        '@rimitive/core',
-        '@rimitive/signals',
-        '@rimitive/view',
-        '@rimitive/router',
-        '@rimitive/resource',
+        /^@rimitive\//,
         'shiki',
       ],
       output: {
