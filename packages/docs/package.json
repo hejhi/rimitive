@@ -14,9 +14,9 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
-    "@astrojs/starlight": "0.37.3",
+    "@astrojs/starlight": "0.37.5",
     "@rimitive/sandbox": "workspace:*",
-    "astro": "5.16.11",
+    "astro": "5.17.1",
     "sharp": "0.34.5"
   }
 }
