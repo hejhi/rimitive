@@ -7,7 +7,22 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@rimitive/benchmarks", "@rimitive/example-devtools"],
+  "ignore": [
+    "@rimitive/benchmarks",
+    "@rimitive/docs",
+    "@rimitive/devtools-extension",
+    "@rimitive/sandbox",
+    "@rimitive/example-canvas",
+    "@rimitive/example-devtools",
+    "@rimitive/example-headless",
+    "@rimitive/example-react",
+    "@rimitive/example-resource",
+    "@rimitive/example-router",
+    "@rimitive/example-ssr-router",
+    "@rimitive/example-ssr-router-async",
+    "@rimitive/example-ssr-router-streaming",
+    "@rimitive/example-view"
+  ],
   "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
     "onlyUpdatePeerDependentsWhenOutOfRange": true
   }
