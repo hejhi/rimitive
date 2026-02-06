@@ -7,9 +7,9 @@ import {
   BatchModule,
 } from '@rimitive/signals/extend';
 import { createDOMAdapter } from './adapters/dom';
-import { createElModule } from './el';
-import { createMapModule } from './map';
-import { createMatchModule } from './match';
+import { ElModule } from './el';
+import { MapModule } from './map';
+import { MatchModule } from './match';
 import { createPortalModule } from './portal';
 import { OnModule } from './deps/addEventListener';
 import { MountModule } from './deps/mount';
@@ -21,9 +21,9 @@ function createTestViewSvc() {
     ComputedModule,
     EffectModule,
     BatchModule,
-    createElModule(adapter),
-    createMapModule(adapter),
-    createMatchModule(adapter),
+    ElModule.with({ adapter }),
+    MapModule.with({ adapter }),
+    MatchModule.with({ adapter }),
     createPortalModule(adapter),
     OnModule,
     MountModule

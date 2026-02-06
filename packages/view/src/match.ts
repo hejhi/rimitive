@@ -5,7 +5,15 @@ import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createNodeHelpers } from './deps/node-deps';
 import { setFragmentChild } from './deps/fragment-boundaries';
-import { defineModule, type Module } from '@rimitive/core';
+import {
+  defineModule,
+  type Module,
+  STATUS_MODULE,
+  PLACEHOLDER,
+  type InstrumentationContext,
+  getCallerLocationFull,
+  type SourceLocation,
+} from '@rimitive/core';
 
 /**
  * Options passed to Match factory
@@ -244,33 +252,85 @@ export function createMatchFactory<TConfig extends TreeConfig>({
 }
 
 /**
- * Create a Match module for a given adapter.
+ * Placeholder module for use in dependency arrays.
+ * The actual module is created via MatchModule.with({ adapter }).
+ */
+const matchModulePlaceholder = {
+  status: STATUS_MODULE as typeof STATUS_MODULE,
+  name: 'match' as const,
+  dependencies: [ScopesModule],
+  [PLACEHOLDER]: true as const,
+  create: (): MatchFactory<Node> => {
+    throw new Error(
+      'Module "match" requires configuration. ' +
+        'Use MatchModule.with({ adapter }) when composing.'
+    );
+  },
+};
+
+/**
+ * Match module - conditional rendering primitive.
+ *
+ * Requires configuration via .with() before composing.
+ * Use MatchModule.module in dependency arrays to declare dependency.
  *
  * @example
  * ```ts
  * import { compose } from '@rimitive/core';
- * import { createMatchModule } from '@rimitive/view/match';
+ * import { MatchModule } from '@rimitive/view/match';
  * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();
- * const MatchModule = createMatchModule(adapter);
+ * const svc = compose(
+ *   SignalModule,
+ *   MatchModule.with({ adapter }),
+ * );
  *
- * const { match } = compose(MatchModule);
+ * const { match } = svc;
  * ```
  */
-export const createMatchModule = <TConfig extends TreeConfig>(
-  adapter: Adapter<TConfig>
-): Module<
-  'match',
-  MatchFactory<NodeOf<TConfig>>,
-  { scopes: CreateScopes }
-> =>
-  defineModule({
-    name: 'match',
-    dependencies: [ScopesModule],
-    create: ({ scopes }: { scopes: CreateScopes }) =>
-      createMatchFactory({
-        adapter,
-        ...scopes,
-      }),
-  });
+export const MatchModule = {
+  name: 'match' as const,
+  module: matchModulePlaceholder,
+
+  with<TConfig extends TreeConfig>(config: {
+    adapter: Adapter<TConfig>;
+  }): Module<'match', MatchFactory<NodeOf<TConfig>>, { scopes: CreateScopes }> {
+    return defineModule({
+      name: 'match',
+      dependencies: [ScopesModule],
+      create: ({ scopes }: { scopes: CreateScopes }) =>
+        createMatchFactory({
+          adapter: config.adapter,
+          ...scopes,
+        }),
+      instrument(
+        impl: MatchFactory<NodeOf<TConfig>>,
+        instr: InstrumentationContext
+      ): MatchFactory<NodeOf<TConfig>> {
+        type TBaseElement = NodeOf<TConfig>;
+
+        // Wrap the match function to emit events
+        function instrumentedMatch<T, TElement extends TBaseElement>(
+          reactive: Writable<T> | (() => T),
+          matcher: (value: T) => RefSpec<TElement> | null
+        ): RefSpec<TElement> {
+          const location = getCallerLocationFull();
+          const sourceLocation: SourceLocation | undefined = location;
+
+          instr.emit({
+            type: 'match:create',
+            timestamp: Date.now(),
+            data: {
+              sourceLocation,
+            },
+          });
+
+          return impl(reactive, matcher);
+        }
+
+        return instrumentedMatch as MatchFactory<TBaseElement>;
+      },
+    });
+  },
+};

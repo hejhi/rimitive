@@ -11,7 +11,15 @@ import type { Adapter, TreeConfig, NodeOf } from './adapter';
 import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createProcessChildren } from './deps/processChildren';
-import { defineModule, type Module } from '@rimitive/core';
+import {
+  defineModule,
+  type Module,
+  STATUS_MODULE,
+  PLACEHOLDER,
+  type InstrumentationContext,
+  getCallerLocationFull,
+  type SourceLocation,
+} from '@rimitive/core';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -370,32 +378,131 @@ export function createElFactory<TConfig extends TreeConfig>({
 }
 
 /**
- * Create an El module for a given adapter.
+ * Placeholder module for use in dependency arrays.
+ * The actual module is created via ElModule.with({ adapter }).
+ */
+const elModulePlaceholder = {
+  status: STATUS_MODULE as typeof STATUS_MODULE,
+  name: 'el' as const,
+  dependencies: [ScopesModule],
+  [PLACEHOLDER]: true as const,
+  create: (): ElFactory<TreeConfig> => {
+    throw new Error(
+      'Module "el" requires configuration. ' +
+        'Use ElModule.with({ adapter }) when composing.'
+    );
+  },
+};
+
+/**
+ * El module - element creation primitive.
  *
- * The adapter is configuration, not a module, so this is a factory
- * that returns a module parameterized by the adapter.
+ * Requires configuration via .with() before composing.
+ * Use ElModule.module in dependency arrays to declare dependency.
  *
  * @example
  * ```ts
  * import { compose } from '@rimitive/core';
- * import { createElModule } from '@rimitive/view/el';
+ * import { ElModule } from '@rimitive/view/el';
  * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();
- * const ElModule = createElModule(adapter);
+ * const svc = compose(
+ *   SignalModule,
+ *   ElModule.with({ adapter }),
+ * );
  *
- * const { el, scopes } = compose(ElModule);
+ * const { el } = svc;
+ * ```
+ *
+ * @example Declaring dependency on el
+ * ```ts
+ * import { defineModule } from '@rimitive/core';
+ * import { ElModule } from '@rimitive/view/el';
+ *
+ * const MyViewModule = defineModule({
+ *   name: 'myView',
+ *   dependencies: [ElModule.module],  // Use .module for dependency
+ *   create: ({ el }) => ({
+ *     render: () => el('div')('Hello'),
+ *   }),
+ * });
  * ```
  */
-export const createElModule = <TConfig extends TreeConfig>(
-  adapter: Adapter<TConfig>
-): Module<'el', ElFactory<TConfig>, { scopes: CreateScopes }> =>
-  defineModule({
-    name: 'el',
-    dependencies: [ScopesModule],
-    create: ({ scopes }: { scopes: CreateScopes }) =>
-      createElFactory({
-        adapter,
-        ...scopes,
-      }),
-  });
+export const ElModule = {
+  name: 'el' as const,
+  module: elModulePlaceholder,
+
+  with<TConfig extends TreeConfig>(config: {
+    adapter: Adapter<TConfig>;
+  }): Module<'el', ElFactory<TConfig>, { scopes: CreateScopes }> {
+    return defineModule({
+      name: 'el',
+      dependencies: [ScopesModule],
+      create: ({ scopes }: { scopes: CreateScopes }) =>
+        createElFactory({
+          adapter: config.adapter,
+          ...scopes,
+        }),
+      instrument(
+        impl: ElFactory<TConfig>,
+        instr: InstrumentationContext
+      ): ElFactory<TConfig> {
+        // Helper to wrap a TagFactory with instrumentation
+        const wrapTagFactory = <
+          Tag extends string &
+            keyof TConfig['attributes'] &
+            keyof TConfig['nodes'],
+        >(
+          tag: Tag,
+          tagFactory: TagFactory<TConfig, Tag>,
+          location: SourceLocation | undefined
+        ): TagFactory<TConfig, Tag> => {
+          // Wrap the callable to emit el:create when RefSpec is produced
+          const instrumentedFactory = (
+            ...children: ElRefSpecChild[]
+          ): RefSpec<TConfig['nodes'][Tag]> => {
+            instr.emit({
+              type: 'el:create',
+              timestamp: Date.now(),
+              data: {
+                tag,
+                childCount: children.length,
+                sourceLocation: location,
+              },
+            });
+
+            return tagFactory(...children);
+          };
+
+          // Wrap .props() to return an instrumented factory
+          instrumentedFactory.props = (
+            propsOrFn: Parameters<TagFactory<TConfig, Tag>['props']>[0]
+          ): TagFactory<TConfig, Tag> => {
+            return wrapTagFactory(tag, tagFactory.props(propsOrFn), location);
+          };
+
+          // Wrap .ref() to return an instrumented factory
+          instrumentedFactory.ref = (
+            ...callbacks: Parameters<TagFactory<TConfig, Tag>['ref']>
+          ): TagFactory<TConfig, Tag> => {
+            return wrapTagFactory(tag, tagFactory.ref(...callbacks), location);
+          };
+
+          return instrumentedFactory as TagFactory<TConfig, Tag>;
+        };
+
+        return <
+          Tag extends string &
+            keyof TConfig['attributes'] &
+            keyof TConfig['nodes'],
+        >(
+          tag: Tag
+        ): TagFactory<TConfig, Tag> => {
+          const location = getCallerLocationFull();
+          return wrapTagFactory(tag, impl(tag), location);
+        };
+      },
+    });
+  },
+};

@@ -259,19 +259,28 @@ export const LoadModule: Module<
 // =============================================================================
 
 /**
+ * Options for load() boundaries
+ */
+export type LoadOptions = {
+  /** Start fetching immediately when load() is called, before SSR resolution. Default: false */
+  eager?: boolean;
+};
+
+/**
  * Load function with explicit ID for data lookup
  */
 export type LoadFn = <T, TElement>(
   id: string,
   fetcher: () => Promise<T>,
-  renderer: (state: LoadState<T>) => RefSpec<TElement>
+  renderer: (state: LoadState<T>) => RefSpec<TElement>,
+  options?: LoadOptions
 ) => RefSpec<TElement>;
 
 /**
  * Loader instance returned by createLoader
  */
 export type Loader = {
-  /** Load function that takes an ID for data lookup */
+  /** Load function that takes an ID for data lookup. Supports { eager: true } to start fetching immediately. */
   load: LoadFn;
   /** Get all collected data (for serialization after SSR) */
   getData: () => Record<string, unknown>;
@@ -279,6 +288,8 @@ export type Loader = {
   setData: (id: string, data: unknown) => void;
   /** Check if a load() boundary with this ID exists */
   has: (id: string) => boolean;
+  /** Get all registered load() boundary IDs */
+  getRegisteredIds: () => string[];
 };
 
 /**
@@ -342,13 +353,21 @@ export function createLoader(opts: LoaderOpts): Loader {
   // Collected data from resolved async boundaries (for getData())
   const collectedData: Record<string, unknown> = {};
 
+  // Set of all registered load() boundary IDs
+  const registeredIds = new Set<string>();
+
   // Registry of active load() boundaries by ID for streaming
   const boundarySetters = new Map<string, (data: unknown) => void>();
+
+  // Buffer for data that arrives before a boundary registers (e.g., streamed
+  // data arriving before a lazy boundary resolves on the client)
+  const pendingStreamData = new Map<string, unknown>();
 
   function load<T, TElement>(
     id: string,
     fetcher: () => Promise<T>,
-    renderer: (state: LoadState<T>) => RefSpec<TElement>
+    renderer: (state: LoadState<T>) => RefSpec<TElement>,
+    options?: LoadOptions
   ): RefSpec<TElement> {
     // Create reactive state properties
     const status = signal<LoadStatus>('pending');
@@ -388,14 +407,49 @@ export function createLoader(opts: LoaderOpts): Loader {
       onResolve?.(id, d);
     };
 
+    // Track this ID in the registered set
+    registeredIds.add(id);
+
     // Register in boundary registry for streaming
     boundarySetters.set(id, setDataImpl as (data: unknown) => void);
+
+    // Replay buffered data that arrived before this boundary registered
+    const buffered = pendingStreamData.get(id);
+    if (buffered !== undefined) {
+      pendingStreamData.delete(id);
+      setDataImpl(buffered as T);
+    }
+
+    // Eager fetch: start the fetcher immediately, cache the promise
+    let eagerPromise: Promise<T> | undefined;
+    if (options?.eager && !hasInitialData && !resolved) {
+      eagerPromise = fetcher();
+      eagerPromise.then(
+        (result) => {
+          resolvedData = result;
+          resolved = true;
+          collectedData[id] = result;
+          data(result);
+          status('ready');
+          onResolve?.(id, result);
+        },
+        (err) => {
+          resolved = true;
+          error(err);
+          status('error');
+        }
+      );
+    }
 
     const meta: AsyncMeta<T> = {
       id,
       resolve: async () => {
         if (resolved && resolvedData !== undefined) {
           return resolvedData;
+        }
+        // If eager fetch is in flight, piggyback on it
+        if (eagerPromise) {
+          return eagerPromise;
         }
         try {
           const result = await fetcher();
@@ -420,6 +474,8 @@ export function createLoader(opts: LoaderOpts): Loader {
       isResolved: () => resolved,
       trigger: () => {
         if (resolved) return;
+        // If eager fetch is already in flight, don't start another
+        if (eagerPromise) return;
         fetcher().then(
           (result) => {
             resolvedData = result;
@@ -464,9 +520,13 @@ export function createLoader(opts: LoaderOpts): Loader {
       const setter = boundarySetters.get(id);
       if (setter) {
         setter(data);
+      } else {
+        // Buffer data for boundaries that haven't registered yet
+        pendingStreamData.set(id, data);
       }
     },
     has: (id: string) => boundarySetters.has(id),
+    getRegisteredIds: () => [...registeredIds],
   };
 }
 

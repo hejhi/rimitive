@@ -20,7 +20,15 @@ import {
   removeFromFragment,
   updateBoundariesAfterInsert,
 } from './deps/fragment-boundaries';
-import { defineModule, type Module } from '@rimitive/core';
+import {
+  defineModule,
+  type Module,
+  STATUS_MODULE,
+  PLACEHOLDER,
+  type InstrumentationContext,
+  getCallerLocationFull,
+  type SourceLocation,
+} from '@rimitive/core';
 import {
   SignalModule,
   type SignalFactory,
@@ -62,7 +70,7 @@ export type MapFactory<TBaseElement> = {
   ): RefSpec<TBaseElement>;
 };
 
-export type MapOpts<TConfig extends TreeConfig> = {
+type MapOpts<TConfig extends TreeConfig> = {
   signal: SignalFactory;
   computed: <T>(fn: () => T) => Reactive<T>;
   iter: IterFactory;
@@ -80,10 +88,6 @@ type ItemData<T, TElement> = {
   elRef: ElementRef<TElement>;
   scope: ReturnType<CreateScopes['createChildScope']>;
 };
-
-export type MapService<TConfig extends TreeConfig> = MapFactory<
-  NodeOf<TConfig>
->;
 
 export function createMapFactory<TConfig extends TreeConfig>({
   signal,
@@ -318,22 +322,110 @@ export function createMapFactory<TConfig extends TreeConfig>({
   return map;
 }
 
-export const createMapModule = <TConfig extends TreeConfig>(
-  adapter: Adapter<TConfig>
-): Module<
-  'map',
-  MapFactory<NodeOf<TConfig>>,
-  {
-    signal: SignalFactory;
-    computed: ComputedFactory;
-    iter: IterFactory;
-    untrack: <T>(fn: () => T) => T;
-    scopes: CreateScopes;
-  }
-> =>
-  defineModule({
-    name: 'map',
-    dependencies: [SignalModule, ComputedModule, IterModule, UntrackModule, ScopesModule],
-    create: ({ signal, computed, iter, untrack, scopes }) =>
-      createMapFactory({ adapter, signal, computed, iter, untrack, ...scopes }),
-  });
+/**
+ * Placeholder module for use in dependency arrays.
+ * The actual module is created via MapModule.with({ adapter }).
+ */
+const mapModulePlaceholder = {
+  status: STATUS_MODULE as typeof STATUS_MODULE,
+  name: 'map' as const,
+  dependencies: [SignalModule, ComputedModule, IterModule, UntrackModule, ScopesModule],
+  [PLACEHOLDER]: true as const,
+  create: (): MapFactory<Node> => {
+    throw new Error(
+      'Module "map" requires configuration. ' +
+      'Use MapModule.with({ adapter }) when composing.'
+    );
+  },
+};
+
+/**
+ * Map module - reactive list rendering primitive.
+ *
+ * Requires configuration via .with() before composing.
+ * Use MapModule.module in dependency arrays to declare dependency.
+ *
+ * @example
+ * ```ts
+ * import { compose } from '@rimitive/core';
+ * import { MapModule } from '@rimitive/view/map';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ *
+ * const adapter = createDOMAdapter();
+ * const svc = compose(
+ *   SignalModule,
+ *   ComputedModule,
+ *   MapModule.with({ adapter }),
+ * );
+ *
+ * const { map } = svc;
+ * ```
+ */
+export const MapModule = {
+  name: 'map' as const,
+  module: mapModulePlaceholder,
+
+  with<TConfig extends TreeConfig>(config: {
+    adapter: Adapter<TConfig>;
+  }): Module<
+    'map',
+    MapFactory<NodeOf<TConfig>>,
+    {
+      signal: SignalFactory;
+      computed: ComputedFactory;
+      iter: IterFactory;
+      untrack: <T>(fn: () => T) => T;
+      scopes: CreateScopes;
+    }
+  > {
+    return defineModule({
+      name: 'map',
+      dependencies: [SignalModule, ComputedModule, IterModule, UntrackModule, ScopesModule],
+      create: ({ signal, computed, iter, untrack, scopes }) =>
+        createMapFactory({ adapter: config.adapter, signal, computed, iter, untrack, ...scopes }),
+      instrument(
+        impl: MapFactory<NodeOf<TConfig>>,
+        instr: InstrumentationContext
+      ): MapFactory<NodeOf<TConfig>> {
+        type TBaseElement = NodeOf<TConfig>;
+
+        // Wrap the map function to emit events
+        function instrumentedMap<T, TEl>(
+          items: Writable<T[]> | T[] | (() => T[]),
+          keyFnOrRender:
+            | ((item: T) => string | number)
+            | ((itemSignal: Reactive<T>) => RefSpec<TEl>),
+          maybeRender?: (itemSignal: Reactive<T>) => RefSpec<TEl>
+        ): RefSpec<TBaseElement> {
+          const location = getCallerLocationFull();
+          const sourceLocation: SourceLocation | undefined = location;
+          const hasKeyFn = maybeRender !== undefined;
+
+          instr.emit({
+            type: 'map:create',
+            timestamp: Date.now(),
+            data: {
+              hasKeyFn,
+              sourceLocation,
+            },
+          });
+
+          // Call the original implementation with proper arguments
+          if (maybeRender) {
+            return impl(
+              items as Writable<T[]>,
+              keyFnOrRender as (item: T) => string | number,
+              maybeRender
+            );
+          }
+          return impl(
+            items as Writable<T[]>,
+            keyFnOrRender as (itemSignal: Reactive<T>) => RefSpec<TEl>
+          );
+        }
+
+        return instrumentedMap as MapFactory<TBaseElement>;
+      },
+    });
+  },
+};

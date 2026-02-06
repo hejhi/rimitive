@@ -6,14 +6,16 @@
  * import { compose } from '@rimitive/core';
  * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
  * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
- * import { createElModule } from '@rimitive/view/el';
- * import { createMapModule } from '@rimitive/view/map';
+ * import { ElModule } from '@rimitive/view/el';
+ * import { MapModule } from '@rimitive/view/map';
  * import { MountModule } from '@rimitive/view/deps/mount';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(
  *   SignalModule, ComputedModule, EffectModule, BatchModule,
- *   createElModule(adapter), createMapModule(adapter), MountModule
+ *   ElModule.with({ adapter }),
+ *   MapModule.with({ adapter }),
+ *   MountModule
  * )();
  * ```
  *
@@ -22,7 +24,7 @@
  * | Use Case | Import |
  * |----------|--------|
  * | DOM adapter | `import { createDOMAdapter } from '@rimitive/view/adapters/dom'` |
- * | View modules | `import { createElModule } from '@rimitive/view/el'` |
+ * | View modules | `import { ElModule } from '@rimitive/view/el'` |
  * | Types only | `import type { RefSpec, NodeRef } from '@rimitive/view'` |
  */
 
@@ -75,6 +77,25 @@ export {
 export type { Adapter, TreeConfig, NodeOf, NodeType } from './adapter';
 
 // =============================================================================
+// Error Boundary - Error catching and fallback rendering
+// =============================================================================
+
+export type {
+  ErrorBoundaryFactory,
+  ErrorBoundaryOpts,
+  ErrorBoundaryMeta,
+  ErrorBoundaryFragment,
+} from './error-boundary';
+
+export {
+  ERROR_BOUNDARY,
+  isErrorBoundaryFragment,
+  getErrorBoundaryMeta,
+  createErrorBoundaryFactory,
+  ErrorBoundaryModule,
+} from './error-boundary';
+
+// =============================================================================
 // Load - Async data loading boundaries
 // =============================================================================
 
@@ -97,6 +118,13 @@ export {
   createLoader,
   LoadModule,
 } from './load';
+
+// =============================================================================
+// Lazy - Lazy-loaded dynamic imports
+// =============================================================================
+
+export { createLazyFunction, LazyModule } from './lazy';
+export type { LazyFunction, LazyOpts } from './lazy';
 
 // =============================================================================
 // Mount - Entry point for rendering with automatic effect scoping

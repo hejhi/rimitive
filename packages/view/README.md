@@ -2,6 +2,8 @@
 
 View layer tooling for rimitive. Elements, lists, conditionals, portals.
 
+**[Full documentation](https://rimitive.dev/view/)**
+
 ## Quick Start
 
 ```typescript
@@ -123,6 +125,31 @@ match(showModal, (show) => (show ? Modal() : null));
 
 ---
 
+## lazy
+
+Code-splitting with dynamic imports. Wraps an import into a stand-in that passes through when loaded, or creates an async boundary while pending.
+
+```typescript
+import { LazyModule } from '@rimitive/view/lazy';
+
+const { lazy, match, el } = compose(...modules, MatchModule.with({ adapter }), LazyModule);
+
+// Resolve to a RefSpec-producing function in .then()
+const LazyChart = lazy(() =>
+  import('./Chart').then(m => m.Chart(svc))
+);
+
+// Use like any other component — async boundary is transparent
+el('div')(LazyChart(data));
+
+// Before hydration, ensure all chunks are loaded
+await lazy.preloadAll();
+```
+
+On the server, bundlers resolve imports synchronously so `lazy()` always hits the fast path (direct call-through, no overhead). On the client, a `signal` + `match` boundary renders nothing until the chunk arrives, then swaps in the real content.
+
+---
+
 ## portal
 
 Renders content into a different DOM location.
@@ -138,6 +165,49 @@ portal()(el('div').props({ className: 'modal' })('Content'));
 // Portal to specific element
 portal(() => document.getElementById('tooltips'))(Tooltip());
 ```
+
+---
+
+## shadow
+
+Renders children into a shadow root attached to the parent element—creating an isolated DOM subtree with encapsulated styles.
+
+```typescript
+import { createShadowModule } from '@rimitive/view/shadow';
+
+const { shadow, el } = compose(...modules, createShadowModule(adapter));
+
+// Basic shadow DOM
+el('div').props({ className: 'host' })(
+  shadow({ mode: 'open' })(
+    el('p')('Inside shadow DOM')
+  )
+)
+
+// With scoped styles
+const css = `.content { color: blue; }`;
+el('div')(
+  shadow({ mode: 'open', styles: css })(
+    el('span').props({ className: 'content' })('Styled text')
+  )
+)
+
+// Access shadow root imperatively via .ref()
+el('div')(
+  shadow({ mode: 'open' })
+    .ref((shadowRoot) => {
+      const editor = createEditor({ root: shadowRoot });
+      return () => editor.dispose(); // cleanup
+    })
+    (el('div')('Content'))
+)
+```
+
+Options:
+
+- `mode`: `'open'` (accessible via `element.shadowRoot`) or `'closed'` (not accessible)
+- `styles`: CSS string or array of strings to inject into the shadow root
+- `delegatesFocus`: Whether to delegate focus to the shadow tree
 
 ---
 

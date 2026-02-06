@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { compose } from '@rimitive/core';
 import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '../el';
+import { ElModule } from '../el';
 import { createDOMAdapter } from './dom';
 
 describe('SVG attribute types (issue #41)', () => {
@@ -18,7 +18,7 @@ describe('SVG attribute types (issue #41)', () => {
     SignalModule,
     ComputedModule,
     EffectModule,
-    createElModule(adapter)
+    ElModule.with({ adapter })
   );
   const { el } = svc;
 

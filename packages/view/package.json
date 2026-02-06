@@ -35,6 +35,10 @@
       "import": "./dist/adapters/test.js",
       "types": "./dist/adapters/test.d.ts"
     },
+    "./adapters/perf": {
+      "import": "./dist/adapters/perf.js",
+      "types": "./dist/adapters/perf.d.ts"
+    },
     "./el": {
       "import": "./dist/el.js",
       "types": "./dist/el.d.ts"
@@ -83,9 +87,17 @@
       "import": "./dist/map.js",
       "types": "./dist/map.d.ts"
     },
+    "./lazy": {
+      "import": "./dist/lazy.js",
+      "types": "./dist/lazy.d.ts"
+    },
     "./load": {
       "import": "./dist/load.js",
       "types": "./dist/load.d.ts"
+    },
+    "./error-boundary": {
+      "import": "./dist/error-boundary.js",
+      "types": "./dist/error-boundary.d.ts"
     },
     "./portal": {
       "import": "./dist/portal.js",

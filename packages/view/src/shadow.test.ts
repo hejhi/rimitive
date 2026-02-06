@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { compose } from '@rimitive/core';
 import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 import { createDOMAdapter } from './adapters/dom';
-import { createElModule } from './el';
+import { ElModule } from './el';
 import { createShadowModule } from './shadow';
 import { MountModule } from './deps/mount';
 
@@ -14,7 +14,7 @@ describe('shadow', () => {
       SignalModule,
       ComputedModule,
       EffectModule,
-      createElModule(adapter),
+      ElModule.with({ adapter }),
       createShadowModule(adapter),
       MountModule
     );

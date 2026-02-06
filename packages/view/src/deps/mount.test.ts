@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from './mount';
 import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '../el';
-import { createMapModule } from '../map';
-import { createMatchModule } from '../match';
+import { ElModule } from '../el';
+import { MapModule } from '../map';
+import { MatchModule } from '../match';
 import { createDOMAdapter } from '../adapters/dom';
 
 describe('mount', () => {
@@ -24,7 +24,7 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container, ({ el }) => () => el('div')('Hello'));
 
       expect(container.innerHTML).toBe('<div>Hello</div>');
@@ -38,7 +38,7 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container, ({ el }) => () => el('div')('test'));
 
       expect(typeof unmount).toBe('function');
@@ -55,7 +55,7 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container, ({ signal, effect, el }) => () => {
         const count = signal(0);
         signalSetter = count;
@@ -90,7 +90,7 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container, ({ effect, el }) => () => {
         effect(() => cleanup);
         return el('div')('test');
@@ -110,7 +110,7 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container, ({ effect, el }) => () => {
         effect(() => cleanups[0]);
         effect(() => cleanups[1]);
@@ -135,7 +135,7 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container, ({ signal, effect, el }) => () => {
         const count = signal(0);
         signalSetter = count;
@@ -171,7 +171,7 @@ describe('mount', () => {
         SignalModule,
         ComputedModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container, ({ signal, computed, effect, el }) => () => {
         const count = signal(0);
         signalSetter = count;
@@ -209,8 +209,8 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter),
-        createMapModule(adapter)
+        ElModule.with({ adapter }),
+        MapModule.with({ adapter })
       )(container, ({ signal, effect, el, map }) => () => {
         const count = signal(0);
         signalSetter = count;
@@ -255,8 +255,8 @@ describe('mount', () => {
       const unmount = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter),
-        createMatchModule(adapter)
+        ElModule.with({ adapter }),
+        MatchModule.with({ adapter })
       )(container, ({ signal, effect, el, match }) => () => {
         const count = signal(0);
         signalSetter = count;
@@ -312,7 +312,7 @@ describe('mount', () => {
       const unmount1 = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container1, ({ effect, el }) => () => {
         effect(() => cleanup1);
         return el('div')('First');
@@ -321,7 +321,7 @@ describe('mount', () => {
       const unmount2 = mount(
         SignalModule,
         EffectModule,
-        createElModule(adapter)
+        ElModule.with({ adapter })
       )(container2, ({ effect, el }) => () => {
         effect(() => cleanup2);
         return el('div')('Second');

@@ -10,20 +10,26 @@
  * ```typescript
  * import { compose } from '@rimitive/core';
  * import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
- * import { createElModule } from '@rimitive/view/el';
+ * import { ElModule } from '@rimitive/view/el';
  * import { myCustomAdapter } from './my-adapter';
  *
- * const svc = compose(SignalModule, ComputedModule, EffectModule, createElModule(myCustomAdapter));
+ * const svc = compose(
+ *   SignalModule,
+ *   ComputedModule,
+ *   EffectModule,
+ *   ElModule.with({ adapter: myCustomAdapter })
+ * );
  * ```
  */
 
 // =============================================================================
-// Primitive Factories - For custom composition
+// Configurable View Modules
 // =============================================================================
 
-export { createElFactory } from './el';
-export { createMapFactory } from './map';
-export { createMatchFactory } from './match';
+export { ElModule, createElFactory } from './el';
+export { MapModule, createMapFactory } from './map';
+export { MatchModule, createMatchFactory } from './match';
+export { ErrorBoundaryModule, createErrorBoundaryFactory } from './error-boundary';
 export { createPortalFactory } from './portal';
 export { createShadowFactory } from './shadow';
 
@@ -49,10 +55,18 @@ export { mount } from './deps/mount';
 // =============================================================================
 
 export type { ElFactory, ElOpts, TagFactory, ElementProps } from './el';
-export type { MapFactory, MapOpts } from './map';
+export type { MapFactory } from './map';
 export type { MatchFactory, MatchOpts } from './match';
+export type { ErrorBoundaryFactory, ErrorBoundaryOpts } from './error-boundary';
 export type { PortalFactory, PortalOpts, PortalTarget } from './portal';
-export type { ShadowFactory, ShadowOpts, ShadowOptions, ShadowService, ShadowMode, ShadowLifecycleCallback } from './shadow';
+export type {
+  ShadowFactory,
+  ShadowOpts,
+  ShadowOptions,
+  ShadowService,
+  ShadowMode,
+  ShadowLifecycleCallback,
+} from './shadow';
 
 // =============================================================================
 // Helper Types
@@ -61,6 +75,13 @@ export type { ShadowFactory, ShadowOpts, ShadowOptions, ShadowService, ShadowMod
 export type { CreateScopes } from './deps/scope';
 export type { AddEventListener } from './deps/addEventListener';
 export type { Use } from './deps/use';
+
+// =============================================================================
+// Lazy - Lazy-loaded dynamic imports
+// =============================================================================
+
+export { createLazyFunction, LazyModule } from './lazy';
+export type { LazyFunction, LazyOpts } from './lazy';
 
 // =============================================================================
 // Core Types
