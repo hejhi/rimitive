@@ -2,6 +2,8 @@
 
 Server-side rendering and hydration. Effects are synchronous and run on the server—your reactive code works the same in both environments.
 
+**[Full documentation](https://rimitive.dev/guides/intro-to-ssr/)**
+
 ## Quick Start
 
 ### Server

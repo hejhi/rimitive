@@ -16,10 +16,11 @@
  */
 
 // Render functions
-export { renderToString, renderToStringAsync, renderToStream } from './render';
+export { renderToString, renderToStringAsync, renderToStream, renderToData } from './render';
 export type {
   AsyncRenderable,
   RenderToStringAsyncOptions,
+  RenderToDataOptions,
   RenderToStreamOptions,
   StreamResult,
 } from './render';

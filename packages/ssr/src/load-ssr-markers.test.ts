@@ -23,8 +23,8 @@ import {
   EffectModule,
   BatchModule,
 } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MatchModule } from '@rimitive/view/match';
 import { createLoader } from '@rimitive/view/load';
 import type { LoadState, LoadStatus } from '@rimitive/view/load';
 import type { RefSpec } from '@rimitive/view/types';
@@ -43,8 +43,8 @@ function createTestService() {
     ComputedModule,
     EffectModule,
     BatchModule,
-    createElModule(adapter),
-    createMatchModule(adapter)
+    ElModule.with({ adapter }),
+    MatchModule.with({ adapter })
   );
 
   const loader = createLoader({ signal: baseSvc.signal });

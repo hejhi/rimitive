@@ -17,9 +17,9 @@ import {
   EffectModule,
   BatchModule,
 } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
+import { MatchModule } from '@rimitive/view/match';
 import { createShadowModule } from '@rimitive/view/shadow';
 import { MountModule } from '@rimitive/view/deps/mount';
 import { STATUS_FRAGMENT } from '@rimitive/view/types';
@@ -39,9 +39,9 @@ function createService() {
     ComputedModule,
     EffectModule,
     BatchModule,
-    createElModule(adapter),
-    createMapModule(adapter),
-    createMatchModule(adapter),
+    ElModule.with({ adapter }),
+    MapModule.with({ adapter }),
+    MatchModule.with({ adapter }),
     createShadowModule(adapter),
     MountModule
   );

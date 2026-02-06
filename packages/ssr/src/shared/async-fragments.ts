@@ -14,6 +14,12 @@ import {
   isAsyncFragment,
   type AsyncFragment,
 } from '@rimitive/view/load';
+import {
+  ERROR_BOUNDARY,
+  isErrorBoundaryFragment,
+  type ErrorBoundaryMeta,
+  type ErrorBoundaryFragment,
+} from '@rimitive/view/error-boundary';
 
 // Re-export for convenience
 export { isAsyncFragment, ASYNC_FRAGMENT, type AsyncFragment };
@@ -51,6 +57,61 @@ export function collectAsyncFragments<TElement>(
 
   walk(nodeRef);
   return fragments;
+}
+
+/**
+ * Result of collecting async fragments with error boundary mappings.
+ */
+export type FragmentsWithBoundaries<TElement> = {
+  fragments: AsyncFragment<TElement>[];
+  boundaryMap: Map<AsyncFragment<TElement>, ErrorBoundaryMeta>;
+};
+
+/**
+ * Collect async fragments and map each to its nearest error boundary ancestor.
+ *
+ * Walks the tree depth-first, maintaining a stack of error boundary ancestors.
+ * Each async fragment is mapped to the closest enclosing error boundary (if any).
+ * Fragments without an error boundary ancestor are not in the map.
+ */
+export function collectFragmentsWithBoundaries<TElement>(
+  nodeRef: NodeRef<TElement>
+): FragmentsWithBoundaries<TElement> {
+  const fragments: AsyncFragment<TElement>[] = [];
+  const boundaryMap = new Map<AsyncFragment<TElement>, ErrorBoundaryMeta>();
+
+  function walk(
+    node: NodeRef<TElement> | null,
+    currentBoundary: ErrorBoundaryMeta | null
+  ): void {
+    if (!node) return;
+
+    // Check if this node is an error boundary — it becomes the new closest boundary for descendants
+    let boundary = currentBoundary;
+    if (isErrorBoundaryFragment(node)) {
+      boundary = (node as ErrorBoundaryFragment)[ERROR_BOUNDARY];
+    }
+
+    // If this is an async fragment, record it and its closest boundary
+    if (isAsyncFragment(node)) {
+      fragments.push(node as AsyncFragment<TElement>);
+      if (boundary) {
+        boundaryMap.set(node as AsyncFragment<TElement>, boundary);
+      }
+    }
+
+    // Walk children
+    if (node.status === STATUS_FRAGMENT || node.status === STATUS_ELEMENT) {
+      let child = node.firstChild;
+      while (child) {
+        walk(child, boundary);
+        child = child.next;
+      }
+    }
+  }
+
+  walk(nodeRef, null);
+  return { fragments, boundaryMap };
 }
 
 /**

@@ -154,10 +154,68 @@ export function createDOMHydrationAdapter(
   // Mutable position - path[i] is child index at depth i
   const path: number[] = [];
 
+  // Track the last element that triggered an exit (to prevent double-counting)
+  // This handles cases where both appendChild and insertBefore are called
+  // for the same element (e.g., in map fragment items)
+  let lastExitedElement: Node | null = null;
+
+  // Track fragment parent and base path for map item creation.
+  // Map creates multiple items before calling insertBefore, so we need to
+  // reset to the base path before each item creation.
+  let fragmentParent: Element | null = null;
+  let fragmentBasePath: number[] = [];
+  let fragmentNextIndex = 0;
+
+  /**
+   * Exit from an element back to its parent level.
+   *
+   * The path may be deep inside the element's descendants (because el.ts
+   * creates all descendants before calling appendChild). We need to restore
+   * the path to the parent's level, pointing to the next sibling position.
+   */
+  function exitToParent(parent: Node, child: Node): void {
+    if (child === lastExitedElement) return;
+    lastExitedElement = child;
+
+    // Compute what the path should be after exiting child:
+    // - Path to parent + (child's sibling index + 1)
+    const parentPath = computePath(containerEl, parent as Element);
+    const childIndex = countSiblingsBefore(parent, child);
+
+    path.length = 0;
+    path.push(...parentPath, childIndex + 1);
+
+    // If this is a fragment child, update the next index
+    if (parent === fragmentParent) {
+      fragmentNextIndex = childIndex + 1;
+    }
+  }
+
   return {
     createNode: (type, props) => {
       // Text nodes
       if (type === 'text') {
+        // For text nodes inside fragments, check if we need to reset path
+        if (fragmentParent && path.length > fragmentBasePath.length + 1) {
+          try {
+            getNodeAtPath(containerEl, path);
+            // Path is valid, continue
+          } catch {
+            // Path is invalid - try fragment reset
+            const testPath = [...fragmentBasePath, fragmentNextIndex];
+            try {
+              const testNode = getNodeAtPath(containerEl, testPath);
+              if (testNode.nodeType === 3) {
+                path.length = 0;
+                path.push(...testPath);
+                path[path.length - 1] = (path[path.length - 1] ?? 0) + 1;
+                return testNode;
+              }
+            } catch {
+              // Reset path also invalid
+            }
+          }
+        }
         const node = getNodeAtPath(containerEl, path);
         if (node.nodeType !== 3) {
           throw new HydrationMismatch(
@@ -171,6 +229,62 @@ export function createDOMHydrationAdapter(
       }
 
       // Element nodes
+      // For direct fragment children (path.length === fragmentBasePath.length + 1),
+      // track the index so we know where we are for subsequent items.
+      if (
+        fragmentParent &&
+        path.length === fragmentBasePath.length + 1 &&
+        path[path.length - 1] === fragmentNextIndex
+      ) {
+        // We're creating a direct fragment child at the expected position
+        // Update fragmentNextIndex for the next item
+        fragmentNextIndex++;
+      }
+
+      // For elements deeper inside fragments, check if path is valid first.
+      // If not, try resetting to fragment base path (handles map items created
+      // before insertBefore is called).
+      if (fragmentParent && path.length > fragmentBasePath.length + 1) {
+        let currentPathValid = false;
+        try {
+          const testNode = getNodeAtPath(containerEl, path);
+          if (
+            testNode.nodeType === 1 &&
+            (testNode as Element).tagName.toLowerCase() === type.toLowerCase()
+          ) {
+            currentPathValid = true;
+          }
+        } catch {
+          // Current path is invalid
+        }
+
+        if (!currentPathValid) {
+          // Current path is invalid - try finding the next fragment child
+          // Start from fragmentNextIndex and search forward
+          for (let i = fragmentNextIndex; i < 100; i++) {
+            const resetPath = [...fragmentBasePath, i];
+            try {
+              const resetNode = getNodeAtPath(containerEl, resetPath);
+              if (
+                resetNode.nodeType === 1 &&
+                (resetNode as Element).tagName.toLowerCase() === type.toLowerCase()
+              ) {
+                // Found the right element - reset path
+                path.length = 0;
+                path.push(...resetPath);
+                path.push(0); // Enter element's children
+                // Update fragmentNextIndex for the next item
+                fragmentNextIndex = i + 1;
+                return resetNode;
+              }
+            } catch {
+              // This index doesn't exist - stop searching
+              break;
+            }
+          }
+        }
+      }
+
       const node = getNodeAtPath(containerEl, path);
       if (
         node.nodeType !== 1 ||
@@ -197,8 +311,7 @@ export function createDOMHydrationAdapter(
       const c = child as Node;
       // Element already attached = exit signal
       if (c && c.nodeType === 1 && c.parentNode === parent) {
-        path.pop();
-        path[path.length - 1] = (path[path.length - 1] ?? 0) + 1;
+        exitToParent(parent as Node, c);
       }
     },
 
@@ -206,10 +319,9 @@ export function createDOMHydrationAdapter(
 
     insertBefore: (parent, child) => {
       const c = child as Node;
-      // Same exit signal as appendChild
+      // Element already attached = exit signal (same as appendChild)
       if (c && c.nodeType === 1 && c.parentNode === parent) {
-        path.pop();
-        path[path.length - 1] = (path[path.length - 1] ?? 0) + 1;
+        exitToParent(parent as Node, c);
       }
     },
 
@@ -252,6 +364,11 @@ export function createDOMHydrationAdapter(
       const parentPath = computePath(containerEl, parentElement as HTMLElement);
       path.length = 0;
       path.push(...parentPath, index);
+
+      // Set up fragment tracking for map item creation
+      fragmentParent = parentElement as Element;
+      fragmentBasePath = [...parentPath];
+      fragmentNextIndex = index;
     },
 
     /**

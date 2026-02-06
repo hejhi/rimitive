@@ -805,9 +805,9 @@ import {
   EffectModule,
   BatchModule,
 } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
+import { MatchModule } from '@rimitive/view/match';
 import { MountModule } from '@rimitive/view/deps/mount';
 import {
   STATUS_ELEMENT,
@@ -818,18 +818,14 @@ import type { DOMTreeConfig } from './adapter';
 
 /** Create a view service with compose pattern for testing */
 function createTestViewSvc(adapter: Adapter<DOMTreeConfig>) {
-  const ElModule = createElModule(adapter);
-  const MapModule = createMapModule(adapter);
-  const MatchModule = createMatchModule(adapter);
-
   return compose(
     SignalModule,
     ComputedModule,
     EffectModule,
     BatchModule,
-    ElModule,
-    MapModule,
-    MatchModule,
+    ElModule.with({ adapter }),
+    MapModule.with({ adapter }),
+    MatchModule.with({ adapter }),
     MountModule
   );
 }
@@ -962,6 +958,90 @@ describe('Integration: match() hydration with full view service', () => {
     expect(children[2]?.textContent).toBe('hello');
     expect(children[3]?.tagName).toBe('SECTION');
     expect(children[3]?.className).toBe('filter');
+
+    document.body.removeChild(container.parentElement!);
+  });
+});
+
+// ============================================================================
+// Integration Tests: map() hydration with full view service
+// ============================================================================
+
+describe('Integration: map() hydration with full view service', () => {
+  const setupIntegrationHTML = (html: string): HTMLElement => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    document.body.appendChild(div);
+    return div.firstElementChild as HTMLElement;
+  };
+
+  it('should hydrate map() with multiple items having nested children', () => {
+    // This replicates the offline-ssr scenario:
+    // map() creates multiple items, each with nested children
+    // The bug: after creating item 1's descendants, the path is deep inside it
+    // When item 2 tries to create, the path is wrong
+    //
+    // <div class="list">
+    //   <!--fragment-start-->
+    //   <div class="item"><span class="name">A</span><span class="dot"></span></div>
+    //   <div class="item"><span class="name">B</span><span class="dot"></span></div>
+    //   <div class="item"><span class="name">C</span><span class="dot"></span></div>
+    //   <!--fragment-end-->
+    // </div>
+    const container = setupIntegrationHTML(
+      '<div class="list"><!--fragment-start-->' +
+        '<div class="item"><span class="name">A</span><span class="dot"></span></div>' +
+        '<div class="item"><span class="name">B</span><span class="dot"></span></div>' +
+        '<div class="item"><span class="name">C</span><span class="dot"></span></div>' +
+        '<!--fragment-end--></div>'
+    );
+
+    const adapter = createDOMHydrationAdapter(container);
+    const viewSvc = createTestViewSvc(adapter);
+
+    const { el, map, signal } = viewSvc;
+
+    const items = signal([
+      { id: '1', name: 'A' },
+      { id: '2', name: 'B' },
+      { id: '3', name: 'C' },
+    ]);
+
+    // Build the list with map - each item has nested children
+    const listSpec = el('div').props({ className: 'list' })(
+      map(
+        items,
+        (item) => item.id,
+        (itemSignal) => {
+          const item = itemSignal();
+          return el('div').props({ className: 'item' })(
+            el('span').props({ className: 'name' })(item.name),
+            el('span').props({ className: 'dot' })()
+          );
+        }
+      )
+    );
+
+    // Hydrate - this should work without HydrationMismatch
+    const nodeRef = listSpec.create(viewSvc);
+
+    // Verify hydration succeeded
+    expect(nodeRef.status).toBe(STATUS_ELEMENT);
+    const listDiv = (nodeRef as ElementRef<HTMLElement>).element;
+    expect(listDiv.className).toBe('list');
+
+    // Verify all 3 items exist with correct structure
+    const itemDivs = listDiv.querySelectorAll('.item');
+    expect(itemDivs.length).toBe(3);
+
+    // Check each item has the correct nested children
+    itemDivs.forEach((item, index) => {
+      const nameSpan = item.querySelector('.name');
+      const dotSpan = item.querySelector('.dot');
+      expect(nameSpan).toBeTruthy();
+      expect(dotSpan).toBeTruthy();
+      expect(nameSpan?.textContent).toBe(['A', 'B', 'C'][index]);
+    });
 
     document.body.removeChild(container.parentElement!);
   });
