@@ -2,6 +2,8 @@
 
 Reactive async data fetching. Automatic dependency tracking, cancellation, and race condition handling.
 
+**[Full documentation](https://rimitive.dev/guides/loading-data/)**
+
 ## Quick Start
 
 ```typescript

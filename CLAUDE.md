@@ -6,10 +6,9 @@ Make sure web searches use the ACTUAL current year. IGNORE YOUR TRAINING CUT-OFF
 
 ## LLM Documentation
 
-For comprehensive LLM-optimized documentation, see:
-
-- `llms.txt` - Quick reference index
-- `llms-full.txt` - Complete documentation (recommended for full context)
+- `llms.txt` - Compressed index pointing to source files (read files for details)
+- For richer retrieval: `npx @rimitive/mcp` (MCP server with search tools)
+- Full docs: https://rimitive.dev
 
 ## Development Commands
 

@@ -28,7 +28,7 @@ function hasStagedChanges(files) {
 }
 
 const API_FILES = ['packages/docs/src/content/docs/api'];
-const LLMS_FILES = ['llms.txt', 'llms-full.txt'];
+const LLMS_FILES = ['llms.txt'];
 const BENCH_FILES = ['packages/docs/src/data/benchmarks.json'];
 const isCI = process.env.CI === 'true';
 

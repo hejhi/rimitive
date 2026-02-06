@@ -20,6 +20,9 @@ api-reports
 # Nx
 .nx/
 
+# Wrangler
+.wrangler/
+
 # Test coverage
 coverage
 

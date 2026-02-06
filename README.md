@@ -20,6 +20,13 @@ Type-safe reactive primitives, atomic tooling, and compositional patterns you ca
 
 All constructed on a foundation of reactive primitives. Rimitive is built for low commitment and no framework lock-in. Take as much or as little of it as you want, and easily customize, extend, or replace along the way.
 
+## LLM Context
+
+For AI-assisted development:
+
+1. **Add [`llms.txt`](llms.txt) to your `CLAUDE.md`** — compressed index with critical patterns
+2. **Configure the MCP server [`@rimitive/mcp`](packages/mcp)** — richer retrieval with `search_api`, `get_module`, `get_patterns` tools
+
 ## Quickstart
 
 ### Install and Create a Service

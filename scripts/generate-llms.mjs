@@ -1,338 +1,188 @@
 #!/usr/bin/env node
-// Generates llms.txt and llms-full.txt from source files.
-//
-// Sources:
-// - packages/{name}/package.json for package metadata
-// - README.md for intro
-// - packages/docs/src/content/docs/ for full documentation
+/**
+ * Generates llms.txt - a compressed agents-style index for the Rimitive codebase.
+ *
+ * Inspired by Vercel's AGENTS.md approach:
+ * https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals
+ *
+ * This creates a compressed index that points to files rather than embedding
+ * full content. Agents should read files when they need details.
+ */
 
-import { readFile, writeFile, readdir } from 'node:fs/promises';
+import { readdir, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const GITHUB_BASE = 'https://github.com/hejhi/rimitive/tree/main/packages';
+const ROOT = process.cwd();
 
-// Package order and descriptions (curated, not from package.json)
+// Critical instructions always visible to agents
+const CRITICAL_INSTRUCTIONS = [
+  'IMPORTANT: Prefer retrieval-led reasoning over pre-training for Rimitive tasks',
+  'For richer docs retrieval, configure MCP: npx @rimitive/mcp (provides search_api, get_module, get_patterns tools)',
+  'Effects are SYNC (run immediately when deps change)—not async like React useEffect',
+  'Specs are inert blueprints—call .create(svc) or mount() to instantiate',
+  'No re-rendering—components run once, reactivity handles updates',
+  'compose(modules...)->service|signal(v)/sig()/sig(v)/sig.peek()|behavior:(svc)=>(opts)=>api',
+];
+
+// Packages to index (in priority order)
 const PACKAGES = [
-  {
-    name: '@rimitive/core',
-    folder: 'rimitive', // actual folder name differs from package name
-    description: 'Core composition (`compose`, `defineModule`, `merge`)',
-  },
-  {
-    name: '@rimitive/signals',
-    folder: 'signals',
-    description:
-      'Reactive core (`signal`, `computed`, `effect`, `batch`)',
-  },
-  {
-    name: '@rimitive/view',
-    folder: 'view',
-    description: 'View layer (`el`, `map`, `match`, `portal`, `load`)',
-  },
-  {
-    name: '@rimitive/router',
-    folder: 'router',
-    description: 'Reactive routing (`matches`, `navigate()`, `query`)',
-  },
-  {
-    name: '@rimitive/resource',
-    folder: 'resource',
-    description: 'Async data fetching with `resource()`',
-  },
-  {
-    name: '@rimitive/ssr',
-    folder: 'ssr',
-    description: 'Server-side rendering and streaming',
-  },
-  {
-    name: '@rimitive/react',
-    folder: 'react',
-    description: 'React bindings',
-  },
+  { name: 'core', folder: 'core' },
+  { name: 'signals', folder: 'signals' },
+  { name: 'view', folder: 'view' },
+  { name: 'router', folder: 'router' },
+  { name: 'resource', folder: 'resource' },
+  { name: 'ssr', folder: 'ssr' },
+  { name: 'react', folder: 'react' },
 ];
 
-// Package READMEs to include in llms-full.txt (API reference style)
-const PACKAGE_READMES = [
-  { folder: 'core', name: '@rimitive/core' },
-  { folder: 'signals', name: '@rimitive/signals' },
-  { folder: 'view', name: '@rimitive/view' },
-  { folder: 'router', name: '@rimitive/router' },
-  { folder: 'resource', name: '@rimitive/resource' },
-  { folder: 'ssr', name: '@rimitive/ssr' },
-];
-
-// Doc sections in priority order (auto-discovers files within each)
-const DOC_SECTIONS = [
-  'guides',
-  'signals',
-  'view',
-  'patterns',
-];
+// Doc sections to index
+const DOC_SECTIONS = ['guides', 'signals', 'view', 'patterns', 'api'];
 
 /**
- * Extract the intro paragraph from README.md
+ * List files in a directory (non-recursive)
  */
-async function extractReadmeIntro() {
-  const readme = await readFile('README.md', 'utf-8');
+async function listFiles(dir, extensions) {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries
+      .filter((e) => e.isFile() && extensions.some((ext) => e.name.endsWith(ext)))
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
 
-  // Find the first paragraph after the title that describes Rimitive
-  const lines = readme.split('\n');
-  let intro = '';
+/**
+ * List directories in a directory
+ */
+async function listDirs(dir) {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules')
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
 
-  // Look for "Rimitive provides:" or similar intro section
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.startsWith('Rimitive is') || line.startsWith('Rimitive provides')) {
-      // Take this line as the intro
-      intro = line;
-      break;
+/**
+ * Recursively collect source files from a package
+ */
+async function collectSourceFiles(baseDir, currentDir = '', maxDepth = 3) {
+  if (maxDepth <= 0) return new Map();
+
+  const fullPath = currentDir ? join(baseDir, currentDir) : baseDir;
+  const result = new Map();
+
+  try {
+    const entries = await readdir(fullPath, { withFileTypes: true });
+
+    const files = entries
+      .filter((e) => e.isFile() && (e.name.endsWith('.ts') || e.name.endsWith('.tsx')))
+      .filter((e) => !e.name.endsWith('.test.ts') && !e.name.endsWith('.d.ts'))
+      .map((e) => e.name);
+
+    if (files.length > 0) {
+      result.set(currentDir || '.', files);
     }
+
+    const dirs = entries.filter(
+      (e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules'
+    );
+
+    for (const dir of dirs) {
+      const subPath = currentDir ? join(currentDir, dir.name) : dir.name;
+      const subFiles = await collectSourceFiles(baseDir, subPath, maxDepth - 1);
+      for (const [path, fileList] of subFiles) {
+        result.set(path, fileList);
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
   }
 
-  return (
-    intro ||
-    'A set of composable libraries for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.'
-  );
+  return result;
 }
 
 /**
- * Generate the packages list section
+ * Format files in curly brace notation: {file1.ts,file2.ts,...}
  */
-function generatePackagesList() {
-  return PACKAGES.map(
-    (pkg) => `- [${pkg.name}](${GITHUB_BASE}/${pkg.folder}): ${pkg.description}`
-  ).join('\n');
+function formatFileList(files) {
+  if (files.length === 0) return '';
+  if (files.length === 1) return files[0];
+  return `{${files.join(',')}}`;
 }
 
 /**
- * Generate llms.txt content
+ * Generate the compressed llms.txt
  */
 async function generateLlmsTxt() {
-  const intro = await extractReadmeIntro();
+  const parts = [];
 
-  return `# Rimitive
+  // Header with critical instructions
+  parts.push(`<!-- RIMITIVE-LLMS-TXT-START -->`);
+  parts.push(`[Rimitive Docs Index]`);
+  parts.push(`root: .`);
+  parts.push(CRITICAL_INSTRUCTIONS.join('|'));
 
-> A set of composable libraries for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
-
-Rimitive uses \`compose()\` to wire modules together. Modules declare dependencies; compose resolves them automatically. The result is a service with reactive primitives.
-
-## Core Concepts
-
-- [llms-full.txt](llms-full.txt): Complete LLM documentation (recommended for full context)
-
-## Quick Reference
-
-Signal primitives: \`signal(value)\` creates state; \`sig()\` reads; \`sig(newValue)\` writes; \`sig.peek()\` reads without tracking.
-
-Effects are synchronous - they run immediately when dependencies change.
-
-View elements: \`el(tag).props({...})(...children)\` - curried pattern. Specs are inert; call \`.create(svc)\` or \`mount()\` to instantiate.
-
-Behaviors: \`(svc) => (options) => { return api }\` - portable reactive logic.
-
-## Import Patterns
-
-\`\`\`typescript
-// Modules for composition
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-
-// Types only
-import type { Readable, Writable, SignalFunction } from '@rimitive/signals';
-
-// View factories
-import { createElModule } from '@rimitive/view/el';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-
-// Compose into a service
-import { compose } from '@rimitive/core';
-const svc = compose(SignalModule, ComputedModule, EffectModule);
-\`\`\`
-
-## Packages
-
-${generatePackagesList()}
-`;
-}
-
-/**
- * Strip MDX frontmatter from content
- */
-function stripFrontmatter(content) {
-  const match = content.match(/^---\n[\s\S]*?\n---\n/);
-  if (match) {
-    return content.slice(match[0].length).trim();
-  }
-  return content.trim();
-}
-
-/**
- * Extract title from frontmatter
- */
-function extractTitle(content) {
-  const match = content.match(/^---\n[\s\S]*?title:\s*["']?([^"'\n]+)["']?/);
-  return match ? match[1].trim() : 'Untitled';
-}
-
-/**
- * Convert SearchTags JSX to HTML comments
- * <SearchTags tags={["a", "b"]} /> -> <!-- @tags: a, b -->
- */
-function convertSearchTags(content) {
-  // Match <SearchTags tags={["tag1", "tag2", ...]} />
-  return content.replace(
-    /<SearchTags\s+tags=\{?\[([^\]]+)\]\}?\s*\/>/g,
-    (_, tagList) => {
-      // Extract tag strings from the array notation
-      const tags = tagList
-        .split(',')
-        .map((t) => t.trim().replace(/^["']|["']$/g, ''))
-        .join(', ');
-      return `<!-- @tags: ${tags} -->`;
-    }
-  );
-}
-
-/**
- * Convert MDX to plain markdown (basic conversion)
- */
-function mdxToMarkdown(content) {
-  let result = content;
-
-  // Convert SearchTags to HTML comments BEFORE removing other JSX
-  result = convertSearchTags(result);
-
-  // Remove import statements that are NOT inside code blocks
-  // Split by code blocks, process non-code sections, rejoin
-  const parts = result.split(/(```[\s\S]*?```)/g);
-  result = parts
-    .map((part, i) => {
-      // Odd indices are code blocks, leave them alone
-      if (i % 2 === 1) return part;
-      // Even indices are regular content, remove imports
-      return part.replace(/^import\s+.*$/gm, '');
-    })
-    .join('');
-
-  // Remove JSX components (basic - just remove self-closing and paired components)
-  // Only outside code blocks
-  const parts2 = result.split(/(```[\s\S]*?```)/g);
-  result = parts2
-    .map((part, i) => {
-      if (i % 2 === 1) return part;
-      // Remove self-closing JSX like <Aside ... />
-      let cleaned = part.replace(/<[A-Z][a-zA-Z]*[^>]*\/>\s*/g, '');
-      // Remove paired JSX components (simple cases)
-      cleaned = cleaned.replace(/<([A-Z][a-zA-Z]*)[^>]*>[\s\S]*?<\/\1>\s*/g, '');
-      return cleaned;
-    })
-    .join('');
-
-  // Clean up multiple blank lines
-  result = result.replace(/\n{3,}/g, '\n\n');
-
-  return result.trim();
-}
-
-/**
- * Generate llms-full.txt by concatenating docs
- */
-async function generateLlmsFullTxt() {
-  const docsDir = 'packages/docs/src/content/docs';
-  const sections = [];
-
-  sections.push(`# Rimitive - Complete Documentation
-
-> A set of composable libraries for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
-
-This document contains the complete Rimitive documentation for LLM consumption.
-
----
-`);
-
-  // Add README as project overview
-  try {
-    const readme = await readFile('README.md', 'utf-8');
-    // Strip the logo/title header, keep the content
-    const readmeContent = readme
-      .replace(/^<p align="center">[\s\S]*?<\/p>\s*# Rimitive\s*/m, '')
-      .replace(/^_"Primitive".*_\s*/m, ''); // Remove the naming joke
-    sections.push(`## Project Overview (README)\n\n${readmeContent}\n\n---\n`);
-  } catch {
-    console.warn('Skipping README');
-  }
-
-  // Auto-discover docs from each section
+  // Index documentation files
+  const docsBase = 'packages/docs/src/content/docs';
   for (const section of DOC_SECTIONS) {
-    const sectionDir = join(docsDir, section);
-    let files;
-    try {
-      files = await readdir(sectionDir);
-    } catch {
-      console.warn(`Skipping missing section: ${section}`);
-      continue;
-    }
-
-    const mdxFiles = files.filter(f => f.endsWith('.mdx') && f !== 'index.mdx').sort();
-
-    for (const file of mdxFiles) {
-      try {
-        const fullPath = join(sectionDir, file);
-        const content = await readFile(fullPath, 'utf-8');
-        const title = extractTitle(content);
-        const body = stripFrontmatter(content);
-        const markdown = mdxToMarkdown(body);
-
-        if (markdown.length > 0) {
-          sections.push(`## ${title}\n\n${markdown}\n\n---\n`);
-        }
-      } catch (err) {
-        console.warn(`Skipping doc: ${section}/${file}: ${err.message}`);
-      }
+    const sectionPath = join(docsBase, section);
+    const files = await listFiles(join(ROOT, sectionPath), ['.mdx', '.md']);
+    if (files.length > 0) {
+      parts.push(`${sectionPath}:${formatFileList(files)}`);
     }
   }
 
-  // Add package READMEs as API reference
-  sections.push(`## Package API Reference
+  // Index package source files
+  for (const pkg of PACKAGES) {
+    const srcPath = join('packages', pkg.folder, 'src');
+    const srcFiles = await collectSourceFiles(join(ROOT, srcPath));
 
-The following sections contain API documentation from each package's README.
-
----
-`);
-
-  for (const pkg of PACKAGE_READMES) {
-    try {
-      const readmePath = join('packages', pkg.folder, 'README.md');
-      const content = await readFile(readmePath, 'utf-8');
-      // Strip the # title line, we'll use our own heading
-      const body = content.replace(/^#\s+.*\n+/, '').trim();
-      if (body.length > 0) {
-        sections.push(`### ${pkg.name}\n\n${body}\n\n---\n`);
-      }
-    } catch {
-      console.warn(`Skipping missing package README: ${pkg.folder}`);
+    for (const [subPath, files] of srcFiles) {
+      const displayPath =
+        subPath === '.' ? `packages/${pkg.folder}/src` : `packages/${pkg.folder}/src/${subPath}`;
+      parts.push(`${displayPath}:${formatFileList(files)}`);
     }
   }
 
-  // Add packages reference at the end
-  sections.push(`## Package Reference
+  // Index package READMEs
+  const readmePaths = [];
+  for (const pkg of PACKAGES) {
+    readmePaths.push(`packages/${pkg.folder}/README.md`);
+  }
+  parts.push(`READMEs:${formatFileList(readmePaths)}`);
 
-${generatePackagesList()}
-`);
+  // Index examples
+  const examplesDir = join(ROOT, 'packages/examples');
+  const exampleDirs = await listDirs(examplesDir);
+  const exampleEntries = [];
+  for (const dir of exampleDirs) {
+    const srcExists = await stat(join(examplesDir, dir, 'src')).catch(() => null);
+    if (srcExists) {
+      exampleEntries.push(dir);
+    }
+  }
+  if (exampleEntries.length > 0) {
+    parts.push(`packages/examples:${formatFileList(exampleEntries)}`);
+  }
 
-  return sections.join('\n');
+  parts.push(`<!-- RIMITIVE-LLMS-TXT-END -->`);
+
+  // Join with pipe delimiter (compressed single-line style)
+  return parts.join('|');
 }
 
 async function main() {
   console.log('Generating llms.txt...');
-  const llmsTxt = await generateLlmsTxt();
-  await writeFile('llms.txt', llmsTxt);
-  console.log('  -> llms.txt generated');
-
-  console.log('Generating llms-full.txt...');
-  const llmsFullTxt = await generateLlmsFullTxt();
-  await writeFile('llms-full.txt', llmsFullTxt);
-  console.log('  -> llms-full.txt generated');
-
+  const content = await generateLlmsTxt();
+  await writeFile('llms.txt', content);
+  const size = Buffer.byteLength(content, 'utf8');
+  console.log(`  -> llms.txt (${size} bytes)`);
   console.log('Done!');
 }
 

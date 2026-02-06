@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Regenerates llms.txt and llms-full.txt, commits if changed.
+// Regenerates llms.txt, commits if changed.
 // Used by husky pre-push hook and prechangeset script.
 
 import { execSync } from 'node:child_process';
@@ -27,7 +27,7 @@ function hasStagedChanges(files) {
   }
 }
 
-const FILES = ['llms.txt', 'llms-full.txt'];
+const FILES = ['llms.txt'];
 
 console.log('Regenerating llms docs...');
 execSync('node scripts/generate-llms.mjs', { stdio: 'inherit' });

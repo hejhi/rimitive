@@ -2,6 +2,8 @@
 
 Reactive primitives for rimitive. Signals, computeds, effects, and friends.
 
+**[Full documentation](https://rimitive.dev/signals/)**
+
 ## Quick Start
 
 ```typescript
