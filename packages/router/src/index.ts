@@ -12,14 +12,16 @@
  * Router does not create elements or manage rendering.
  */
 
-// New minimal router API - Module pattern
-export { createRouter, createRouterModule } from './router';
+// Router - Configurable module pattern
+export { createRouter, RouterModule } from './router';
 export type {
   Router,
+  RouterConfig,
   RouterDeps,
   RouterOptions,
   RouteConfig,
   MatchedRoute,
+  NavigationDirection,
 } from './router';
 
 // Link component

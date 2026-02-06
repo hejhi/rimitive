@@ -2,6 +2,8 @@
 
 Routing as reactive state. The router provides signals (`matches`, `currentPath`), not rendering—use `match()` from `@rimitive/view` to render.
 
+**[Full documentation](https://rimitive.dev/guides/adding-routing/)**
+
 ## Quick Start
 
 ```typescript

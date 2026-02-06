@@ -58,9 +58,7 @@ export default defineConfig({
         'node:test',
         '@rimitive/core',
         '@rimitive/signals',
-        '@rimitive/view',
         /^@rimitive\/signals\//,
-        /^@rimitive\/view\//,
       ],
       output: {
         entryFileNames: '[name].js',

@@ -14,12 +14,37 @@
  * The view layer uses match() to render based on router.matches().
  */
 
-import type { Readable, Writable } from '@rimitive/view/types';
-import { defineModule, type Module } from '@rimitive/core';
-import type { SignalFactory } from '@rimitive/signals/extend';
-import type { ComputedFactory } from '@rimitive/signals/extend';
+import { defineConfigurableModule } from '@rimitive/core';
+import type { SignalFactory, ComputedFactory } from '@rimitive/signals/extend';
 import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
 import { matchPath, matchPathPrefix } from './helpers/matching';
+import { Readable, Writable } from '@rimitive/signals';
+
+// =============================================================================
+// Navigation API Types (not yet in standard TypeScript lib)
+// =============================================================================
+
+declare global {
+  interface Window {
+    navigation?: {
+      currentEntry: { index: number } | null;
+      addEventListener(
+        type: 'navigate',
+        listener: (event: NavigateEvent) => void
+      ): void;
+    };
+  }
+
+  interface NavigateEvent extends Event {
+    navigationType: 'push' | 'replace' | 'reload' | 'traverse';
+    destination: { index: number; url: string };
+  }
+}
+
+/**
+ * Navigation direction for page transitions
+ */
+export type NavigationDirection = 'forward' | 'back';
 
 /**
  * Route configuration - pure data, no components
@@ -64,8 +89,10 @@ export type Router = {
 
   /**
    * Navigate to a new path
+   * @param path - The path to navigate to
+   * @param direction - Optional direction hint for animations (defaults to 'forward')
    */
-  navigate: (path: string) => void;
+  navigate: (path: string, direction?: NavigationDirection) => void;
 
   /**
    * Navigate back in history
@@ -102,6 +129,20 @@ export type Router = {
    * e.g., { sort: "price", filter: "new" }
    */
   query: Readable<Record<string, string>>;
+
+  // Navigation state for transitions
+
+  /**
+   * Direction of the last navigation ('forward' or 'back')
+   * Useful for page transition animations
+   */
+  direction: Readable<NavigationDirection>;
+
+  /**
+   * Whether this is the initial page load (no previous navigation)
+   * Useful to skip entrance animations on first render
+   */
+  isInitial: Readable<boolean>;
 };
 
 /**
@@ -113,6 +154,13 @@ export type RouterOptions = {
    * Defaults to window.location on client
    */
   initialPath?: string;
+
+  /**
+   * Called before each navigation with the target path.
+   * Useful for prefetching data in parallel with route chunk loading.
+   * If it returns a Promise, the promise is NOT awaited (fire-and-forget).
+   */
+  onNavigate?: (path: string) => void | Promise<void>;
 };
 
 /**
@@ -299,8 +347,14 @@ export function createRouter(
   // Internal writable signal for current path
   const pathSignal = signal<string>(getInitialPath(options));
 
+  // Navigation state signals
+  const directionSignal = signal<NavigationDirection>('forward');
+  const isInitialSignal = signal(true);
+
   // Public read-only computed
   const currentPath = computed(() => pathSignal());
+  const direction = computed(() => directionSignal());
+  const isInitial = computed(() => isInitialSignal());
 
   // Computed matches - recomputes when path changes
   const matches = computed(() => {
@@ -310,12 +364,23 @@ export function createRouter(
   });
 
   // Navigation function
-  function navigate(path: string): void {
-    pathSignal(path);
+  function navigate(
+    path: string,
+    navDirection: NavigationDirection = 'forward'
+  ): void {
+    if (path === pathSignal()) return;
+
+    // Fire onNavigate before updating path signal (fire-and-forget)
+    options.onNavigate?.(path);
+
+    directionSignal(navDirection);
+    isInitialSignal(pathSignal() === '');
 
     if (typeof window !== 'undefined' && window.history) {
       window.history.pushState(null, '', path);
     }
+
+    pathSignal(path);
   }
 
   // History navigation
@@ -331,15 +396,44 @@ export function createRouter(
     }
   }
 
-  // Listen to popstate for back/forward buttons
+  // Listen for browser-initiated navigation (back/forward buttons)
+  // Uses Navigation API for direction detection with popstate fallback
   if (typeof window !== 'undefined') {
-    window.addEventListener('popstate', () => {
-      const fullPath =
-        window.location.pathname +
-        window.location.search +
-        window.location.hash;
-      pathSignal(fullPath);
-    });
+    const nav = window.navigation;
+
+    if (nav) {
+      // Navigation API - can detect actual direction
+      nav.addEventListener('navigate', (event: NavigateEvent) => {
+        if (event.navigationType === 'traverse') {
+          const currentIndex = nav.currentEntry?.index ?? 0;
+          const destinationIndex = event.destination.index;
+          const newDirection: NavigationDirection =
+            destinationIndex < currentIndex ? 'back' : 'forward';
+          const newPath = new URL(event.destination.url).pathname;
+
+          if (newPath === pathSignal()) return;
+
+          directionSignal(newDirection);
+          isInitialSignal(false);
+          pathSignal(newPath);
+        }
+      });
+    } else {
+      // Fallback for browsers without Navigation API
+      window.addEventListener('popstate', () => {
+        const fullPath =
+          window.location.pathname +
+          window.location.search +
+          window.location.hash;
+
+        if (fullPath === pathSignal()) return;
+
+        // Cannot determine direction without Navigation API, default to 'back'
+        directionSignal('back');
+        isInitialSignal(false);
+        pathSignal(fullPath);
+      });
+    }
   }
 
   // Location - reactive URL components
@@ -358,23 +452,31 @@ export function createRouter(
     search,
     hash,
     query,
+    direction,
+    isInitial,
   };
 }
 
 /**
- * Create a Router module for use with compose().
+ * Router configuration for RouterModule
+ */
+export type RouterConfig = {
+  routes: RouteConfig[];
+  initialPath?: string;
+  onNavigate?: (path: string) => void | Promise<void>;
+};
+
+/**
+ * Router module for use with compose().
  *
- * Like createElModule(adapter), this takes configuration at module creation time
- * and returns a Module that can be composed with other modules.
- *
- * @param routes - Route configuration (pure data)
- * @param options - Router options (initialPath, etc.)
+ * Requires configuration via .with() before composing.
+ * Use RouterModule.module in dependency arrays to declare dependency.
  *
  * @example
  * ```typescript
  * import { compose } from '@rimitive/core';
  * import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
- * import { createRouterModule } from '@rimitive/router';
+ * import { RouterModule } from '@rimitive/router';
  *
  * const routes = [
  *   { id: 'home', path: '' },
@@ -387,7 +489,7 @@ export function createRouter(
  * const svc = compose(
  *   SignalModule,
  *   ComputedModule,
- *   createRouterModule(routes, { initialPath: '/' })
+ *   RouterModule.with({ routes, initialPath: '/' })
  * );
  *
  * // Router is now part of the composed context
@@ -400,23 +502,30 @@ export function createRouter(
  *   return componentMap[route.id]({ params: route.params });
  * });
  * ```
+ *
+ * @example Declaring dependency on router
+ * ```typescript
+ * import { defineModule } from '@rimitive/core';
+ * import { RouterModule } from '@rimitive/router';
+ *
+ * const NavigationModule = defineModule({
+ *   name: 'nav',
+ *   dependencies: [RouterModule.module],  // Use .module for dependency
+ *   create: ({ router }) => ({
+ *     goHome: () => router.navigate('/'),
+ *   }),
+ * });
+ * ```
  */
-export const createRouterModule = (
-  routes: RouteConfig[],
-  options: RouterOptions = {}
-): Module<
-  'router',
-  Router,
-  { signal: SignalFactory; computed: ComputedFactory }
-> =>
-  defineModule({
-    name: 'router',
-    dependencies: [SignalModule, ComputedModule],
-    create: ({
-      signal,
-      computed,
-    }: {
-      signal: SignalFactory;
-      computed: ComputedFactory;
-    }) => createRouter({ signal, computed }, routes, options),
-  });
+export const RouterModule = defineConfigurableModule({
+  name: 'router' as const,
+  dependencies: [SignalModule, ComputedModule],
+  create: (
+    { signal, computed }: { signal: SignalFactory; computed: ComputedFactory },
+    config: RouterConfig
+  ): Router =>
+    createRouter({ signal, computed }, config.routes, {
+      initialPath: config.initialPath,
+      onNavigate: config.onNavigate,
+    }),
+});
