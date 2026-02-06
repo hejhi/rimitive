@@ -26,8 +26,8 @@ function generateEvents(count: number): AnalyticsEvent[] {
     const minutesAgo = Math.floor((i / count) * 45) + 2;
     events.push({
       id: `evt-${String(i + 1).padStart(3, '0')}`,
-      type: EVENT_TYPES[i % EVENT_TYPES.length],
-      path: PATHS[i % PATHS.length],
+      type: EVENT_TYPES[i % EVENT_TYPES.length] as AnalyticsEvent['type'],
+      path: PATHS[i % PATHS.length] as string,
       visitor: `visitor-${String(Math.floor(Math.random() * 50) + 1).padStart(3, '0')}`,
       timestamp: `${minutesAgo}m ago`,
     });

@@ -1,4 +1,4 @@
-import type { AnalyticsEvent, Site, SiteDetail, SiteTraffic } from './types.js';
+import type { Site, SiteDetail, SiteTraffic } from './types.js';
 import { apiFetch } from './api-fetch.js';
 
 export async function fetchSites(): Promise<Site[]> {

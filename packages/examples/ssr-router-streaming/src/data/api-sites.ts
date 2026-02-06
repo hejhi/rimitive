@@ -27,7 +27,7 @@ export async function getSites(): Promise<Site[]> {
 }
 
 export async function getSiteDetail(id: string): Promise<SiteDetail> {
-  const site = SITES.find((s) => s.id === id) ?? SITES[0];
+  const site = SITES.find((s) => s.id === id) ?? SITES[0] as Site;
   return {
     site,
     totalVisitors: 142_350,
@@ -59,8 +59,8 @@ function generateRecentEvents(siteId: string): AnalyticsEvent[] {
   for (let i = 0; i < 5; i++) {
     events.push({
       id: `${siteId}-evt-${i}`,
-      type: types[i % types.length],
-      path: paths[i % types.length],
+      type: types[i % types.length] as AnalyticsEvent['type'],
+      path: paths[i % types.length] as string,
       visitor: `visitor-${String(Math.floor(Math.random() * 50) + 1).padStart(3, '0')}`,
       timestamp: `${(i + 1) * 3}m ago`,
     });
