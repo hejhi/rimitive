@@ -1,0 +1,50 @@
+/* View Transitions */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+  animation-timing-function: ease-out;
+}
+
+/* Forward navigation (going deeper) */
+[data-transition="forward"]::view-transition-old(root) {
+  animation-name: slide-out-left;
+}
+
+[data-transition="forward"]::view-transition-new(root) {
+  animation-name: slide-in-right;
+}
+
+/* Back navigation */
+[data-transition="back"]::view-transition-old(root) {
+  animation-name: slide-out-right;
+}
+
+[data-transition="back"]::view-transition-new(root) {
+  animation-name: slide-in-left;
+}
+
+@keyframes slide-out-left {
+  to {
+    transform: translateX(-30%);
+    opacity: 0.5;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-30%);
+    opacity: 0.5;
+  }
+}

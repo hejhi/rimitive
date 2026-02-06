@@ -1,0 +1,91 @@
+.lists {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.list-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #2a2a4a;
+  border-radius: 12px;
+  border-left: 4px solid #6366f1;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.list-card:active {
+  transform: scale(0.98);
+  background: #3a3a5a;
+}
+
+.list-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.list-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.list-count {
+  font-size: 0.75rem;
+  color: #888;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.list-progress-bar {
+  height: 3px;
+  background: #1a1a2e;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.list-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.list-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.list-preview-item {
+  font-size: 0.75rem;
+  color: #777;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 1.25rem;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s, color 0.2s;
+}
+
+.delete-btn:hover {
+  background: #4a1a1a;
+  color: #f44;
+}

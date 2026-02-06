@@ -1,0 +1,28 @@
+.detail-page .header {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0.75rem;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.progress {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.detail-progress-bar {
+  height: 3px;
+  background: #1a1a2e;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.detail-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@rimitive/example-edge-ssr",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm build:client && wrangler dev",
+    "build:client": "vite build",
+    "build": "pnpm build:client",
+    "deploy": "pnpm build && wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/router": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/ssr": "workspace:*",
+    "@rimitive/view": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20250505.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "wrangler": "4.14.1"
+  }
+}

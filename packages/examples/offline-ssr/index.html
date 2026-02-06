@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0f0f23" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Rimitive Todo - Offline PWA</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/src/app.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <div class="status-bar">
+        <span>Rimitive PWA</span>
+        <span id="status" class="status">Loading...</span>
+      </div>
+
+      <div id="app">
+        <div class="page loading-page">Initializing...</div>
+      </div>
+
+      <div class="footer">
+        Offline-first • Worker pre-rendered • Native transitions
+        <br />
+        <a href="https://rimitive.dev" target="_blank">rimitive.dev</a>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
