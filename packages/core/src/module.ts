@@ -51,6 +51,9 @@ import type { InstrumentationContext, ServiceContext } from './types';
  */
 export const STATUS_MODULE = 8; // 1000
 
+/** Symbol marking placeholder modules that need configuration via .with() */
+export const PLACEHOLDER = Symbol.for('rimitive.placeholder');
+
 /**
  * Module scope - controls instance lifetime
  * - 'singleton': One instance shared by all dependents (default)
@@ -344,6 +347,13 @@ export function isLazy(module: AnyModule): module is LazyModule {
 }
 
 /**
+ * Check if a module is a placeholder (from configurable module pattern)
+ */
+export function isPlaceholder(module: AnyModule): boolean {
+  return PLACEHOLDER in module;
+}
+
+/**
  * Mark a module with async create() as lazy.
  *
  * Lazy modules are awaited during composition. When compose() includes lazy
@@ -375,4 +385,142 @@ export function lazy<TName extends string, TImpl, TDeps>(
     ...module,
     __lazy: true,
   } as LazyModule<TName, TImpl, TDeps>;
+}
+
+// =============================================================================
+// Configurable Modules
+// =============================================================================
+
+/**
+ * A module that requires configuration before it can be composed.
+ *
+ * Call .with(config) to get a composable Module.
+ * Use .module in dependency arrays to declare the dependency.
+ */
+export interface ConfigurableModule<
+  TName extends string,
+  TImpl,
+  TDeps,
+  TConfig,
+> {
+  /**
+   * Provide configuration and get a composable module.
+   */
+  with(config: TConfig): Module<TName, TImpl, TDeps>;
+
+  /**
+   * Reference to use in dependency arrays.
+   * This is a placeholder - the actual configured module must be composed.
+   */
+  readonly module: Module<TName, TImpl, TDeps>;
+
+  /**
+   * The module name (for reference)
+   */
+  readonly name: TName;
+}
+
+/**
+ * Definition for a configurable module
+ */
+export interface ConfigurableModuleDefinition<
+  TName extends string,
+  TImpl,
+  TConfig,
+  TModules extends readonly AnyModule[] = readonly [],
+> {
+  /** Unique name - becomes the property name on the composed context */
+  name: TName;
+
+  /** Modules this module depends on (resolved by compose) */
+  dependencies?: TModules;
+
+  /** Create the implementation with resolved dependencies and config */
+  create(deps: DepsFromModules<TModules>, config: TConfig): TImpl;
+
+  /** Optional: wrap impl for debugging/profiling when instrumentation is enabled */
+  instrument?(
+    impl: TImpl,
+    instrumentation: InstrumentationContext,
+    ctx: ServiceContext
+  ): TImpl;
+
+  /** Optional: called when module is added to context */
+  init?(ctx: ServiceContext): void;
+
+  /** Optional: called when context is disposed */
+  destroy?(ctx: ServiceContext): void;
+}
+
+/**
+ * Define a module that requires configuration.
+ *
+ * Unlike regular modules, configurable modules must call .with(config)
+ * before they can be composed. This provides type-safe configuration.
+ *
+ * @example
+ * ```ts
+ * // Define a module that requires routes config
+ * export const RouterModule = defineConfigurableModule({
+ *   name: 'router',
+ *   dependencies: [SignalModule, ComputedModule],
+ *   create: ({ signal, computed }, config: { routes: Route[] }) => {
+ *     return createRouter({ signal, computed }, config.routes);
+ *   },
+ * });
+ *
+ * // Must call .with() before composing - type error otherwise
+ * const svc = compose(
+ *   SignalModule,
+ *   RouterModule.with({ routes: myRoutes }),  // ✓
+ *   // RouterModule,  // ✗ Type error
+ * );
+ *
+ * // Use .module in dependency arrays
+ * const OtherModule = defineModule({
+ *   name: 'other',
+ *   dependencies: [RouterModule.module],  // ✓ Declares dependency on router
+ *   create: ({ router }) => { ... },
+ * });
+ * ```
+ */
+export function defineConfigurableModule<
+  const TName extends string,
+  TImpl,
+  TConfig,
+  const TModules extends readonly AnyModule[] = readonly [],
+>(
+  definition: ConfigurableModuleDefinition<TName, TImpl, TConfig, TModules>
+): ConfigurableModule<TName, TImpl, DepsFromModules<TModules>, TConfig> {
+  // Create a placeholder module for use in dependency arrays
+  // This declares the dependency but doesn't provide implementation
+  const placeholderModule = {
+    status: STATUS_MODULE,
+    name: definition.name,
+    dependencies: (definition.dependencies ?? []) as AnyModule[],
+    [PLACEHOLDER]: true,
+    create: () => {
+      throw new Error(
+        `Module "${definition.name}" requires configuration. ` +
+          `Use ${definition.name}Module.with(config) when composing.`
+      );
+    },
+  } as Module<TName, TImpl, DepsFromModules<TModules>> & { [PLACEHOLDER]: true };
+
+  return {
+    name: definition.name,
+    module: placeholderModule,
+
+    with(config: TConfig): Module<TName, TImpl, DepsFromModules<TModules>> {
+      return defineModule({
+        name: definition.name,
+        dependencies: definition.dependencies,
+        create: (deps) =>
+          definition.create(deps as DepsFromModules<TModules>, config),
+        ...(definition.instrument && { instrument: definition.instrument }),
+        ...(definition.init && { init: definition.init }),
+        ...(definition.destroy && { destroy: definition.destroy }),
+      }) as Module<TName, TImpl, DepsFromModules<TModules>>;
+    },
+  };
 }

@@ -2,6 +2,8 @@
 
 Simple, minimal Dependency Injection through module composition. Modules declare dependencies and `compose()` wires them together.
 
+**[Full documentation](https://rimitive.dev/guides/custom-modules/)**
+
 Additional features:
 
 - [**fork**](#forkbase-freshmodules) - fresh instances of selected modules, shares everything else

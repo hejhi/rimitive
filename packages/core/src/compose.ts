@@ -11,7 +11,7 @@ import type {
   ValidatedModules,
   ComposeReturn,
 } from './types';
-import { type AnyModule, isModule, isTransient, isLazy } from './module';
+import { type AnyModule, isModule, isTransient, isLazy, isPlaceholder } from './module';
 import { tryDispose } from './utils';
 
 type ContextState = {
@@ -242,8 +242,15 @@ export function compose(
     const deps: Record<string, unknown> = {};
     for (const dep of mod.dependencies) {
       const isT = isTransient(dep);
-      if (isT) initTransient(dep);
-      deps[dep.name] = isT ? createTransientSync(dep) : resolveSync(dep);
+      if (isT) {
+        initTransient(dep);
+        deps[dep.name] = createTransientSync(dep);
+      } else if (isPlaceholder(dep) && dep.name in context) {
+        // Placeholder dependency resolved by name (configurable module pattern)
+        deps[dep.name] = context[dep.name];
+      } else {
+        deps[dep.name] = resolveSync(dep);
+      }
     }
     return deps;
   };
@@ -279,10 +286,15 @@ export function compose(
     const deps: Record<string, unknown> = {};
     for (const dep of mod.dependencies) {
       const isT = isTransient(dep);
-      if (isT) initTransient(dep);
-      deps[dep.name] = isT
-        ? await createTransientAsync(dep)
-        : await resolveAsync(dep);
+      if (isT) {
+        initTransient(dep);
+        deps[dep.name] = await createTransientAsync(dep);
+      } else if (isPlaceholder(dep) && dep.name in context) {
+        // Placeholder dependency resolved by name (configurable module pattern)
+        deps[dep.name] = context[dep.name];
+      } else {
+        deps[dep.name] = await resolveAsync(dep);
+      }
     }
     return deps;
   };
