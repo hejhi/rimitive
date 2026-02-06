@@ -6,8 +6,8 @@ import {
   BatchModule,
 } from '@rimitive/signals/extend';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
 import type { Reactive, ElRefSpecChild } from '@rimitive/view/types';
 
@@ -18,8 +18,8 @@ const svc = compose(
   ComputedModule,
   EffectModule,
   BatchModule,
-  createElModule(adapter),
-  createMapModule(adapter),
+  ElModule.with({ adapter }),
+  MapModule.with({ adapter }),
   OnModule
 );
 

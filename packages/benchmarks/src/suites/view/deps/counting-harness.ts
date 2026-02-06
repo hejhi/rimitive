@@ -19,9 +19,9 @@ import {
   type CountingNode,
   type CountingAdapter,
 } from './counting-adapter';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
+import { MatchModule } from '@rimitive/view/match';
 import type { Reactive } from '@rimitive/view/types';
 
 // ============================================================================
@@ -35,9 +35,9 @@ export function createCountingService() {
     ComputedModule,
     EffectModule,
     BatchModule,
-    createElModule<CountingTreeConfig>(adapter),
-    createMapModule<CountingTreeConfig>(adapter),
-    createMatchModule<CountingTreeConfig>(adapter)
+    ElModule.with<CountingTreeConfig>({ adapter }),
+    MapModule.with<CountingTreeConfig>({ adapter }),
+    MatchModule.with<CountingTreeConfig>({ adapter })
   );
   return { svc, adapter };
 }

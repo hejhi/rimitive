@@ -12,9 +12,9 @@ import {
   BatchModule,
 } from '@rimitive/signals/extend';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
+import { MatchModule } from '@rimitive/view/match';
 import { createPortalModule } from '@rimitive/view/portal';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
 import { MountModule } from '@rimitive/view/deps/mount';
@@ -27,9 +27,9 @@ const use = compose(
   ComputedModule,
   EffectModule,
   BatchModule,
-  createElModule(adapter),
-  createMapModule(adapter),
-  createMatchModule(adapter),
+  ElModule.with({ adapter }),
+  MapModule.with({ adapter }),
+  MatchModule.with({ adapter }),
   createPortalModule(adapter),
   OnModule,
   MountModule

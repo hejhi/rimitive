@@ -11,12 +11,12 @@ import {
   BatchModule,
 } from '@rimitive/signals/extend';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
+import { MatchModule } from '@rimitive/view/match';
 import { MountModule } from '@rimitive/view/deps/mount';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
-import { createRouterModule } from '@rimitive/router';
+import { RouterModule } from '@rimitive/router';
 import type { RefSpec } from '@rimitive/view/types';
 import { routes } from './routes';
 
@@ -36,12 +36,13 @@ export const svc = compose(
   ComputedModule,
   EffectModule,
   BatchModule,
-  createElModule(adapter),
-  createMapModule(adapter),
-  createMatchModule(adapter),
+  ElModule.with({ adapter }),
+  MapModule.with({ adapter }),
+  MatchModule.with({ adapter }),
   MountModule,
   OnModule,
-  createRouterModule(routes, {
+  RouterModule.with({
+    routes,
     initialPath:
       typeof window !== 'undefined'
         ? window.location.pathname +

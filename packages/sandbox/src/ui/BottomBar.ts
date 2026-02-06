@@ -30,7 +30,7 @@ export const importTemplates: ImportTemplate[] = [
   {
     id: 'view',
     label: '+ view',
-    importStatement: `import { createElModule } from '@rimitive/view/el';
+    importStatement: `import { ElModule } from '@rimitive/view/el';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';`,
   },
   {
