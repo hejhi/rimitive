@@ -1,7 +1,7 @@
 import type { DocSection } from './types.js';
 
 /**
- * Boundaries for section types based on line position in llms-full.txt
+ * Boundaries for section types based on line position in the embedded docs
  * These are approximate and based on the document structure
  */
 const OVERVIEW_END = 200;
@@ -190,7 +190,7 @@ function detectPackage(content: string): string | undefined {
 }
 
 /**
- * Parse llms-full.txt into structured sections
+ * Parse embedded docs into structured sections
  */
 export function parseDocs(content: string): DocSection[] {
   const lines = content.split('\n');

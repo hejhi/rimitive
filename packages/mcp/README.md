@@ -4,32 +4,7 @@ MCP (Model Context Protocol) server that exposes Rimitive documentation to codin
 
 ## Installation
 
-```bash
-npm install -g @rimitive/mcp
-# or
-npx @rimitive/mcp
-```
-
-## Usage
-
-### With Claude Code
-
-Add to your Claude Code MCP configuration (`~/.claude/claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "rimitive": {
-      "command": "npx",
-      "args": ["@rimitive/mcp"]
-    }
-  }
-}
-```
-
-### With Claude Desktop
-
-Add to your Claude Desktop configuration:
+Add to your Claude Code or Claude Desktop configuration (`~/.claude/claude_desktop_config.json`):
 
 ```json
 {
@@ -101,19 +76,6 @@ Once configured, Claude can use these tools to help you write Rimitive code:
 - "Show me the signal API" → `get_module` returns full signal documentation
 - "Give me a counter example" → `get_example` extracts counter code samples
 - "What's the idiomatic way to build a form?" → `get_patterns` returns form patterns and best practices
-
-## Development
-
-```bash
-# Build
-pnpm build
-
-# Run locally
-node bin/rimitive-mcp.js
-
-# Test with JSON-RPC
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | node bin/rimitive-mcp.js
-```
 
 ## License
 

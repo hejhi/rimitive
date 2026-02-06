@@ -1,5 +1,5 @@
 /**
- * A section of documentation parsed from llms-full.txt
+ * A section of documentation parsed from the embedded docs
  */
 export interface DocSection {
   /** Kebab-case identifier derived from the title */
