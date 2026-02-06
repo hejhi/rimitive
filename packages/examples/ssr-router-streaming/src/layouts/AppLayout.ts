@@ -1,64 +1,42 @@
 /**
  * App Layout
  *
- * Renders navbar and route content based on router.matches().
+ * Dashboard layout with sidebar navigation and route content.
+ * Pages with load() boundaries are lazy-loaded so that
+ * renderToStream discovers their async boundaries correctly.
  */
-import type { RefSpec } from '@rimitive/view/types';
 import type { MatchedRoute } from '@rimitive/router';
 import type { Service } from '../service.js';
-import { Navigation } from '../components/Navigation.js';
-import { Home } from '../pages/Home.js';
-import { About } from '../pages/About.js';
-import { Products } from '../pages/Products.js';
-import { ProductDetail } from '../pages/ProductDetail.js';
-import { Stats } from '../pages/Stats.js';
-import { UserProfile } from '../pages/UserProfile.js';
+import { SideNav } from '../components/SideNav.js';
 import { NotFound } from '../pages/NotFound.js';
 
-/**
- * Map route IDs to portable component functions
- *
- * All pages follow the portable style: (svc) => () => RefSpec
- * We wrap them to fit the (svc) => (props) => RefSpec signature.
- */
-const componentMap: Record<
-  string,
-  (
-    svc: Service
-  ) => (props: { params: Record<string, string> }) => RefSpec<unknown>
-> = {
-  home: Home,
-  about: About,
-  products: Products,
-  'product-detail': ProductDetail,
-  // Stats uses load() internally for async data - same pattern as other routes
-  stats: Stats,
-  // UserProfile demonstrates nested load() calls
-  'user-profile': UserProfile,
-};
-
 export const AppLayout = (svc: Service) => {
-  const { el, match, router } = svc;
+  const { el, match, router, lazy } = svc;
 
   return el('div').props({ className: 'app' })(
-    // Navbar with navigation
-    el('nav').props({ className: 'navbar' })(
-      el('div').props({ className: 'nav-brand' })(
-        el('h1')('🧩 Rimitive SSR + Router')
-      ),
-      svc(Navigation)()
-    ),
-
-    // Route content - renders based on router.matches()
+    SideNav(svc)(),
     el('main').props({ className: 'main-content' })(
       match(router.matches, (matchedRoutes: MatchedRoute[]) => {
         const route = matchedRoutes[0];
         if (!route) return svc(NotFound)();
 
-        const Component = componentMap[route.id];
-        if (!Component) return svc(NotFound)();
+        if (route.id === 'overview') {
+          return lazy(() =>
+            import('../pages/Overview.js').then((m) => m.Overview(svc))
+          )();
+        }
+        if (route.id === 'site-detail') {
+          return lazy(() =>
+            import('../pages/SiteDetail.js').then((m) => m.SiteDetail(svc))
+          )();
+        }
+        if (route.id === 'feed') {
+          return lazy(() =>
+            import('../pages/Feed.js').then((m) => m.Feed(svc))
+          )();
+        }
 
-        return svc(Component)({ params: route.params });
+        return svc(NotFound)();
       })
     )
   );

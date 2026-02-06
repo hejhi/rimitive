@@ -8,11 +8,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": [
-    "src/server.ts",
-    "src/api.ts",
-    "src/pages/**/*",
-    "src/layouts/**/*",
-    "src/routes.ts"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/client.ts"]
 }

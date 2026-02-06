@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createParse5Adapter,
   renderToStream,
+  renderToData,
   createStreamWriter,
 } from '@rimitive/ssr/server';
 import type { RefSpec } from '@rimitive/view/types';
@@ -26,27 +27,39 @@ import { AppLayout } from './layouts/AppLayout.js';
 import { getStyles } from './styles.js';
 import { STREAM_KEY } from './config.js';
 
+// Import data functions for API endpoints
+import {
+  getOverviewMetrics,
+  getTopPages,
+  getReferrers,
+} from './data/api-metrics.js';
+import { getSiteDetail, getSiteTraffic, getSites } from './data/api-sites.js';
+import { getRecentEvents } from './data/api-events.js';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
 
 // Create stream writer - same key used on client in connectStream()
 const stream = createStreamWriter(STREAM_KEY);
 
-const clientBundlePath = isDev
-  ? join(__dirname, '../dist/client/client.js')
-  : join(__dirname, '../client/client.js');
+const clientDir = isDev
+  ? join(__dirname, '../dist/client')
+  : join(__dirname, '../client');
+const clientBundlePath = join(clientDir, 'client.js');
 
 // Create HTTP server
 const server = createServer(async (req, res) => {
-  // Serve client bundle
-  if (req.url === '/client.js') {
-    if (existsSync(clientBundlePath)) {
-      const bundle = readFileSync(clientBundlePath, 'utf-8');
+  // Serve client bundle and lazy-loaded chunks
+  if (req.url === '/client.js' || req.url?.startsWith('/assets/')) {
+    const filePath =
+      req.url === '/client.js' ? clientBundlePath : join(clientDir, req.url);
+    if (existsSync(filePath)) {
+      const content = readFileSync(filePath, 'utf-8');
       res.writeHead(200, { 'Content-Type': 'application/javascript' });
-      res.end(bundle);
+      res.end(content);
     } else {
       res.writeHead(404);
-      res.end('Client bundle not found. Run: pnpm build:client');
+      res.end('Not found');
     }
     return;
   }
@@ -57,10 +70,89 @@ const server = createServer(async (req, res) => {
     `http://${req.headers.host || 'localhost'}`
   );
 
+  // API endpoints - serve real data with artificial delays
+  if (url.pathname === '/api/overview') {
+    const data = await getOverviewMetrics();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
+  }
+
+  if (url.pathname === '/api/top-pages') {
+    const data = await getTopPages();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
+  }
+
+  if (url.pathname === '/api/referrers') {
+    const data = await getReferrers();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
+  }
+
+  if (url.pathname === '/api/sites') {
+    const data = await getSites();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
+  }
+
+  if (url.pathname.startsWith('/api/sites/')) {
+    const siteId = url.pathname.split('/')[3];
+    if (siteId && !url.pathname.includes('/traffic')) {
+      const data = await getSiteDetail(siteId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+      return;
+    }
+  }
+
+  if (
+    url.pathname.includes('/api/sites/') &&
+    url.pathname.endsWith('/traffic')
+  ) {
+    const siteId = url.pathname.split('/')[3];
+    if (siteId) {
+      const data = await getSiteTraffic(siteId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+      return;
+    }
+  }
+
+  if (url.pathname === '/api/events') {
+    const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+    const data = await getRecentEvents(limit);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
+  }
+
+  // /_data endpoint: prefetch data for client-side navigation
+  if (url.pathname.startsWith('/_data/')) {
+    const path = url.pathname.slice('/_data'.length) || '/';
+    const { adapter: dataAdapter } = createParse5Adapter();
+    const dataService = createService(dataAdapter, { initialPath: path });
+
+    const data = await renderToData(AppLayout(dataService), {
+      mount: (spec: RefSpec<unknown>) => spec.create(dataService),
+      getData: () => dataService.loader.getData(),
+    });
+
+    console.log(
+      `[data] Prefetch data for ${path}: ${Object.keys(data).join(', ')}`
+    );
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+    return;
+  }
+
   // Create per-request service with streaming callback
   // onResolve writes data chunks to the streaming proxy
-  const { adapter, serialize, insertFragmentMarkers } =
-    createParse5Adapter();
+  const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
   const service = createService(adapter, {
     initialPath: url.pathname,
     onResolve: (id, data) => {
@@ -90,7 +182,7 @@ const server = createServer(async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rimitive SSR Streaming</title>
+  <title>Analytics Dashboard — Rimitive SSR Streaming</title>
   <script>${stream.bootstrapCode()}</script>
   <style>${getStyles()}</style>
 </head>
@@ -100,7 +192,8 @@ const server = createServer(async (req, res) => {
   res.write(initialHtml);
 
   // Write client script - blocking to ensure hydration completes before chunks
-  res.write('<script src="/client.js"></script>');
+  // Note: type="module" is required because Vite builds to ES module format
+  res.write('<script type="module" src="/client.js"></script>');
 
   // Wait for all async boundaries to resolve
   // Chunks are streamed via onResolve as each boundary completes
@@ -115,18 +208,16 @@ const server = createServer(async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Streaming SSR server running at http://localhost:${PORT}/`);
-  console.log('');
-  console.log('This example demonstrates streaming SSR:');
-  console.log('- Initial HTML is sent immediately with pending states');
-  console.log('- Data chunks stream as load() boundaries resolve');
-  console.log('- Client updates reactively via signals (no DOM manipulation)');
+  console.log('Analytics Dashboard — Streaming SSR');
   console.log('');
   console.log('Try these URLs:');
-  console.log(`  http://localhost:${PORT}/`);
-  console.log(`  http://localhost:${PORT}/about`);
-  console.log(`  http://localhost:${PORT}/products`);
   console.log(
-    `  http://localhost:${PORT}/stats (async data - watch the streaming!)`
+    `  http://localhost:${PORT}/           (overview — parallel streaming)`
+  );
+  console.log(
+    `  http://localhost:${PORT}/sites/site-1  (site detail — nested streaming)`
+  );
+  console.log(
+    `  http://localhost:${PORT}/feed        (event feed — streaming + interactivity)`
   );
 });

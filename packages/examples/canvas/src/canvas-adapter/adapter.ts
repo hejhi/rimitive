@@ -465,6 +465,7 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
     // Handle image loading
     if (type === 'image' && props?.src) {
       const img = new Image();
+      img.crossOrigin = 'anonymous'; // Enable CORS for canvas export
       img.onload = () => {
         node.props._image = img;
         // Find the bridge element and mark dirty
@@ -523,10 +524,9 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
     const root = canvas.__sceneRoot;
     for (let i = root.children.length - 1; i >= 0; i--) {
       const child = root.children[i];
-      if (child) {
-        const hit = hitTestNode(x, y, child);
-        if (hit) return hit;
-      }
+      if (!child) continue;
+      const hit = hitTestNode(x, y, child);
+      if (hit) return hit;
     }
     return null;
   }
@@ -540,9 +540,7 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
     ) => {
       // 'canvas' type creates a bridge element (HTMLCanvasElement)
       // This is the boundary type - valid when parent is a different renderer (e.g., DOM)
-      if (type === 'canvas') {
-        return createBridgeElement(props ?? {});
-      }
+      if (type === 'canvas') return createBridgeElement(props ?? {});
 
       // For non-bridge types, validate that parent renderer is this canvas adapter
       // This catches errors like: dom.el('div')(canvas.el('circle')()) - missing canvas boundary
@@ -571,46 +569,43 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
           // Forward all other props to HTMLCanvasElement (width, height, className, id, style, etc.)
           Reflect.set(node, key, value);
           // width/height changes need repaint
-          if (key === 'width' || key === 'height') {
-            node.__markDirty();
-          }
+          if (key === 'width' || key === 'height') node.__markDirty();
         }
         return;
       }
 
       // Handle scene node properties
-      if (isSceneNode(node)) {
-        node.props[key] = value;
+      if (!isSceneNode(node)) return;
 
-        // Handle image src changes
-        if (node.type === 'image' && key === 'src') {
-          const img = new Image();
-          img.onload = () => {
-            node.props._image = img;
-            markSceneNodeDirty(node);
-          };
-          img.src = value as string;
+      node.props[key] = value;
+
+      // Handle image src changes
+      if (node.type === 'image' && key === 'src') {
+        const img = new Image();
+        img.crossOrigin = 'anonymous'; // Enable CORS for canvas export
+        img.onload = () => {
           node.props._image = img;
-        }
-
-        markSceneNodeDirty(node);
+          markSceneNodeDirty(node);
+        };
+        img.src = value as string;
+        node.props._image = img;
       }
+
+      markSceneNodeDirty(node);
     },
 
     appendChild: (parent, child) => {
       // Parent is bridge element - append to its scene graph
       if (isBridgeElement(parent)) {
-        if (isSceneNode(child)) {
-          // Store back-reference to bridge on scene root
-          const root = parent.__sceneRoot as CanvasNode & {
-            __bridge?: CanvasBridgeElement;
-          };
-          root.__bridge = parent;
-
-          child.parent = root;
-          root.children.push(child);
-          parent.__markDirty();
-        }
+        if (!isSceneNode(child)) return;
+        // Store back-reference to bridge on scene root
+        const root = parent.__sceneRoot as CanvasNode & {
+          __bridge?: CanvasBridgeElement;
+        };
+        root.__bridge = parent;
+        child.parent = root;
+        root.children.push(child);
+        parent.__markDirty();
         return;
       }
 
@@ -625,13 +620,12 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
     removeChild: (parent, child) => {
       // Parent is bridge element - remove from its scene graph
       if (isBridgeElement(parent)) {
-        if (isSceneNode(child)) {
-          const root = parent.__sceneRoot;
-          const idx = root.children.indexOf(child);
-          if (idx !== -1) root.children.splice(idx, 1);
-          child.parent = null;
-          parent.__markDirty();
-        }
+        if (!isSceneNode(child)) return;
+        const root = parent.__sceneRoot;
+        const idx = root.children.indexOf(child);
+        if (idx !== -1) root.children.splice(idx, 1);
+        child.parent = null;
+        parent.__markDirty();
         return;
       }
 
@@ -647,32 +641,29 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
     insertBefore: (parent, child, reference) => {
       // Parent is bridge element - insert into its scene graph
       if (isBridgeElement(parent)) {
-        if (isSceneNode(child)) {
-          const root = parent.__sceneRoot as CanvasNode & {
-            __bridge?: CanvasBridgeElement;
-          };
-          root.__bridge = parent;
+        if (!isSceneNode(child)) return;
+        const root = parent.__sceneRoot as CanvasNode & {
+          __bridge?: CanvasBridgeElement;
+        };
+        root.__bridge = parent;
 
-          // Remove from old parent if needed (proper move semantics)
-          if (child.parent) {
-            const oldIdx = child.parent.children.indexOf(child);
-            if (oldIdx !== -1) {
-              child.parent.children.splice(oldIdx, 1);
-            }
-          }
-
-          child.parent = root;
-          if (reference && isSceneNode(reference)) {
-            const idx = root.children.indexOf(reference);
-            if (idx !== -1) {
-              root.children.splice(idx, 0, child);
-              parent.__markDirty();
-              return;
-            }
-          }
-          root.children.push(child);
-          parent.__markDirty();
+        // Remove from old parent if needed (proper move semantics)
+        if (child.parent) {
+          const oldIdx = child.parent.children.indexOf(child);
+          if (oldIdx !== -1) child.parent.children.splice(oldIdx, 1);
         }
+
+        child.parent = root;
+        if (reference && isSceneNode(reference)) {
+          const idx = root.children.indexOf(reference);
+          if (idx !== -1) {
+            root.children.splice(idx, 0, child);
+            parent.__markDirty();
+            return;
+          }
+        }
+        root.children.push(child);
+        parent.__markDirty();
         return;
       }
 
@@ -681,9 +672,7 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
         // Remove from old parent if needed (proper move semantics)
         if (child.parent) {
           const oldIdx = child.parent.children.indexOf(child);
-          if (oldIdx !== -1) {
-            child.parent.children.splice(oldIdx, 1);
-          }
+          if (oldIdx !== -1) child.parent.children.splice(oldIdx, 1);
         }
 
         child.parent = parent;

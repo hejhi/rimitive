@@ -24,13 +24,14 @@ import {
   EffectModule,
   BatchModule,
 } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
+import { MatchModule } from '@rimitive/view/match';
 import { MountModule } from '@rimitive/view/deps/mount';
 import type { RefSpec } from '@rimitive/view/types';
 import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
+import type { CanvasTreeConfig } from './types';
 
 export { createCanvasAdapter } from './adapter';
 export { createCanvasAddEventListener } from './addEventListener';
@@ -68,20 +69,15 @@ export type {
 export const createCanvasViewSvc = (options: CanvasAdapterOptions) => {
   const { adapter, hitTest } = createCanvasAdapter(options);
 
-  // Create canvas-adapter-bound view modules
-  const CanvasElModule = createElModule(adapter);
-  const CanvasMapModule = createMapModule(adapter);
-  const CanvasMatchModule = createMatchModule(adapter);
-
   // Compose canvas view service
   const viewSvc = compose(
     SignalModule,
     ComputedModule,
     EffectModule,
     BatchModule,
-    CanvasElModule,
-    CanvasMapModule,
-    CanvasMatchModule,
+    ElModule.with<CanvasTreeConfig>({ adapter }),
+    MapModule.with<CanvasTreeConfig>({ adapter }),
+    MatchModule.with<CanvasTreeConfig>({ adapter }),
     MountModule
   );
 

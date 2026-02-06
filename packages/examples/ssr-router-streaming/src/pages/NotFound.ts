@@ -1,13 +1,7 @@
-import { Service } from '../service';
+import type { Service } from '../service.js';
 
-export const NotFound =
-  ({ el, router }: Service) =>
-  () =>
-    el('div').props({ className: 'page not-found' })(
-      el('h2')('Page Not Found'),
-      el('p')('The page you are looking for does not exist.'),
-      el('button').props({
-        className: 'primary-btn',
-        onclick: () => router.navigate('/'),
-      })('← Go Home')
-    );
+export const NotFound = (svc: Service) => () =>
+  svc.el('div').props({ className: 'page not-found-page' })(
+    svc.el('h2')('404 — Page Not Found'),
+    svc.el('p')('The page you are looking for does not exist.')
+  );

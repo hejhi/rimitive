@@ -15,15 +15,22 @@ import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
 import { STREAM_KEY, APP_ROOT } from './config.js';
+import { createPrefetch } from './ssr/prefetch.js';
 
 // Create hydration adapter
 const adapter = createClientAdapter(document.querySelector(APP_ROOT)!);
 
 // Create service with hydrating adapter
 // Pass initialPath explicitly to ensure router matches server state during hydration
+// onNavigate fires a data prefetch in parallel with lazy chunk loading
+const ref: { prefetch: (path: string) => void } = {
+  prefetch: () => {},
+};
 const service = createService(adapter, {
   initialPath: window.location.pathname,
+  onNavigate: (path: string) => ref.prefetch(path),
 });
+ref.prefetch = createPrefetch(service.loader);
 
 // Hydrate the app - this registers load() boundaries in the loader
 AppLayout(service).create(service);
@@ -33,5 +40,3 @@ adapter.activate();
 
 // Connect to the stream - flushes queued data and wires up future chunks
 connectStream(service, STREAM_KEY);
-
-console.log('[client] Hydration complete, stream connected');

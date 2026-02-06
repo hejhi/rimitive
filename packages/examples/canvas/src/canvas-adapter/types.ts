@@ -14,7 +14,7 @@ import type { TreeConfig } from '@rimitive/view/types';
 
 export type CanvasNode = {
   type: string;
-  props: Record<string, unknown>;
+  props: CanvasBaseProps & Record<string, unknown>;
   children: CanvasNode[];
   parent: CanvasNode | null;
   bounds?: { x: number; y: number; width: number; height: number };

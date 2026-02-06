@@ -13,12 +13,13 @@ import {
   EffectModule,
   BatchModule,
 } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMapModule } from '@rimitive/view/map';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MapModule } from '@rimitive/view/map';
+import { MatchModule } from '@rimitive/view/match';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
+import { LazyModule } from '@rimitive/view/lazy';
 import { createLoaderModule } from '@rimitive/view/load';
-import { createRouterModule, type RouterOptions } from '@rimitive/router';
+import { RouterModule, type RouterOptions } from '@rimitive/router';
 import type { Adapter, RefSpec } from '@rimitive/view/types';
 import type { TreeConfig } from '@rimitive/view/adapter';
 import { routes } from './routes.js';
@@ -55,14 +56,15 @@ export function createService<TConfig extends TreeConfig>(
     ComputedModule,
     EffectModule,
     BatchModule,
-    createElModule(adapter),
-    createMapModule(adapter),
-    createMatchModule(adapter),
+    ElModule.with({ adapter }),
+    MapModule.with({ adapter }),
+    MatchModule.with({ adapter }),
     createLoaderModule({
       initialData: options?.hydrationData,
       onResolve: options?.onResolve,
     }),
-    createRouterModule(routes, options),
+    LazyModule,
+    RouterModule.with({ routes, ...options }),
     OnModule
   );
 }

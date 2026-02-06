@@ -1,83 +1,199 @@
 /**
  * App Component
  *
- * Composes DOM (toolbar) and Canvas (scene) in a single tree.
- * Demonstrates the composable adapter pattern where canvas.cvs('canvas')
- * acts as a boundary - a DOM element externally, scene graph root internally.
+ * Follows the idiomatic Rimitive behavior pattern:
+ *   (svc) => () => RefSpec
  *
- * Event handling uses addEventListener on the canvas element itself,
- * matching DOM patterns. Hit testing provides the target canvas node.
+ * Service layer called once, card behaviors bound once.
  */
-import { canvas, dom } from '../service';
-import { ShapeEditor } from './ShapeEditor';
-import { Toolbar } from './Toolbar';
+import type { ShareCardData, shareCard } from './ShareCard';
+import type { CanvasBridgeElement } from '../canvas-adapter';
+import type { DOM, Canvas } from '../service';
+import type {
+  SignalFactory,
+  ComputedFactory,
+  EffectFactory,
+} from '@rimitive/signals';
 
-const { on, canvas: root } = canvas;
-const { div, p, strong, code, h1 } = dom;
+const CARD_WIDTH = 400;
+const CARD_HEIGHT = 200;
 
-type AppProps = {
-  canvasWidth: number;
-  canvasHeight: number;
+// The bound shareCard behavior - what you get after svc(shareCard)
+type BoundShareCard = ReturnType<typeof shareCard>;
+
+type AppDeps = {
+  dom: DOM;
+  canvas: Canvas;
+  signals: {
+    signal: SignalFactory;
+    computed: ComputedFactory;
+    effect: EffectFactory;
+  };
+  cards: {
+    dom: BoundShareCard;
+    canvas: BoundShareCard;
+  };
 };
 
-export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
-  // Get the scene content (the group with shapes)
-  const {
-    shapes,
-    addShape,
-    clearAll,
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
-  } = ShapeEditor({
-    canvasWidth,
-    canvasHeight,
-    initialShapes: [
-      { type: 'circle' },
-      { type: 'circle' },
-      { type: 'rect' },
-      { type: 'rect' },
-      { type: 'circle' },
-    ],
-  });
+/**
+ * App behavior - demonstrates portable components rendering to DOM and Canvas.
+ */
+export const App = ({ dom, canvas, signals, cards }: AppDeps) => {
+  const { signal, computed, effect } = signals;
+  const { div, h1, p, span, a, label, input, button, code, strong, br } = dom;
+  const { dom: DOMShareCard, canvas: CanvasShareCard } = cards;
+  const { canvas: CanvasComponent } = canvas;
 
-  // Single composed tree: DOM with embedded canvas
-  // canvas.el('canvas') creates an HTMLCanvasElement that acts as the boundary
-  return div.props({ className: 'app' })(
-    h1('Rimitive Canvas'),
-    p.props({ className: 'subtitle' })(
-      'Reactive canvas rendering with signals'
-    ),
+  const formGroup: typeof div = div.props({ className: 'form-group' });
 
-    div.props({ className: 'canvas-container' })(
-      // Canvas element: DOM node externally, scene graph root internally
-      // Event listeners attached via lifecycle callbacks with hit testing
-      root
-        .props({
-          width: canvasWidth,
-          height: canvasHeight,
-          clearColor: '#16213e',
-        })
-        .ref(
-          on('pointerdown', handlePointerDown),
-          on('pointermove', handlePointerMove),
-          on('pointerup', handlePointerUp)
-        )(shapes)
-    ),
+  return () => {
+    // Shared reactive state
+    const name = signal('Ada Lovelace');
+    const handle = signal('ada');
+    const avatar = signal(
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=ada'
+    );
+    const followers = signal(12400);
+    const posts = signal(847);
 
-    // DOM toolbar - passes actions to canvas scene
-    Toolbar({
-      onAddShape: addShape,
-      onClearAll: clearAll,
-    }),
+    let canvasEl: CanvasBridgeElement | null = null;
 
-    div.props({ className: 'info' })(
-      strong('Click on shapes'),
-      ' to select them. ',
-      strong('Drag'),
-      ' to move selected shape. Shapes are reactive - powered by ',
-      code('@rimitive/signals'),
-      ' and rendered with a custom canvas adapter.'
-    )
-  );
+    const cardData: ShareCardData = {
+      name,
+      handle,
+      avatar,
+      followers,
+      posts,
+    };
+
+    effect(() => {
+      avatar(`https://api.dicebear.com/7.x/avataaars/svg?seed=${handle()}`);
+    });
+
+    const downloadPng = () => {
+      if (!canvasEl) return;
+      try {
+        const link = document.createElement('a');
+        link.download = `${handle()}-card.png`;
+        link.href = canvasEl.toDataURL('image/png');
+        link.click();
+      } catch {
+        alert('Cannot download: canvas contains cross-origin image.');
+      }
+    };
+
+    return div.props({ className: 'app' })(
+      div.props({ className: 'header' })(
+        h1('One Component, Two Renderers'),
+        p.props({ className: 'subtitle' })(
+          'Same portable shareCard behavior renders to DOM and Canvas.'
+        )
+      ),
+
+      div.props({ className: 'renders' })(
+        div.props({ className: 'render-section' })(
+          div.props({ className: 'render-label' })('DOM'),
+          div.props({ className: 'render-container dom-container' })(
+            DOMShareCard({
+              data: cardData,
+              width: CARD_WIDTH,
+              height: CARD_HEIGHT,
+            })
+          )
+        ),
+
+        div.props({ className: 'render-section' })(
+          div.props({ className: 'render-label' })('Canvas'),
+          div.props({ className: 'render-container' })(
+            CanvasComponent.props({
+              width: CARD_WIDTH,
+              height: CARD_HEIGHT,
+              clearColor: '#0f0f23',
+            }).ref((el) => {
+              canvasEl = el;
+            })(
+              CanvasShareCard({
+                data: cardData,
+                width: CARD_WIDTH,
+                height: CARD_HEIGHT,
+              })
+            )
+          ),
+          button.props({
+            className: 'download-btn',
+            onclick: downloadPng,
+          })('Download PNG')
+        )
+      ),
+
+      div.props({ className: 'form-section' })(
+        p.props({ className: 'form-intro' })(
+          'Edit below — both renders update from the same signals:'
+        ),
+        div.props({ className: 'form-grid' })(
+          formGroup(
+            label('Name'),
+            input.props({
+              type: 'text',
+              value: name,
+              oninput: (e: Event) => name((e.target as HTMLInputElement).value),
+            })()
+          ),
+          formGroup(
+            label('Handle'),
+            div.props({ className: 'input-with-prefix' })(
+              span.props({ className: 'prefix' })('@'),
+              input.props({
+                type: 'text',
+                value: handle,
+                oninput: (e: Event) =>
+                  handle((e.target as HTMLInputElement).value),
+              })()
+            )
+          ),
+          formGroup(
+            label('Followers'),
+            input.props({
+              type: 'number',
+              value: computed(() => String(followers())),
+              oninput: (e: Event) =>
+                followers(parseInt((e.target as HTMLInputElement).value) || 0),
+            })()
+          ),
+          formGroup(
+            label('Posts'),
+            input.props({
+              type: 'number',
+              value: computed(() => String(posts())),
+              oninput: (e: Event) =>
+                posts(parseInt((e.target as HTMLInputElement).value) || 0),
+            })()
+          )
+        )
+      ),
+
+      div.props({ className: 'info' })(
+        p(
+          code('const DOMShareCard = domCardSvc(shareCard)'),
+          br(),
+          code('const CanvasShareCard = canvasCardSvc(shareCard)')
+        ),
+        p(
+          strong('Same portable behavior, different services.'),
+          ' The shareCard behavior is injected with domCardSvc or canvasCardSvc, each providing different cardElements implementations.'
+        ),
+        p(
+          "The component doesn't import DOM or Canvas specifics. It just asks the service for ",
+          code('cardElements'),
+          ' and uses them.'
+        ),
+        p(
+          a.props({
+            href: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/canvas',
+            target: '_blank',
+          })('View source on GitHub')
+        )
+      )
+    );
+  };
 };

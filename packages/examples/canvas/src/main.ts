@@ -1,27 +1,32 @@
 /**
- * Canvas Example - Main Entry Point
+ * Share Card Demo - Entry Point
  *
- * Demonstrates composable renderer pattern:
- * - Single composed tree with DOM and Canvas elements
- * - canvas.el('canvas') acts as the boundary between renderers
- * - Shared signals for reactive state across both
+ * Wires all dependencies and passes them to the portable App.
+ * This is the only place that imports concrete implementations.
  */
-import { dom } from './service';
+import {
+  dom,
+  canvas,
+  signal,
+  computed,
+  effect,
+  domCardSvc,
+  canvasCardSvc,
+} from './service';
 import { App } from './components/App';
+import { shareCard } from './components/ShareCard';
 
-// Mount the entire app - DOM and Canvas composed together
-const appRef = dom.mount(
-  App({
-    canvasWidth: 600,
-    canvasHeight: 400,
-  })
-);
+// Bind behaviors once at startup
+const AppComponent = App({
+  dom,
+  canvas,
+  signals: { signal, computed, effect },
+  cards: { dom: domCardSvc(shareCard), canvas: canvasCardSvc(shareCard) },
+});
+
+// Mount the app
+const appRef = dom.mount(AppComponent());
 
 // Append to document
 const root = document.getElementById('root');
 root!.appendChild(appRef.element!);
-
-console.log('Rimitive Canvas Example loaded!');
-console.log('- Click shapes to select');
-console.log('- Drag to move');
-console.log('- Use buttons to add more shapes');
