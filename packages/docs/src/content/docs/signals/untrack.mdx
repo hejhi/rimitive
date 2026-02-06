@@ -22,7 +22,7 @@ Whatever `fn` returns.
 
 ## Description
 
-Normally, reading a signal inside `computed()` or `effect()` creates a dependency. With `untrack()`, you can read signals without subscribing to their changes:
+Use `untrack()` when you need to read signals for context or logging without triggering re-runs when those signals change:
 
 ```typescript
 const a = signal(1);
@@ -44,22 +44,12 @@ sum();  // 12 (not recomputed — `b` isn't a dependency)
 
 ### vs peek()
 
-Both `untrack()` and `peek()` avoid tracking, but they serve different purposes:
-
-- **`sig.peek()`** — Read a single signal without tracking
-- **`untrack(fn)`** — Execute a block of code without tracking any reads
+- **`sig.peek()`** — single signal
+- **`untrack(fn)`** — multiple signals
 
 ```typescript
-// These are equivalent for a single signal
-const x = untrack(() => count());
 const x = count.peek();
-
-// untrack is better for multiple reads
-const { a, b, c } = untrack(() => ({
-  a: sigA(),
-  b: sigB(),
-  c: sigC(),
-}));
+const { a, b, c } = untrack(() => ({ a: sigA(), b: sigB(), c: sigC() }));
 ```
 
 ## Examples

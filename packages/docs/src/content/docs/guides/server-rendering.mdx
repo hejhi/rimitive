@@ -62,9 +62,7 @@ Now, this file can be shared with both the server and the client ✨
 
 ## Server Setup
 
-`createParse5Adapter()` creates a server-friendly adapter powered by [parse5](https://github.com/inikulin/parse5), a lightweight HTML parser for Node.js. When `el("div")` runs on the server, it creates a parse5 element instead of a real DOM element—same structure, no browser required.
-
-Create a fresh adapter and service for each incoming request. Reusing them across requests would cause data from one user to leak into another's response.
+Create a parse5 adapter for server-side rendering:
 
 ```typescript
 // server.ts
@@ -94,15 +92,6 @@ const server = createServer((req, res) => {
 
 server.listen(3000);
 ```
-
-### What happens:
-
-1. `createParse5Adapter()` returns an `adapter` (for creating elements) and `serialize` (for converting individual elements to HTML)
-2. `createService(adapter)` wires up your app with the server adapter
-3. `App(service).create(service)` runs your app, building a parse5 element tree
-4. `renderToString(root, serialize)` walks the tree and converts it to an HTML string
-
-Finally the HTML is sent to the client (and your `<script>` tag loads the client bundle).
 
 <Aside type="tip" title="Working Example">
 See [`packages/examples/ssr-router`](https://github.com/hejhi/rimitive/tree/main/packages/examples/ssr-router) for a complete basic SSR implementation with routing.

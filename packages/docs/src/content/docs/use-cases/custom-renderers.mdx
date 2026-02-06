@@ -1,0 +1,268 @@
+---
+title: Custom Renderers
+description: Writing portable components that render to DOM and Canvas.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["canvas", "renderer", "adapter", "portable", "export", "png", "design-tool", "multi-renderer"]} />
+
+A client needed a badge generator for their conference. Organizers would upload attendee data, customize the design, and export print-ready PNGs. Simple enough—until you realize the editor and the export have competing requirements.
+
+For the editor, you want DOM. Form inputs for names and titles. Text that's selectable and accessible. CSS handling hover states and focus rings. Responsive layout that just works.
+
+For export, you need Canvas. Pixel-perfect rendering at exact dimensions. No browser inconsistencies. `toDataURL()` for the PNG. No surprises from zoom levels or font rendering differences.
+
+The typical solution: build two components. A `<BadgePreview>` using DOM elements and a `<BadgeExporter>` that replicates the layout in Canvas. Now you're maintaining two implementations, debugging why the PNG doesn't quite match the preview, and duplicating layout logic across both.
+
+Rimitive sidesteps this entirely. Write one component. Inject DOM elements for the editor, Canvas elements for export. Same behavior, same reactive state, same layout logic.
+
+---
+
+## The adapter pattern
+
+Rimitive components don't talk to the DOM directly. They go through an adapter—an object with four methods:
+
+```ts
+type Adapter = {
+  createNode(type, props, parentContext): Node;
+  setAttribute(node, key, value): void;
+  appendChild(parent, child): void;
+  removeChild(parent, child): void;
+};
+```
+
+The DOM adapter creates real elements. A Canvas adapter creates scene graph nodes. A test adapter creates plain objects. The component doesn't know or care which one it's using.
+
+Compare this to React's `react-reconciler`, which requires implementing ~40 methods for scheduling, hydration, mutations, and more. Rimitive's adapter is just tree operations—you control when and how updates happen through the reactive system.
+
+---
+
+## One component, two renderers
+
+Here's a portable badge component. It receives its elements from the service, so it works with any renderer:
+
+```ts
+const badge = ({ computed, badgeElements }: BadgeDeps) =>
+  ({ data, width, height }: BadgeProps) => {
+    const { card, avatar, heading, subheading, field } = badgeElements;
+
+    return card({ width, height })(
+      avatar({ src: data.photo, size: 80, x: 20, y: 20 }),
+      heading({ text: data.name, x: 120, y: 40 }),
+      subheading({ text: data.title, x: 120, y: 70 }),
+      field({
+        value: computed(() => data.company()),
+        label: 'Company',
+        x: 20,
+        y: 120,
+      })
+    );
+  };
+```
+
+The `badgeElements` object is the abstraction point. For DOM:
+
+```ts
+const domBadgeElements = {
+  card: ({ width, height }) => (...children) =>
+    div.props({
+      className: 'badge-card',
+      style: `width: ${width}px; height: ${height}px`,
+    })(...children),
+
+  heading: ({ text, x, y }) =>
+    span.props({
+      className: 'badge-heading',
+      style: `left: ${x}px; top: ${y}px`,
+    })(text),
+
+  // ... other elements
+};
+```
+
+For Canvas:
+
+```ts
+const canvasBadgeElements = {
+  card: ({ width, height }) => (...children) =>
+    group(
+      rect.props({ width, height, cornerRadius: 12, fill: '#ffffff' })(),
+      ...children
+    ),
+
+  heading: ({ text, x, y }) =>
+    txt.props({
+      text,
+      x,
+      y,
+      fill: '#1a1a1a',
+      fontSize: 24,
+      fontFamily: 'system-ui',
+    })(),
+
+  // ... other elements
+};
+```
+
+Wire them up with service composition:
+
+```ts
+// DOM service for the editor
+const domBadgeSvc = merge(domSvc, { badgeElements: domBadgeElements });
+
+// Canvas service for export
+const canvasBadgeSvc = merge(domSvc, { badgeElements: canvasBadgeElements });
+
+// Bind the behavior to each service
+const DOMBadge = domBadgeSvc(badge);
+const CanvasBadge = canvasBadgeSvc(badge);
+```
+
+Now `DOMBadge` and `CanvasBadge` are the same component rendering to different targets.
+
+---
+
+## Shared reactive state
+
+The real power isn't just "same component, different output." It's that both renderers share the same reactive graph.
+
+```ts
+// Shared signals
+const name = signal('Ada Lovelace');
+const title = signal('Software Engineer');
+const company = signal('Anthropic');
+
+const badgeData = { name, title, company, photo };
+
+// Both render from the same signals
+const editor = DOMBadge({ data: badgeData, width: 400, height: 200 });
+const exporter = CanvasBadge({ data: badgeData, width: 400, height: 200 });
+```
+
+When the user types in a form field, both the DOM preview and the Canvas export update. Not because we're syncing state between them, but because they're reading from the same signals.
+
+This is possible because both services share the same scopes—the reactive effect system that tracks dependencies and schedules updates. The DOM and Canvas adapters are separate, but the reactive core is shared.
+
+---
+
+## The export flow
+
+In the editor, we render the DOM badge for interaction and keep a hidden Canvas for export:
+
+```ts
+const App = ({ dom, canvas, signals }: AppDeps) => {
+  const { signal } = signals;
+  const { div, input, button } = dom;
+  const { canvas: CanvasEl } = canvas;
+
+  return () => {
+    const name = signal('');
+    const title = signal('');
+    let canvasEl: HTMLCanvasElement | null = null;
+
+    const badgeData = { name, title, /* ... */ };
+
+    const downloadPng = () => {
+      if (!canvasEl) return;
+      const link = document.createElement('a');
+      link.download = 'badge.png';
+      link.href = canvasEl.toDataURL('image/png');
+      link.click();
+    };
+
+    return div.props({ className: 'badge-editor' })(
+      // Form inputs bound to signals
+      input.props({
+        value: name,
+        oninput: (e) => name(e.target.value),
+        placeholder: 'Name',
+      })(),
+
+      // DOM preview - accessible, interactive
+      div.props({ className: 'preview' })(
+        DOMBadge({ data: badgeData, width: 400, height: 200 })
+      ),
+
+      // Hidden canvas for export
+      CanvasEl.props({ width: 400, height: 200 })
+        .ref((el) => { canvasEl = el; })(
+          CanvasBadge({ data: badgeData, width: 400, height: 200 })
+        ),
+
+      button.props({ onclick: downloadPng })('Download PNG')
+    );
+  };
+};
+```
+
+The user interacts with the DOM preview. When they click export, we grab the PNG from the Canvas that's been silently updating alongside it.
+
+---
+
+## Why this matters
+
+The alternative approaches all have problems:
+
+**Two separate components:** You're maintaining parallel implementations. They drift apart. The preview doesn't match the export. Every feature change means updating two places.
+
+**Canvas-only editor:** You lose accessibility. No native form controls. No text selection. Screen readers can't parse it. You're reimplementing browser features poorly.
+
+**html2canvas:** Screenshot the DOM and hope for the best. Slow, unreliable, breaks on custom fonts and complex CSS. Not suitable for production.
+
+**Rimitive's approach:** One component, injected dependencies, shared reactive state. The preview *is* the export—just rendered through a different adapter. Add a field once, it appears in both. Fix a layout bug once, it's fixed everywhere.
+
+---
+
+## Building a Canvas adapter
+
+The [canvas example](https://github.com/hejhi/rimitive/tree/main/packages/examples/canvas) includes a complete Canvas 2D adapter. The core is ~100 lines implementing the four adapter methods. The rest is rendering logic (drawing shapes, text, images) and hit testing for pointer events.
+
+Key pieces:
+
+```ts
+const adapter: Adapter = {
+  createNode(type, props) {
+    if (type === 'canvas') return createBridgeElement(props);
+    return createSceneNode(type, props);
+  },
+
+  setAttribute(node, key, value) {
+    node.props[key] = value;
+    markDirty(node); // Schedule repaint
+  },
+
+  appendChild(parent, child) {
+    child.parent = parent;
+    parent.children.push(child);
+    markDirty(parent);
+  },
+
+  removeChild(parent, child) {
+    const idx = parent.children.indexOf(child);
+    if (idx !== -1) parent.children.splice(idx, 1);
+    markDirty(parent);
+  },
+};
+```
+
+The "bridge element" pattern lets you embed a Canvas inside a DOM tree. The `<canvas>` element is a real DOM node that owns a scene graph of Canvas-specific nodes.
+
+---
+
+## Beyond Canvas
+
+The adapter pattern isn't limited to Canvas. The same approach works for:
+
+- **PDF generation** — Render to a PDF document structure instead of DOM
+- **SVG export** — Generate SVG elements for vector output
+- **Terminal UIs** — Render to ANSI escape sequences (like Ink for React)
+- **Test environments** — Skip the DOM entirely, assert against a plain object tree
+- **Performance visualization** — Wrap any adapter to highlight renders
+
+<Aside type="tip" title="See it in action">
+Run the [canvas example](https://github.com/hejhi/rimitive/tree/main/packages/examples/canvas) locally to see a shareable card component rendering to both DOM and Canvas simultaneously.
+</Aside>
+
+The component stays portable. The adapter handles the target. And the reactive system ties it all together.

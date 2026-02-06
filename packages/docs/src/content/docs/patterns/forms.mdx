@@ -257,8 +257,6 @@ const SignupForm = (svc: Service) => () => {
 
 ### Synchronous Validation
 
-Most validation is synchronous—check the value, return an error or null:
-
 ```typescript
 const required = (msg = 'Required') => (v: string) => v ? null : msg;
 

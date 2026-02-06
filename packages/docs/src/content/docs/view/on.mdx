@@ -29,7 +29,7 @@ on(eventName, handler, options)
 
 ### Return value
 
-A lifecycle callback for use with `.ref()`. When the element is removed, the listener is automatically cleaned up.
+A callback for use with `.ref()`.
 
 ## Description
 
@@ -160,17 +160,14 @@ el('button')
 
 Both handlers fire on click.
 
-## on() vs props
+## When to use on()
 
-| Feature | Props (`onclick`) | `on()` |
-|---------|-------------------|--------|
-| Simple cases | ✓ Best choice | Works |
-| Multiple listeners | One per event | ✓ Unlimited |
-| Auto cleanup | ✓ | ✓ |
-| Batching | No | ✓ |
-| Event options | No | ✓ |
+Use `on()` when you need:
+- Multiple listeners on the same event
+- Automatic batching of signal updates
+- Event options (`capture`, `once`, `passive`)
 
-Use props for simple handlers. Use `on()` when you need batching, multiple listeners, or event options.
+For simple handlers, props (`onclick`, etc.) are sufficient.
 
 ## See also
 

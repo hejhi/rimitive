@@ -19,28 +19,6 @@ Basic SSR renders static content. But when you need data from an API or database
 
 Rimitive provides a module called `load()` for this. You wrap the parts of your UI that need async data, Rimitive handles fetching on the server, serializes the results, and hydrates the client without refetching.
 
-```
-SERVER
-  │
-  ├─ App runs, hits load() calls
-  ├─ Fetches data, waits for all
-  ├─ Renders HTML with fetched data
-  ├─ Packs fetched data into a <script> tag
-  │
-  ▼
-─────────── HTML + Data ───────────►
-  │
-  ▼
-CLIENT
-  │
-  ├─ Displays HTML (instant)
-  ├─ Loads JS, reads packed data
-  ├─ App runs, load() finds respective cached data
-  └─ Hydrates without refetching or re-rendering ✓
-  │
-  🎉 UI interactive!
-```
-
 <Aside type="tip">
 You can nest `load()` boundaries! The server resolves them iteratively—outer boundaries first, then any inner boundaries that appear after outer data loads.
 </Aside>
@@ -178,13 +156,6 @@ const server = createServer(async (req, res) => {
 
 server.listen(3000);
 ```
-
-### What's new:
-
-1. **`renderToStringAsync`** — Waits for all `load()` fetchers to complete
-2. **`insertFragmentMarkers`** — Adds markers around `load()` boundaries for hydration
-3. **`service.loader.getData()`** — Returns a map of all fetched data (ID → data)
-4. **`safeJsonStringify`** — Safely embeds JSON in HTML (prevents XSS from `</script>` in data)
 
 ---
 

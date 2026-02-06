@@ -4,8 +4,8 @@ import {
   ComputedModule,
   EffectModule,
 } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
+import { ElModule } from '@rimitive/view/el';
+import { MatchModule } from '@rimitive/view/match';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import { MountModule } from '@rimitive/view/deps/mount';
 
@@ -15,8 +15,8 @@ export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
+  ElModule.with({ adapter }),
+  MatchModule.with({ adapter }),
   MountModule
 );
 

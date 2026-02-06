@@ -65,7 +65,7 @@ effect(() => {
 ```
 
 Cleanup runs:
-- Before each re-run (when dependencies change)
+- Before each re-run
 - When the effect is disposed
 
 ### Disposal
@@ -84,8 +84,6 @@ dispose();
 
 count(3);  // nothing — effect stopped
 ```
-
-Disposal also runs any cleanup function one final time.
 
 ## Flush Strategies
 

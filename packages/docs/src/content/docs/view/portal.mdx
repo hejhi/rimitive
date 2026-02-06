@@ -26,7 +26,7 @@ portal(target)(child)
 
 ### Return value
 
-A spec that renders its child at the specified target, maintaining reactivity and proper cleanup.
+A spec for use with `mount()` or as a child of other elements.
 
 ## Description
 
@@ -42,13 +42,6 @@ el('div').props({ className: 'container' })(
 ```
 
 The modal is a child of the container in your code, but renders to `document.body` in the DOM.
-
-### Lifecycle
-
-Portal content follows normal lifecycle rules:
-- Created when the portal is mounted
-- Disposed when the portal is unmounted
-- Cleanup callbacks from `.ref()` run on disposal
 
 ### With match
 

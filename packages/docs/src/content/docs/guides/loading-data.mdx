@@ -8,19 +8,15 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["resource", "fetch", "async", "data-loading", "api", "http", "loading-state", "error-state"]} />
 
+**[Package on GitHub](https://github.com/hejhi/rimitive/tree/main/packages/resource)**
+
 Data loading in Rimitive is reactive. When dependencies change, data refetches. When requests overlap, stale ones get cancelled. Let's build up to that.
-
----
-
-## The Manual Way
-
-You _could_ manage async state yourself with signals and effects, but you'd likely end up manually setting loading, error, and data states as signals, as well as cancellation. When dependencies change mid-flight, if you're not careful, you could also end up with race conditions.
 
 ---
 
 ## Using resource()
 
-`resource()` handles all of this in a tiny module. Add the resource module to your service:
+`resource()` manages loading state, errors, and automatic cancellation. Add the resource module to your service:
 
 ```typescript
 // service.ts
@@ -76,10 +72,7 @@ const ProductList = ({ resource, el, match }: Service) => {
 };
 ```
 
-Notice that:
-- the fetcher receives an `AbortSignal` - pass it to `fetch()` for automatic cancellation
-- we create resources **inside the component function**, not at module level
-- we call `dispose()` when the component unmounts to abort in-flight requests
+The fetcher receives an `AbortSignal` - pass it to `fetch()` for automatic cancellation.
 
 ### Reading State
 
@@ -100,15 +93,13 @@ products.data();     // T | undefined
 products.error();    // unknown | undefined
 ```
 
-All are reactive—use them in computeds or effects.
-
 ---
 
 <SearchTags tags={["reactive-fetch", "auto-refetch", "dependency-tracking", "abort-controller", "cancellation"]} />
 
 ## Reactive Dependencies
 
-Here's where resources shine. Read signals inside the fetcher, and the resource refetches when they change:
+Read signals inside the fetcher, and the resource refetches when they change:
 
 ```typescript
 const ProductList = (svc: Service) => {
@@ -138,7 +129,6 @@ const ProductList = (svc: Service) => {
 When `category` changes:
 1. The previous request is automatically aborted
 2. A new fetch starts with the updated category
-3. No race conditions, no stale data
 
 ### Multiple Dependencies
 
@@ -159,11 +149,6 @@ const ProductList = (svc: Service) => {
         { signal }
       ).then(r => r.json())
     );
-
-    // Any change triggers a refetch with automatic cancellation
-    // category('books');   // refetch
-    // sortBy('rating');    // refetch
-    // page(2);             // refetch
 
     return el('div').ref(() => () => products.dispose())(
       // ... render with filters and pagination controls

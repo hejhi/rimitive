@@ -5,7 +5,7 @@ import {
   EffectModule,
   BatchModule,
 } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
+import { ElModule } from '@rimitive/view/el';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import { MountModule } from '@rimitive/view/deps/mount';
@@ -17,7 +17,7 @@ const svc = compose(
   ComputedModule,
   EffectModule,
   BatchModule,
-  createElModule(adapter),
+  ElModule.with({ adapter }),
   OnModule,
   MountModule
 );

@@ -3,7 +3,9 @@ title: Signals
 description: Reactive primitives for state management.
 ---
 
-The `@rimitive/signals` package provides the base reactive primitives—signals, computeds, and effects—that form the foundation of rimitive's reactivity system.
+The `@rimitive/signals` package provides signals, computeds, and effects for reactive state management.
+
+**[Package on GitHub](https://github.com/hejhi/rimitive/tree/main/packages/signals)**
 
 ## Installation
 
@@ -43,6 +45,7 @@ count(1);  // logs: "Count: 1, Doubled: 2"
 | [batch()](/signals/batch) | Group updates into a single notification |
 | [untrack()](/signals/untrack) | Read signals without creating dependencies |
 | [subscribe()](/signals/subscribe) | Subscribe to signal changes with a callback |
+| [iter()](/signals/iter) | Reactive linked list with O(1) operations |
 
 ## Modules
 
@@ -56,6 +59,7 @@ import {
   BatchModule,
   UntrackModule,
   SubscribeModule,
+  IterModule,
 } from '@rimitive/signals/extend';
 ```
 

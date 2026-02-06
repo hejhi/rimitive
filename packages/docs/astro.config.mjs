@@ -41,9 +41,18 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Use Cases',
+          items: [
+            { label: 'Overview', slug: 'use-cases' },
+            { label: 'Custom Renderers', slug: 'use-cases/custom-renderers' },
+          ],
+        },
+        {
           label: 'Patterns',
           items: [
             { label: 'Overview', slug: 'patterns' },
+            { label: 'Signal Patterns', slug: 'patterns/signal-patterns' },
+            { label: 'Forms', slug: 'patterns/forms' },
             { label: 'Behaviors', slug: 'patterns/behaviors' },
             { label: 'Portability', slug: 'patterns/portability' },
             { label: 'Shared State', slug: 'patterns/shared-state' },
@@ -65,6 +74,7 @@ export default defineConfig({
             { label: 'batch()', slug: 'signals/batch' },
             { label: 'untrack()', slug: 'signals/untrack' },
             { label: 'subscribe()', slug: 'signals/subscribe' },
+            { label: 'iter()', slug: 'signals/iter' },
           ],
         },
         {
@@ -74,6 +84,7 @@ export default defineConfig({
             { label: 'el()', slug: 'view/el' },
             { label: 'map()', slug: 'view/map' },
             { label: 'match()', slug: 'view/match' },
+            { label: 'lazy()', slug: 'view/lazy' },
             { label: 'portal()', slug: 'view/portal' },
             { label: 'mount()', slug: 'view/mount' },
             { label: 'on()', slug: 'view/on' },
@@ -144,6 +155,12 @@ export default defineConfig({
             {
               label: 'Custom Adapter (Canvas)',
               link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/canvas',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'Performance Adapter',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/perf-adapter',
               attrs: { target: '_blank' },
               badge: { text: '↗', variant: 'note' },
             },

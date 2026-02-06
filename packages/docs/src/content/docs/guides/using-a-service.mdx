@@ -19,7 +19,7 @@ You can safely destructure anything in Rimitive from a service, so for simpler u
 export const { signal, computed } = compose(SignalModule, ComputedModule);
 ```
 
-But `svc` is also call-able. So it's more idiomatic to export the service and service type if you're looking for a more durable pattern:
+You can also export the service itself, which is callable:
 
 ```typescript
 // myService.ts
@@ -27,8 +27,6 @@ But `svc` is also call-able. So it's more idiomatic to export the service and se
 export const svc = compose(SignalModule, ComputedModule);
 export type Service = typeof svc;
 ```
-
-For now though, we'll continue exporting the destructured parts for simplicity.
 
 ---
 
@@ -51,13 +49,11 @@ counter.increment();
 counter.count(); // 1
 ```
 
-A nuance here is that the above is **a plain function** that instantiates reactive state and returns an api to drive it 🚗. In Rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with `use*` for clarity (ie `useCounter` instead of `myCounter` or something).
+This is a plain function that instantiates reactive state and returns an API. In Rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), conventionally prefixed with `use*`.
 
 <Aside type="note">
-For those coming from reactive frameworks, prefixing with `use*` in rimitive is **only a naming convention and nice semantics**. It doesn't confer any reactive abilities, or require you to obey any rules in how it's used.
+The `use*` prefix is just a naming convention.
 </Aside>
-
-You can stop right here, if that's all you need! For plenty of apps simple apps, direct service exports and simple behaviors might be enough.
 
 If you want to drive a reactive ui with state, Rimitive also has modules and patterns to help you with that.
 

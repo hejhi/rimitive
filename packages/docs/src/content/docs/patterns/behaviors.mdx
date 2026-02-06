@@ -8,9 +8,7 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["behavior", "headless", "disclosure", "dropdown", "modal", "pagination", "composition"]} />
 
-A **behavior** is a portable function that encapsulates reactive logic without any UI. It receives a service, returns a factory, and that factory returns an API of signals, computeds, and actions.
-
-Think of behaviors as headless components—all the state and logic, none of the markup.
+A **behavior** is a portable function that encapsulates reactive logic without any UI. Think of behaviors as headless components—all the state and logic, none of the markup.
 
 ---
 
@@ -71,8 +69,6 @@ const App = (svc: Service) => () => {
   );
 };
 ```
-
-The behavior handles state. The component handles rendering. Clean separation.
 
 ---
 
@@ -171,8 +167,6 @@ const modal = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
   };
 };
 ```
-
-Same `disclosure` behavior, three different use cases. The logic is shared; the semantics differ.
 
 ---
 
@@ -314,12 +308,6 @@ function App() {
 }
 ```
 
-<Aside type="note">
-In React, you must use `useSubscribe(signal)` to read signal values and trigger re-renders. Calling `signal()` directly won't cause React to update when the value changes.
-</Aside>
-
-Same behavior, different framework. The logic stays the same.
-
 ---
 
 ## Naming Conventions
@@ -398,8 +386,6 @@ describe('counter', () => {
   });
 });
 ```
-
-Pure functions, pure tests.
 
 ### Testing Behaviors with Dependencies
 

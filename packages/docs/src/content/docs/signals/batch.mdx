@@ -3,7 +3,7 @@ title: batch()
 description: Group multiple signal writes into a single update cycle.
 ---
 
-The `batch()` function groups multiple signal updates so that dependents only run once, after all updates complete.
+The `batch()` function defers notifications so dependents run once after all updates complete.
 
 ## Syntax
 
@@ -61,17 +61,6 @@ batch(() => {
   d(40);
 });
 // All effects run once, after all updates
-```
-
-### Return values
-
-`batch()` returns whatever your function returns:
-
-```typescript
-const total = batch(() => {
-  count(count() + 1);
-  return count();
-});
 ```
 
 ## Examples

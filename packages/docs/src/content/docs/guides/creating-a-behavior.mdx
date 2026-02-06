@@ -10,10 +10,6 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 A **behavior** is a pattern for encapsulating reactive state and actions into a reusable function (inspired by [SAM](https://sam.js.org/) and [downshift](https://www.downshift-js.com/)).
 
-<Aside type="note">
-As mentioned in the previous section, behaviors are _just functions_. They're prefixed with `use*` for naming convention purposes only, which does not confer any magical reactive abilities or require them to be used in specific ways.
-</Aside>
-
 ---
 
 ## The Simple Approach
@@ -24,7 +20,6 @@ The easiest way to create a behavior is to import directly from your service:
 // behaviors/useCounter.ts
 import { signal, computed } from '../service';
 
-// Again, use* is just a convention, this is not prescribed and not React!
 export const useCounter = (initial = 0) => {
   const count = signal(initial);
   const doubled = computed(() => count() * 2);
@@ -58,18 +53,14 @@ counter.count();  // 11
 When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern. This is, generally speaking, the preferred pattern.
 
 ```typescript
-// Remember how we exported `typeof svc` in the previous guide example?
 import type { Service } from './service';
 
 const myBehavior = (svc: Service) => {
-  // This would be called during composition like `const useMyBehavior = svc(myBehavior)`.
-  // This is colloquially known as the **service function** or **service closure**. 
-  // It's also where you'd compose other behaviors or components.
   return (options?) => // ...
 }
 ```
 
-This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. It also decouples your function from Rimitive! you could pass in whatever you want for `svc` later, as long as it matches the Service type. So from now on, we'll be working with portable functions.
+This pattern decouples behaviors from a specific service instance.
 
 ### A Counter Example
 
@@ -153,7 +144,7 @@ const dropdown = (svc: Service) => {
 };
 ```
 
-Now `dropdown` composes `disclosure`! They both use the same behavior shape of `(svc) => (args) => api`, but one composes the other. The outer service function is a convenient place to inject services a single time.
+Now `dropdown` composes `disclosure`. The outer service function is a convenient place to inject services a single time.
 
 ---
 
@@ -187,4 +178,3 @@ describe('counter', () => {
 });
 ```
 
-Pure functions, pure tests. Again, if this is all you need, you can stop here. If you want a reactive UI and UI components, as the kids say, "let's gooooo".

@@ -11,9 +11,7 @@ This guide covers hydrating server-rendered HTML on the client. Read [Server Ren
 
 ## What is Hydration?
 
-The browser already has HTML on screen from the server—now we need to make it interactive. Instead of creating new DOM elements (which would cause a flash), the hydration adapter _walks_ the existing DOM and attaches your event listeners and reactive bindings.
-
-After hydration completes, we fall back to a normal DOM adapter for subsequent updates.
+Hydration attaches your app's reactivity to existing DOM elements without recreating them.
 
 ---
 
@@ -48,13 +46,6 @@ App(service).create(service);
 hydrationAdapter.switchToFallback();
 ```
 
-### What happens:
-
-1. `createDOMHydrationAdapter` wraps the existing `.app` element—it will walk the DOM instead of creating new elements
-2. `createHydrationAdapter` combines it with a normal `createDOMAdapter()` to use after hydration
-3. `App(service).create(service)` runs your app, but instead of building DOM, it attaches signals and event listeners to what's already there
-4. `switchToFallback()` switches to the normal adapter—future updates create/modify DOM elements as usual
-
 <Aside type="tip" title="Working Example">
 See [`packages/examples/ssr-router/src/client.ts`](https://github.com/hejhi/rimitive/tree/main/packages/examples/ssr-router/src/client.ts) for the complete client setup.
 </Aside>
@@ -63,17 +54,7 @@ See [`packages/examples/ssr-router/src/client.ts`](https://github.com/hejhi/rimi
 
 ## Browser-Only Code
 
-If you have browser-specific code that might run on the server (focus, scroll, animate, etc.), add guards:
-
-```typescript
-el('input').ref((el) => {
-  if (typeof window !== 'undefined') el.focus();
-})()
-```
-
-<Aside type="note">
-Rimitive effects and refs are synchronous by default and run on the server. However, Rimitive out-of-the-box async or browser-specific effect flush strategies (like `mt`, `raf`, etc.) are noops on the server. They're safe to use, but they won't execute. Any other custom flush strategies should be evaluated on a case-by-case basis.
-</Aside>
+Guard browser-specific code. See [Intro to SSR](/guides/intro-to-ssr) for details.
 
 ---
 

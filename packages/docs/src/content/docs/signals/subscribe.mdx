@@ -25,7 +25,7 @@ An `unsubscribe` function that stops the subscription.
 
 ## Description
 
-`subscribe()` provides fine-grained control over what triggers re-runs. The source function determines dependencies; the callback can read any signals without creating subscriptions:
+The source function determines dependencies; the callback can read any signals without creating subscriptions:
 
 ```typescript
 const count = signal(0);
@@ -39,23 +39,6 @@ subscribe(
 count(5);       // logs: 10
 multiplier(3);  // no log — multiplier isn't a dependency
 count(6);       // logs: 18
-```
-
-### vs effect()
-
-With `effect()`, all signal reads create dependencies:
-
-```typescript
-// Effect: re-runs when a OR b changes
-effect(() => {
-  console.log(a() + b());
-});
-
-// Subscribe: re-runs only when a changes
-subscribe(
-  () => a(),
-  (val) => console.log(val + b())
-);
 ```
 
 ### Initial call

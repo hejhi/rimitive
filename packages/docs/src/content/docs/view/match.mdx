@@ -25,7 +25,7 @@ match(source, render)
 
 ### Return value
 
-A reactive spec that renders the result of the render function, disposing and replacing elements when the source value changes.
+A spec for use with `mount()` or as a child of other elements.
 
 ## Description
 
@@ -46,23 +46,7 @@ When `show` changes from `true` to `false`:
 When `show` changes back to `true`:
 1. A new `div` element is created
 
-### Element lifecycle
-
-Each time the render function returns a different element, the previous one is fully disposed. This includes:
-- Running any cleanup functions from `.ref()` callbacks
-- Disposing any effects tied to the element
-- Removing the element from the DOM
-
-### Why not computed?
-
-`computed()` derives values, not elements. This won't work:
-
-```typescript
-// WRONG — computed can't return elements
-const content = computed(() =>
-  show() ? el('div')('Yes') : el('div')('No')
-);
-```
+When the rendered element changes, the previous element is removed and any `.ref()` cleanup callbacks run.
 
 Use `match()` for conditional elements, `computed()` for conditional values.
 

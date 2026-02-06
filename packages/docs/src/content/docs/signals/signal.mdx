@@ -29,7 +29,7 @@ A `SignalFunction<T>` — a callable function with the following behavior:
 
 ## Description
 
-Signals are the foundation of Rimitive's reactivity. When you read a signal inside a `computed()` or `effect()`, that read is tracked. When the signal's value changes, all dependents are notified and re-run.
+Signals are the foundation of Rimitive's reactivity. When you read a signal inside a `computed()` or `effect()`, that read is tracked. When the signal's value changes, all dependent computeds and effects re-run.
 
 ```typescript
 const count = signal(0);
@@ -44,8 +44,6 @@ count(count() + 1);   // read then write
 ```
 
 ### Reactive tracking
-
-Reads are only tracked inside reactive contexts — `computed()` and `effect()`. Reading a signal in plain JavaScript doesn't create any subscription:
 
 ```typescript
 const name = signal('Alice');

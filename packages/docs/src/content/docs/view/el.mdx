@@ -33,7 +33,7 @@ el(tag).props(props)(children)
 
 ### Return value
 
-An `ElementSpec` — an inert blueprint that becomes a real element when mounted or created.
+An `ElementSpec` for use with `mount()` or as a child of other elements.
 
 ## Description
 
@@ -56,9 +56,9 @@ el('button')
   ('Click me')
 ```
 
-### Elements never re-render
+### Stable elements
 
-Unlike virtual DOM frameworks, `el()` creates a stable element once. The element itself doesn't re-render — only individual props and text nodes update when their reactive values change:
+Elements are created once. Only individual props and text nodes update when their reactive values change:
 
 ```typescript
 const count = signal(0);

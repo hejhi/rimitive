@@ -8,28 +8,7 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["store", "proxy", "deep-reactivity", "immutable", "composition", "state-management", "nested-state"]} />
 
-SolidJS has `createStore`. Vue has `reactive()`. These provide "deep reactivity"—you can mutate nested properties and the framework tracks the changes automatically.
-
-Rimitive doesn't have stores. This is intentional.
-
----
-
-## Why No Stores?
-
-Deep reactivity requires proxies. Proxies have costs:
-
-- **Magic behavior**: Property access triggers invisible tracking. Mutations trigger invisible updates. Hard to debug.
-- **Performance overhead**: Every property access goes through the proxy trap.
-- **Complexity**: Edge cases around arrays, Maps, Sets, class instances, etc.
-- **Encourages sprawl**: Big nested state objects instead of focused, composable units.
-
-There's nothing saying you can't create your own module—it's just that Rimitive doesn't ship one by default.
-
----
-
-## The Alternative: Composition
-
-Instead of one big store, compose focused behaviors:
+Rimitive uses composition instead of stores. Instead of one big state object, compose focused behaviors:
 
 ```typescript
 // Instead of this:
@@ -79,13 +58,6 @@ const cart = (svc: SignalsSvc) => () => {
   };
 };
 ```
-
-Each behavior:
-- Has a clear, focused purpose
-- Encapsulates its own logic
-- Is independently testable
-- Can be composed with others
-- Is portable
 
 ---
 
@@ -216,12 +188,6 @@ const bridged = (svc: SignalsSvc) => () => {
   return { count };
 };
 ```
-
-But consider: if you're reaching for proxies, you might be fighting the framework. Rimitive's composition model works best when you embrace it.
-
-<Aside type="note">
-This isn't about purity—it's about predictability. Every abstraction has a cost. Proxies hide what's happening. Composition makes it visible.
-</Aside>
 
 ---
 

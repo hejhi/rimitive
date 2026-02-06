@@ -15,25 +15,6 @@ With `renderToStringAsync`, the server waits for **all** data before sending any
 
 **Streaming SSR** sends the page shell immediately, then streams data chunks as each `load()` boundary resolves. Users see content faster, especially when some data sources are slow.
 
-```
-SERVER
-  │
-  ├─ App runs, creates load() boundaries with pending states
-  ├─ Sends initial HTML immediately (loading UI visible)
-  │
-  │   ─────────── HTML Shell ───────────►  Users see loading UI
-  │
-  ├─ load() #1 resolves → stream chunk
-  │   ─────────── <script>data1</script> ──►  UI updates
-  │
-  ├─ load() #2 resolves → stream chunk
-  │   ─────────── <script>data2</script> ──►  UI updates
-  │
-  └─ All done, close response
-```
-
-Signals update the UI. The server streams data, the client pushes it to signals, and Rimitive handles the rest.
-
 ---
 
 ## The Stream Writer
@@ -126,15 +107,6 @@ const server = createServer(async (req, res) => {
 server.listen(3000);
 ```
 
-### What's different from async SSR:
-
-| Async SSR | Streaming SSR |
-|-----------|---------------|
-| `renderToStringAsync` waits for all data | `renderToStream` returns immediately |
-| One HTML response at the end | HTML shell + data chunks over time |
-| No `onResolve` needed | `onResolve` streams each chunk |
-| Simpler setup | More responsive UX |
-
 ---
 
 ## Service with Streaming
@@ -195,27 +167,11 @@ hydrationAdapter.switchToFallback();
 connectStream(service, STREAM_KEY);
 ```
 
-### What happens:
-
-1. Hydration adapter walks existing DOM, attaches reactivity
-2. `switchToFallback()` switches to normal DOM mode for future updates
-3. `connectStream()` flushes any queued chunks and wires up the loader to receive future chunks
-4. As chunks arrive, signals update and the UI re-renders automatically
-
 ---
 
 ## Using load() with Streaming
 
-Components use `load()` exactly the same as [basic async SSR](/guides/ssr-loading#using-load). The difference is what happens on the server:
-
-| Basic Async SSR | Streaming SSR |
-|-----------------|---------------|
-| Server waits for `fetchStats` | Server sends `pending` HTML immediately |
-| Full HTML sent after 2s | Skeleton UI visible instantly |
-| — | Data chunk streams when ready |
-| — | Signal updates, UI re-renders |
-
-Your component code doesn't change—only the server orchestration differs.
+Components use `load()` exactly the same as [basic async SSR](/guides/ssr-loading#using-load).
 
 ---
 

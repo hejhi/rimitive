@@ -24,18 +24,18 @@ A `NodeRef` with:
 
 ## Description
 
-Element specs are inert blueprints. `mount()` realizes them into actual DOM elements:
+`mount()` creates DOM elements from specs:
 
 ```typescript
-const spec = el('div')('Hello');  // just a blueprint
-const ref = mount(spec);           // creates real DOM element
+const spec = el('div')('Hello');
+const ref = mount(spec);
 
 document.body.appendChild(ref.element);
 ```
 
 ### Disposal
 
-Call `dispose()` to remove the element and clean up:
+Disposal removes the element and runs all cleanup callbacks.
 
 ```typescript
 const ref = mount(App());
@@ -44,12 +44,6 @@ document.body.appendChild(ref.element);
 // Later, when unmounting
 ref.dispose();
 ```
-
-Disposal:
-- Removes the element from its parent
-- Runs cleanup callbacks from `.ref()`
-- Disposes effects tied to the element
-- Recursively disposes all children
 
 ### App pattern
 

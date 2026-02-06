@@ -8,9 +8,7 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["portable", "framework-agnostic", "react", "testing", "ssr", "adapter", "cross-platform"]} />
 
-Most UI logic isn't tied to a specific framework. A dropdown's open/close behavior is the same whether you're rendering to DOM, React, or a canvas. A form's validation logic doesn't care about the view layer.
-
-Rimitive is designed around this insight. The same code can run in different contexts without modification.
+Rimitive is designed so the same code can run in different contexts without modification.
 
 ---
 
@@ -171,8 +169,6 @@ const app = Counter(svc);
 // Renders to canvas instead of DOM
 ```
 
-Same component, different targets.
-
 ---
 
 ## Anti-patterns
@@ -311,7 +307,3 @@ describe('counter behavior', () => {
 ```
 
 No DOM mocking, no framework test utilities—just functions and assertions.
-
-<Aside type="tip">
-Portability isn't about running everywhere—it's about **not being locked in**. Even if you only ever use the DOM adapter, portable code is easier to test, easier to refactor, and easier to reason about.
-</Aside>

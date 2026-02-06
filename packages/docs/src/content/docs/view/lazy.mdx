@@ -1,0 +1,127 @@
+---
+title: lazy()
+description: Code-split components with dynamic imports and async boundaries.
+---
+
+The `lazy()` function wraps a dynamic import into a transparent stand-in. On the server (or once the import resolves), calls pass through directly. On the client before the chunk loads, it creates a reactive async boundary that swaps in the real content when the chunk arrives.
+
+## Syntax
+
+```typescript
+lazy(importer)
+```
+
+### Parameters
+
+**`importer`**
+: A function that returns a `Promise` — typically a dynamic `import()` with a `.then()` that resolves to a callable producing a `RefSpec`.
+
+### Return value
+
+The same type as whatever the promise resolves to. Calls are intercepted transparently — if the import has resolved, calls go straight through. If it hasn't, an async boundary is created.
+
+## Description
+
+`lazy()` intercepts exactly one call. The importer should resolve to a function that produces a `RefSpec` when called:
+
+```typescript
+// The import resolves to a function: (data) => RefSpec
+const LazyChart = lazy(() =>
+  import('./Chart').then(m => m.Chart(svc))
+);
+
+// Call the result — if loaded, passes through; if not, creates async boundary
+const view = LazyChart(data);
+```
+
+### Fast path (cached)
+
+When the import has already resolved (always the case on the server, since bundlers resolve imports synchronously), the call goes directly to the real value. No async boundary, no signal overhead.
+
+### Slow path (pending)
+
+When the import hasn't resolved yet:
+
+1. `lazy()` returns a wrapper function
+2. When called, the wrapper creates a reactive boundary using `signal` + `match`
+3. The boundary renders nothing while pending
+4. When the import resolves, `match` swaps in the real content
+5. `ASYNC_FRAGMENT` metadata is attached so SSR can introspect the boundary
+
+### preloadAll()
+
+Resolves all pending lazy imports. Call before hydration to prevent client/server mismatch:
+
+```typescript
+await lazy.preloadAll();
+```
+
+## Examples
+
+### Lazy-loaded route
+
+```typescript
+const LazyStreamingPage = (svc: Service) =>
+  svc.lazy(() =>
+    import('./pages/StreamingPage').then(m => m.StreamingPage(svc))
+  );
+
+// Use in a route switch
+match(currentRoute, (route) => {
+  switch (route) {
+    case 'home': return HomePage(svc);
+    case 'streaming': return LazyStreamingPage(svc)();
+  }
+})
+```
+
+### Multiple lazy components
+
+```typescript
+const LazyChart = lazy(() =>
+  import('./Chart').then(m => m.Chart(svc))
+);
+const LazyTable = lazy(() =>
+  import('./Table').then(m => m.Table(svc))
+);
+
+// Both chunks load in parallel
+el('div')(
+  LazyChart(chartData),
+  LazyTable(tableData),
+)
+```
+
+### Preload before hydration
+
+```typescript
+// Server rendered the full page — ensure all chunks are
+// loaded before hydrating so the DOM matches
+await lazy.preloadAll();
+hydrate(containerEl, App);
+```
+
+## Module usage
+
+`lazy` is available via `LazyModule` for use with `compose()`:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/extend';
+import { LazyModule } from '@rimitive/view/lazy';
+import { MatchModule } from '@rimitive/view/match';
+
+const { lazy } = compose(
+  SignalModule,
+  MatchModule.with({ adapter }),
+  LazyModule,
+);
+```
+
+`LazyModule` depends on `SignalModule` and `MatchModule` — both must be composed.
+
+## See also
+
+- [match()](/view/match) — Conditional rendering (used internally by lazy boundaries)
+- [load()](/ssr/load) — Async data loading with fetcher/renderer pattern
+- [el()](/view/el) — Create elements

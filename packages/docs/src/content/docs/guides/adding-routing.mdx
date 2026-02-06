@@ -5,7 +5,9 @@ description: Navigate between views based on URL.
 
 import { Aside } from '@astrojs/starlight/components';
 
-Routing in Rimitive is simply reactive state. The router tracks the provided URL and matches it against your route definitions. You render different views by reacting to those matches.
+**[Package on GitHub](https://github.com/hejhi/rimitive/tree/main/packages/router)**
+
+The router tracks the URL and matches it against your route definitions.
 
 ---
 
@@ -49,8 +51,6 @@ router.navigate('/about');
 router.currentPath();  // '/about'
 router.matches();      // [{ id: 'about', pattern: '/about', params: {}, path: '/about' }]
 ```
-
-That's the core: routes in, reactive matches out.
 
 ---
 
@@ -146,9 +146,9 @@ const App = (svc: Service) => () => {
 };
 ```
 
-`Link` renders an `<a>` tag that intercepts clicks and calls `router.navigate()` instead of doing a full page reload.
+`Link` renders an `<a>` tag that intercepts clicks and uses `router.navigate()`.
 
-For programmatic navigation, use `router.navigate()` directly:
+For programmatic navigation:
 
 ```typescript
 const Home = ({ el, router }: Service) => () => el('div')(
@@ -261,8 +261,6 @@ const Nav = (svc: Service) => () => {
   );
 };
 ```
-
-Routes are data, and matching is reactive. Rendering is just `match()` on `router.matches`, and everything composes with the same patterns you've already learned!
 
 <Aside type="tip" title="Working Example">
 See [`packages/examples/router`](https://github.com/hejhi/rimitive/tree/main/packages/examples/router) for a complete client-side routing implementation.

@@ -8,7 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 <SearchTags tags={["service", "compose", "setup", "configuration", "modules", "dependency-injection"]} />
 
-To use Rimitive, start by creating a **reactive service**. Services and modules are constructs of our flyweight dependency injection (DI) system in [`core`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
+A service bundles modules into an isolated reactive context.
 
 The simplest example of a reactive service:
 
@@ -20,12 +20,8 @@ const svc = compose(SignalModule);
 const { signal } = svc;
 ```
 
-- A **service** is the result of calling `compose()`. It bundles selected modules into an isolated reactive context.
-- A **module** is what you provide to `compose()`. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
-
-Using `svc` to represent a service is a convention you'll see used throughout these docs.
-
-This service wouldn't do much on its own—nothing is connected to react to signal changes yet.
+- A **service** is the result of calling `compose()`.
+- A **module** is what you provide to `compose()`. Modules can depend on other modules and share the same reactive graph.
 
 ---
 
@@ -53,7 +49,7 @@ effect(() => {
 // ...etc
 ```
 
-Reactive dependencies are automatically tracked in Rimitive, so you don't need to worry about it.
+Reactive dependencies are automatically tracked.
 
 ---
 

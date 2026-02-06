@@ -27,7 +27,7 @@ A `Readable<T>` — a read-only reactive value:
 
 ## Description
 
-Computeds derive values from other reactive state. When you read signals inside a computed, those reads are tracked. When any dependency changes, the computed is marked stale and will recalculate on the next read.
+Computeds derive values from other reactive state. When you read signals inside a computed, those reads are tracked. When any dependency changes, the computed will recalculate on the next read.
 
 ```typescript
 const firstName = signal('Ada');
@@ -56,15 +56,8 @@ count(1);  // Nothing logged yet
 count(2);  // Still nothing
 doubled(); // logs "calculating...", returns 4
 doubled(); // No log — cached
-```
 
-This makes computeds efficient even in complex dependency graphs.
-
-### Caching
-
-Once computed, the value is cached until a dependency changes:
-
-```typescript
+// Cached until a dependency changes
 const items = signal([1, 2, 3, 4, 5]);
 const sum = computed(() => items().reduce((a, b) => a + b, 0));
 
@@ -90,8 +83,6 @@ average();  // 2
 items([10, 20]);
 average();  // 15
 ```
-
-The dependency graph is tracked automatically — no manual wiring needed.
 
 ## Examples
 

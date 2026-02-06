@@ -9,9 +9,7 @@ import SandboxDir from '../../../components/SandboxDir.astro';
 
 ## Extending the Service
 
-You have signals and behaviors, so perhaps now we want to layer on some reactive UI.
-
-Rimitive provides the `view` package that contains view-specific modules, with `el()` being the foundation: `el()` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
+Rimitive provides the `view` package with view-specific modules. `el()` is the foundation for creating elements. It's renderer-agnostic, but we'll use the DOM adapter here.
 
 Add the view modules to your service:
 
@@ -27,21 +25,17 @@ export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  // Let's add the `el` and `mount` modules from the `view` package, and provide the
-  // DOM adapter to make DOM elements 👇
   createElModule(createDOMAdapter()),
   MountModule
 );
 export type Service = typeof svc;
 ```
 
-Notice it's the same compose/service pattern as before, just now with more modules!
-
 ---
 
 ## Creating Elements
 
-`el()` is curried: `el(tag)(children)`. It's all just factories:
+`el()` is curried: `el(tag)(children)`:
 
 ```typescript
 // A div tag
@@ -57,7 +51,7 @@ el('div')(
 );
 ```
 
-If you provided a different adapter, then you'd pass different (strongly typed!) strings (like `el("mySpecialElement")`). `el` returns a UI **spec** with a stable reference to the underlying element—it doesn't "re-render".
+`el` returns a UI **spec** with a stable reference to the underlying element.
 
 ---
 
@@ -99,7 +93,7 @@ count(5);  // display updates to "Count: 5"
 
 ## UI Components
 
-The star of the show, UI components in Rimitive are...just functions that return UI specs:
+UI components in Rimitive are functions that return UI specs:
 
 ```typescript
 const Greeting = (name: string) =>
@@ -115,10 +109,10 @@ const DoubleGreeting = () => el('div')(
 ```
 
 <Aside type="note">
-UI "components" in Rimitive are plain functions that return a **spec** for a UI, which can be mounted and unmounted. They never re-render, reconcile, or anything else. Some modules like `map` may contain reconciliation logic if they need it to dynamically or conditionally render children, but it's always encapsulated within the module.
+Components don't re-render. Reactivity happens at the signal level.
 </Aside>
 
-That's it, kind of anticlimactic. Here's a working example:
+Here's a working example:
 
 <SandboxDir dir="adding-a-ui" editorHeight="380px" />
 
@@ -134,8 +128,6 @@ import { counter } from './behaviors/counter';
 
 const Counter = (svc: Service) => {
   const { el, computed } = svc;
-
-  // The service function is so cyute isn't it??
   const useCounter = svc(counter);
 
   return (initial: number) => {
@@ -165,7 +157,7 @@ const Counters = (svc: Service) => {
 };
 ```
 
-Same shape as portable behaviors: `(svc) => (args) => result`. This is useful for testing, SSR, or sharing components across different service contexts.
+This is useful for testing, SSR, or sharing components across different service contexts.
 
 ---
 

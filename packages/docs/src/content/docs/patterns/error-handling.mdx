@@ -8,30 +8,7 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["error", "error-boundary", "try-catch", "error-handling", "async-error", "effect-error", "result-type"]} />
 
-React has Error Boundaries. Solid has `<ErrorBoundary>`. You might expect Rimitive to have something similar.
-
-It doesn't—because it doesn't need one.
-
----
-
-## Why No Error Boundary Module?
-
-In React and Solid, components are reactive functions that re-run during a render cycle. Errors can happen mid-render, and the framework needs a way to catch them and show fallback UI.
-
-In Rimitive, components are just functions that return specs. They run once, produce a data structure, and that's it. Errors are plain JavaScript errors that propagate normally.
-
-```typescript
-const RiskyComponent = (svc: Service) => () => {
-  const { el } = svc;
-
-  // If this throws, it's a normal JS error
-  const data = somethingThatMightThrow();
-
-  return el('div')(data.value);
-};
-```
-
-You handle it with... try/catch:
+In Rimitive, errors are plain JavaScript errors. Handle them with try/catch:
 
 ```typescript
 const SafeWrapper = (svc: Service) => () => {
@@ -159,8 +136,6 @@ const App = (svc: Service) => () => {
   );
 };
 ```
-
-But honestly? Just use try/catch. It's JavaScript. It works.
 
 ---
 

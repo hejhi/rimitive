@@ -1,0 +1,185 @@
+---
+title: iter()
+description: Create a reactive linked list with O(1) operations and dependency tracking.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `iter()` function creates a reactive linked list optimized for efficient insertions, removals, and reordering. It's the data structure that powers [`map()`](/view/map) for list reconciliation.
+
+## Syntax
+
+```typescript
+const list = iter(keyFn, initialItems?)
+```
+
+### Parameters
+
+**`keyFn`**
+: A function that returns a unique key for each item. Keys must be strings or numbers.
+
+**`initialItems`** (optional)
+: An array of items to populate the list initially.
+
+### Return value
+
+An `Iter<T>` — a callable that returns the current items as an array (with dependency tracking), plus methods for O(1) list operations.
+
+## Description
+
+`iter()` provides O(1) key lookups and list operations.
+
+```typescript
+const todos = iter(t => t.id, [
+  { id: 1, text: 'Learn' },
+  { id: 2, text: 'Build' },
+]);
+
+// Read as array (tracked)
+todos();  // [{ id: 1, ... }, { id: 2, ... }]
+
+// O(1) operations
+todos.append({ id: 3, text: 'Ship' });
+todos.remove(1);
+todos.prepend({ id: 0, text: 'Plan' });
+```
+
+**O(1) operations:**
+- Insertions: `append`, `prepend`, `insertBefore`, `insertAfter`
+- Removals: `remove` by key
+- Reordering: `moveBefore`, `moveNodeBefore`
+- Lookups: `get`, `has`, `getNode` by key
+
+### Reactive tracking
+
+```typescript
+const list = iter(x => x.id, []);
+
+// Reactive — re-runs when list changes
+effect(() => {
+  console.log('Items:', list().length);
+});
+
+// Also tracked
+effect(() => {
+  for (const item of list) {
+    console.log(item);
+  }
+});
+```
+
+Use `peek()` or `peekKeys()` for untracked reads.
+
+## API Reference
+
+### Reading
+
+| Method | Description |
+|--------|-------------|
+| `list()` | Returns items as array (tracked) |
+| `list.peek()` | Returns items as array (untracked) |
+| `list.get(key)` | Get item value by key |
+| `list.has(key)` | Check if key exists |
+| `list.getNode(key)` | Get the internal node for a key |
+| `list.size` | Number of items (tracked) |
+| `list.head` | First node (untracked) |
+| `list.tail` | Last node (untracked) |
+
+### Iterating
+
+| Method | Description |
+|--------|-------------|
+| `for (const item of list)` | Iterate values (tracked) |
+| `list.keys()` | Iterate keys (tracked) |
+| `list.nodes()` | Iterate nodes (tracked) |
+| `list.peekKeys()` | Iterate keys (untracked) |
+
+### Mutating
+
+| Method | Description |
+|--------|-------------|
+| `list.append(item)` | Add to end |
+| `list.prepend(item)` | Add to beginning |
+| `list.insertBefore(refKey, item)` | Insert before a key |
+| `list.insertAfter(refKey, item)` | Insert after a key |
+| `list.remove(key)` | Remove by key |
+| `list.update(item)` | Update item with same key |
+| `list.moveBefore(key, refKey)` | Move item before another |
+| `list.moveNodeBefore(node, refNode)` | Move node before another (direct node access) |
+| `list.clear()` | Remove all items |
+
+## Examples
+
+### Basic usage
+
+```typescript
+const { iter } = compose(SignalModule, IterModule);
+
+const users = iter(u => u.id, [
+  { id: 'a', name: 'Alice' },
+  { id: 'b', name: 'Bob' },
+]);
+
+// Append
+users.append({ id: 'c', name: 'Carol' });
+
+// Update existing item
+users.update({ id: 'b', name: 'Bobby' });
+
+// Remove
+users.remove('a');
+
+// Reorder — move 'c' before 'b'
+users.moveBefore('c', 'b');
+```
+
+### With effects
+
+```typescript
+effect(() => {
+  console.log('User count:', users.size);
+});
+
+users.append({ id: 'd', name: 'Dave' });
+// logs: "User count: 3"
+
+users.remove('b');
+// logs: "User count: 2"
+```
+
+### Direct node manipulation
+
+For advanced use cases, you can work with nodes directly:
+
+```typescript
+const node = users.getNode('c');
+if (node) {
+  console.log(node.value);      // the item
+  console.log(node.prev?.key);  // previous node's key
+  console.log(node.next?.key);  // next node's key
+}
+
+// Move using node references (avoids key lookups)
+const nodeA = users.getNode('a')!;
+const nodeB = users.getNode('b')!;
+users.moveNodeBefore(nodeA, nodeB);
+```
+
+## Module
+
+```typescript
+import { IterModule } from '@rimitive/signals/extend';
+import { compose } from '@rimitive/core';
+
+const { iter } = compose(SignalModule, IterModule);
+```
+
+<Aside type="note">
+`IterModule` depends on `SignalModule` — compose will include it automatically if you only specify `IterModule`.
+</Aside>
+
+## See also
+
+- [map()](/view/map) — Uses `iter()` internally for list reconciliation
+- [signal()](/signals/signal) — Basic reactive state
+- [Signal Patterns](/patterns/signal-patterns) — Patterns for arrays and collections
