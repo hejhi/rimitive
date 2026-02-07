@@ -196,7 +196,7 @@ describe('data prefetch handler — integration', () => {
           create: () => {
             const childNodes = specs.map((s) => s.create());
             for (let i = 0; i < childNodes.length - 1; i++) {
-              childNodes[i].next = childNodes[i + 1];
+              childNodes[i]!.next = childNodes[i + 1]!;
             }
             return {
               status: 1 as const,
@@ -325,7 +325,7 @@ describe('data prefetch vs streaming consistency', () => {
       create: () => {
         const childNodes = specs.map((s) => s.create());
         for (let i = 0; i < childNodes.length - 1; i++) {
-          childNodes[i].next = childNodes[i + 1];
+          childNodes[i]!.next = childNodes[i + 1]!;
         }
         return {
           status: 1 as const,
@@ -376,7 +376,7 @@ describe('data prefetch vs streaming consistency', () => {
       create: () => {
         const childNodes = specs.map((s) => s.create());
         for (let i = 0; i < childNodes.length - 1; i++) {
-          childNodes[i].next = childNodes[i + 1];
+          childNodes[i]!.next = childNodes[i + 1]!;
         }
         return {
           status: 1 as const,
@@ -543,9 +543,9 @@ describe('client-side prefetch via loader.setData', () => {
     // Resolve should return the cached initial data, not re-fetch
     const { ASYNC_FRAGMENT } = await import('@rimitive/view/load');
     const meta = (nodeRef as Record<symbol, { resolve: () => Promise<unknown>; isResolved: () => boolean }>)[ASYNC_FRAGMENT];
-    expect(meta.isResolved()).toBe(true);
+    expect(meta!.isResolved()).toBe(true);
 
-    const result = await meta.resolve();
+    const result = await meta!.resolve();
     expect(result).toEqual({ visitors: 24521 });
     expect(fetcher).not.toHaveBeenCalled();
   });
@@ -572,7 +572,7 @@ describe('client-side prefetch via loader.setData', () => {
     // Now resolve the async fragment — should return the pre-cached data
     const { ASYNC_FRAGMENT } = await import('@rimitive/view/load');
     const meta = (nodeRef as Record<symbol, { resolve: () => Promise<unknown> }>)[ASYNC_FRAGMENT];
-    const result = await meta.resolve();
+    const result = await meta!.resolve();
 
     // resolve() should return the setData value, not call fetcher
     expect(result).toEqual({ visitors: 24521 });

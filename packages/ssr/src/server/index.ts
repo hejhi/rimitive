@@ -3,14 +3,18 @@
  *
  * Server-side utilities for SSR rendering.
  *
- * @example
+ * @example Basic rendering
+ * ```ts
+ * import { createParse5Adapter, renderToString } from '@rimitive/ssr/server';
+ * ```
+ *
+ * @example Streaming server with abstractions
  * ```ts
  * import {
- *   createParse5Adapter,
- *   renderToString,
- *   renderToStringAsync,
- *   renderToStream,
- *   createStreamWriter,
+ *   createStreamingServer,
+ *   createStaticHandler,
+ *   createDataPrefetchHandler,
+ *   createHtmlShell,
  * } from '@rimitive/ssr/server';
  * ```
  */

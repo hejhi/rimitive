@@ -353,7 +353,7 @@ describe('createStreamingServer — streaming integration', () => {
 
             // Link nodes as siblings
             for (let i = 0; i < childNodes.length - 1; i++) {
-              childNodes[i].next = childNodes[i + 1];
+              childNodes[i]!.next = childNodes[i + 1]!;
             }
 
             // Build root element that contains children
