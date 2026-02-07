@@ -56,6 +56,7 @@ public/
 !packages/docs/public/
 
 *.d.ts
+!**/vite-env.d.ts
 *.ts.map
 
 **/.claude/settings.local.json
