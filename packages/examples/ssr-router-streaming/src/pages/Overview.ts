@@ -16,7 +16,7 @@ import {
   fetchTopPages,
   fetchReferrers,
 } from '../data/index.js';
-import { renderBoundary } from '../ssr/streaming.js';
+import { renderBoundary } from '../lib/streaming.js';
 import {
   MetricCard,
   PageViewsTable,
@@ -26,8 +26,9 @@ import {
 
 export const Overview = (svc: Service) => {
   const { el, loader, match } = svc;
-  const metricCard = MetricCard(svc);
-  const skeleton = SkeletonCard(svc);
+  const metricCard = svc(MetricCard);
+  const skeleton = svc(SkeletonCard);
+  const div = el('div');
 
   const metrics = loader.load(
     'overview-metrics',
@@ -35,16 +36,15 @@ export const Overview = (svc: Service) => {
     (state: LoadState<OverviewMetrics>) =>
       renderBoundary(match, state, {
         pending: () =>
-          el('div').props({ className: 'metrics-grid' })(
+          div.props({ className: 'metrics-grid' })(
             skeleton({ size: 'sm' }),
             skeleton({ size: 'sm' }),
             skeleton({ size: 'sm' }),
             skeleton({ size: 'sm' })
           ),
-        error: (err) =>
-          el('div').props({ className: 'section-error' })(String(err)),
+        error: (err) => div.props({ className: 'section-error' })(String(err)),
         ready: (data) =>
-          el('div').props({ className: 'metrics-grid' })(
+          div.props({ className: 'metrics-grid' })(
             metricCard({
               label: 'Visitors',
               value: data.visitors.toLocaleString(),
@@ -76,8 +76,7 @@ export const Overview = (svc: Service) => {
     (state: LoadState<TopPage[]>) =>
       renderBoundary(match, state, {
         pending: () => skeleton({ size: 'lg' }),
-        error: (err) =>
-          el('div').props({ className: 'section-error' })(String(err)),
+        error: (err) => div.props({ className: 'section-error' })(String(err)),
         ready: (data) => PageViewsTable(svc)({ pages: data }),
       }),
     { eager: true }
@@ -89,17 +88,16 @@ export const Overview = (svc: Service) => {
     (state: LoadState<Referrer[]>) =>
       renderBoundary(match, state, {
         pending: () => skeleton({ size: 'md' }),
-        error: (err) =>
-          el('div').props({ className: 'section-error' })(String(err)),
+        error: (err) => div.props({ className: 'section-error' })(String(err)),
         ready: (data) => ReferrerList(svc)({ referrers: data }),
       }),
     { eager: true }
   );
 
   return (): RefSpec<HTMLElement> =>
-    el('div').props({ className: 'page overview-page' })(
+    div.props({ className: 'page overview-page' })(
       el('h2')('Dashboard Overview'),
       metrics,
-      el('div').props({ className: 'overview-grid' })(topPages, referrers)
+      div.props({ className: 'overview-grid' })(topPages, referrers)
     );
 };

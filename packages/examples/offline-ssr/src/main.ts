@@ -37,7 +37,7 @@ import {
   withViewTransition,
   DataCacheModule,
   type Status,
-} from './pwa';
+} from './lib';
 
 import PrerenderWorker from './worker?worker';
 

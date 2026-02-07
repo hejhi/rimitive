@@ -11,14 +11,15 @@ import type { RefSpec } from '@rimitive/view/types';
 import type { AnalyticsEvent } from '../data/types.js';
 import type { Service } from '../service.js';
 import { fetchRecentEvents } from '../data/index.js';
-import { renderBoundary } from '../ssr/streaming.js';
+import { renderBoundary } from '../lib/streaming.js';
 import { EventRow, EventFilter, SkeletonCard } from '../components/index.js';
 
 export const Feed = (svc: Service) => {
   const { el, loader, match, signal, computed, map } = svc;
-  const skeleton = SkeletonCard(svc);
-  const eventRow = EventRow(svc);
-  const eventFilter = EventFilter(svc);
+  const skeleton = svc(SkeletonCard);
+  const eventRow = svc(EventRow);
+  const eventFilter = svc(EventFilter);
+  const div = el('div');
 
   const feedEvents = loader.load(
     'feed-events',
@@ -26,8 +27,7 @@ export const Feed = (svc: Service) => {
     (state: LoadState<AnalyticsEvent[]>) =>
       renderBoundary(match, state, {
         pending: () => skeleton({ size: 'lg' }),
-        error: (err) =>
-          el('div').props({ className: 'section-error' })(String(err)),
+        error: (err) => div.props({ className: 'section-error' })(String(err)),
         ready: (events) => {
           const allEvents = signal(events);
           const activeFilter = signal<string>('all');
@@ -38,13 +38,13 @@ export const Feed = (svc: Service) => {
           );
           const handleFilter = (type: string) => activeFilter(type);
 
-          return el('div').props({ className: 'feed-content' })(
+          return div.props({ className: 'feed-content' })(
             eventFilter({
               events: allEvents,
               activeFilter,
               onFilter: handleFilter,
             }),
-            el('div').props({ className: 'events-list' })(
+            div.props({ className: 'events-list' })(
               map(
                 filteredEvents,
                 (e: AnalyticsEvent) => e.id,
@@ -58,7 +58,7 @@ export const Feed = (svc: Service) => {
   );
 
   return (): RefSpec<HTMLElement> =>
-    el('div').props({ className: 'page feed-page' })(
+    div.props({ className: 'page feed-page' })(
       el('h2')('Live Feed'),
       feedEvents
     );

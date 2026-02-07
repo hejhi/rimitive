@@ -17,7 +17,7 @@ import { MapModule } from '@rimitive/view/map';
 import { createParse5Adapter, renderToString } from '@rimitive/ssr/server';
 import { RouterModule } from '@rimitive/router';
 
-import { DataCacheModule } from './pwa/cache';
+import { DataCacheModule } from './lib/cache';
 import { ActionsModule } from './actions';
 import { routes } from './routes';
 import { renderPage } from './pages/index';

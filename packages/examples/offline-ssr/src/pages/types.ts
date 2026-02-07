@@ -10,7 +10,7 @@ import type { ElFactory } from '@rimitive/view/el';
 import type { MapFactory } from '@rimitive/view/map';
 import type { Router } from '@rimitive/router';
 import type { Actions } from '../actions';
-import type { DataCache } from '../pwa';
+import type { DataCache } from '../lib';
 
 export type PageService = {
   signal: SignalFactory;

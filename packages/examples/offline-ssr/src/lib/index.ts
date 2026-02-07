@@ -1,5 +1,5 @@
 /**
- * PWA Utilities
+ * Offline-First Utilities
  *
  * Copy-able utilities for building offline-first PWAs with Rimitive.
  * These are patterns, not a framework - copy into your project and modify as needed.

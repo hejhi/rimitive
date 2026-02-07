@@ -7,16 +7,19 @@
  */
 import type { LoadState } from '@rimitive/view/load';
 import type { RefSpec } from '@rimitive/view/types';
-import type { SiteDetail as SiteDetailData, SiteTraffic } from '../data/types.js';
+import type {
+  SiteDetail as SiteDetailData,
+  SiteTraffic,
+} from '../data/types.js';
 import type { Service } from '../service.js';
 import { fetchSiteDetail, fetchSiteTraffic } from '../data/index.js';
-import { renderBoundary } from '../ssr/streaming.js';
+import { renderBoundary } from '../lib/streaming.js';
 import { TrafficChart, EventRow, SkeletonCard } from '../components/index.js';
 
 export const SiteDetail = (svc: Service) => {
   const { el, loader, match, router } = svc;
-  const skeleton = SkeletonCard(svc);
-  const eventRow = EventRow(svc);
+  const skeleton = svc(SkeletonCard);
+  const eventRow = svc(EventRow);
 
   const siteId = router.matches()[0]?.params.id ?? 'site-1';
 
