@@ -121,6 +121,15 @@ export type {
   SSRRequestLogger,
 } from './logging';
 
+// Configuration validation
+export {
+  ConfigValidationError,
+  validateStreamingServerConfig,
+  validateStaticHandlerConfig,
+  validateDataPrefetchHandlerConfig,
+  validateDevServerConfig,
+} from './validate';
+
 // Async fragment utilities (server-side)
 export {
   isAsyncFragment,
