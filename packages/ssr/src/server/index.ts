@@ -41,6 +41,10 @@ export type {
 export { createStreamWriter, safeJsonStringify } from './stream';
 export type { StreamWriter } from './stream';
 
+// HTML shell
+export { createHtmlShell } from './html-shell';
+export type { HtmlShellOptions, HtmlShell } from './html-shell';
+
 // Async fragment utilities (server-side)
 export {
   isAsyncFragment,
