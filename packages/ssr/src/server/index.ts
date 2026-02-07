@@ -45,6 +45,16 @@ export type { StreamWriter } from './stream';
 export { createHtmlShell } from './html-shell';
 export type { HtmlShellOptions, HtmlShell } from './html-shell';
 
+// Service factory
+export { createServiceFactory, createConfiguredServiceFactory } from './create-service-factory';
+export type {
+  ServiceFactoryConfig,
+  ServiceRequestOptions,
+  ServiceFactoryResult,
+  ServiceFactory,
+  ConfiguredFactoryConfig,
+} from './create-service-factory';
+
 // Async fragment utilities (server-side)
 export {
   isAsyncFragment,
