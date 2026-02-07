@@ -60,6 +60,8 @@ export default defineConfig({
         'node:test',
         'node:http',
         'node:async_hooks',
+        'node:fs',
+        'node:path',
         'parse5',
         /^parse5\//,
         '@rimitive/core',

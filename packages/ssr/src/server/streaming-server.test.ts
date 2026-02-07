@@ -4,6 +4,9 @@
  * Uses the real createHtmlShell and renderToStream functions with
  * controlled service/app mocks. The mock NodeRef has STATUS_ELEMENT
  * so renderToStream produces a simple HTML string without async fragments.
+ *
+ * Also includes integration tests that verify the full streaming flow
+ * with real async boundaries (loader + onResolve + chunk scripts).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -12,6 +15,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { RefSpec, NodeRef, FragmentRef } from '@rimitive/view/types';
 import { STATUS_ELEMENT } from '@rimitive/view/types';
 import type { Serialize } from './parse5-adapter';
+import { createLoader } from '@rimitive/view/load';
+import type { LoadState } from '@rimitive/view/load';
+import { createServerTestEnv, createMockRefSpec, serialize, mockInsertFragmentMarkers } from './test-fixtures';
 
 function createMockReq(url: string): IncomingMessage {
   return {
@@ -273,5 +279,313 @@ describe('createStreamingServer', () => {
     expect(bodyIdx).toBeLessThan(appIdx);
     expect(appIdx).toBeLessThan(clientIdx);
     expect(clientIdx).toBeLessThan(closeIdx);
+  });
+});
+
+/**
+ * Integration tests for streaming server with real async boundaries.
+ *
+ * These tests verify the full end-to-end streaming flow:
+ * - HTML shell sent immediately with bootstrap script
+ * - Initial HTML with pending states for async boundaries
+ * - Data chunks stream via onResolve through script tags
+ * - Client script sent before streaming completes
+ * - Document closed after all boundaries resolve
+ */
+describe('createStreamingServer — streaming integration', () => {
+  type BoundaryDef = {
+    id: string;
+    fetcher: () => Promise<unknown>;
+    pendingHtml: string;
+  };
+
+  type TestService = {
+    loader: ReturnType<typeof createLoader>;
+    boundaries: BoundaryDef[];
+  };
+
+  /**
+   * Create a streaming server config that uses real loader + signal
+   * to produce async boundaries with controlled resolution.
+   */
+  function createStreamingConfig(options: {
+    boundaries: BoundaryDef[];
+    streamKey?: string;
+  }) {
+    const { signal } = createServerTestEnv();
+    const streamKey = options.streamKey ?? '__INTEGRATION_STREAM__';
+
+    const config = {
+      shell: {
+        title: 'Integration Test',
+        streamKey,
+        rootId: false as const,
+      },
+      clientSrc: '/client.js',
+      createService: ({ onResolve }: { pathname: string; onResolve: (id: string, data: unknown) => void }) => {
+        const loader = createLoader({ signal, onResolve });
+
+        return {
+          service: { loader, boundaries: options.boundaries } as TestService,
+          serialize,
+          insertFragmentMarkers: mockInsertFragmentMarkers,
+        };
+      },
+      createApp: (svc: TestService) => {
+        // Build a container RefSpec whose create() produces a tree with
+        // async fragments from loader.load() as children
+        const containerSpec: RefSpec<unknown> = {
+          status: 4 as RefSpec<unknown>['status'],
+          create: () => {
+            const childSpecs = svc.boundaries.map((b) =>
+              svc.loader.load(
+                b.id,
+                b.fetcher,
+                (state: LoadState<unknown>) => {
+                  if (state.status() === 'pending') return createMockRefSpec(b.pendingHtml);
+                  return createMockRefSpec(`<div data-resolved="${b.id}">${JSON.stringify(state.data())}</div>`);
+                },
+              ),
+            );
+
+            // Create (mount) each child spec to get NodeRefs with async metadata
+            const childNodes = childSpecs.map((spec) => spec.create());
+
+            // Link nodes as siblings
+            for (let i = 0; i < childNodes.length - 1; i++) {
+              childNodes[i].next = childNodes[i + 1];
+            }
+
+            // Build root element that contains children
+            const rootNode = {
+              status: 1 as const,
+              element: { outerHTML: '<div class="app-root">content</div>' },
+              parent: null,
+              prev: null,
+              next: null,
+              firstChild: childNodes[0] ?? null,
+              lastChild: childNodes[childNodes.length - 1] ?? null,
+            };
+
+            return rootNode as unknown as NodeRef<unknown>;
+          },
+        };
+        return containerSpec;
+      },
+      mount: (_svc: TestService) => (spec: RefSpec<unknown>) => spec.create(),
+    };
+
+    return { config, streamKey };
+  }
+
+  it('should stream all three parallel boundaries with correct data', async () => {
+    const { config, streamKey } = createStreamingConfig({
+      boundaries: [
+        {
+          id: 'metrics',
+          fetcher: () => Promise.resolve({ visitors: 24521 }),
+          pendingHtml: '<div class="skeleton">Loading metrics...</div>',
+        },
+        {
+          id: 'top-pages',
+          fetcher: () => Promise.resolve([{ path: '/', views: 45230 }]),
+          pendingHtml: '<div class="skeleton">Loading pages...</div>',
+        },
+        {
+          id: 'referrers',
+          fetcher: () => Promise.resolve([{ source: 'Google', visitors: 12340 }]),
+          pendingHtml: '<div class="skeleton">Loading referrers...</div>',
+        },
+      ],
+    });
+
+    const handler = createStreamingServer(config);
+    const req = createMockReq('/');
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    const fullOutput = res._written.join('');
+
+    // Verify HTML shell structure
+    expect(fullOutput).toContain('<!DOCTYPE html>');
+    expect(fullOutput).toContain('<title>Integration Test</title>');
+    expect(fullOutput).toContain('</body></html>');
+    expect(res._ended).toBe(true);
+
+    // Verify bootstrap script for streaming
+    expect(fullOutput).toContain(streamKey);
+
+    // Verify client script is present
+    expect(fullOutput).toContain('<script type="module" src="/client.js"></script>');
+
+    // Verify all three data chunks were streamed
+    expect(fullOutput).toContain(`${streamKey}.push("metrics"`);
+    expect(fullOutput).toContain(`${streamKey}.push("top-pages"`);
+    expect(fullOutput).toContain(`${streamKey}.push("referrers"`);
+
+    // Verify chunk data is correct
+    expect(fullOutput).toContain('"visitors":24521');
+    expect(fullOutput).toContain('"views":45230');
+    expect(fullOutput).toContain('"source":"Google"');
+  });
+
+  it('should send client script before streaming chunks in output order', async () => {
+    const { config } = createStreamingConfig({
+      boundaries: [
+        {
+          id: 'async-data',
+          fetcher: () => Promise.resolve({ value: 42 }),
+          pendingHtml: '<div>Loading...</div>',
+        },
+      ],
+    });
+
+    const handler = createStreamingServer(config);
+    const req = createMockReq('/');
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    const fullOutput = res._written.join('');
+
+    // Client script must come before streaming data chunks
+    const clientScriptIdx = fullOutput.indexOf('/client.js');
+    const chunkIdx = fullOutput.indexOf('.push("async-data"');
+    const closeIdx = fullOutput.indexOf('</body></html>');
+
+    expect(clientScriptIdx).toBeGreaterThan(-1);
+    expect(chunkIdx).toBeGreaterThan(-1);
+    expect(closeIdx).toBeGreaterThan(-1);
+
+    // Client script before chunks, chunks before document close
+    expect(clientScriptIdx).toBeLessThan(chunkIdx);
+    expect(chunkIdx).toBeLessThan(closeIdx);
+  });
+
+  it('should handle boundaries with delayed resolution', async () => {
+    let resolveDelayed: ((value: { status: string }) => void) | undefined;
+    const delayedPromise = new Promise<{ status: string }>((r) => {
+      resolveDelayed = r;
+    });
+
+    const { config, streamKey } = createStreamingConfig({
+      boundaries: [
+        {
+          id: 'delayed-boundary',
+          fetcher: () => delayedPromise,
+          pendingHtml: '<div>Waiting...</div>',
+        },
+      ],
+    });
+
+    const handler = createStreamingServer(config);
+    const req = createMockReq('/');
+    const res = createMockRes();
+
+    // Start the handler (it will await done)
+    const handlerPromise = handler(req, res);
+
+    // Handler should not be finished yet
+    let finished = false;
+    handlerPromise.then(() => { finished = true; });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(finished).toBe(false);
+
+    // Shell + initial HTML + client script should already be written
+    const partialOutput = res._written.join('');
+    expect(partialOutput).toContain('<!DOCTYPE html>');
+    expect(partialOutput).toContain('/client.js');
+
+    // Resolve the delayed boundary
+    resolveDelayed!({ status: 'complete' });
+    await handlerPromise;
+
+    // Now the chunk and document close should be written
+    const fullOutput = res._written.join('');
+    expect(fullOutput).toContain(`${streamKey}.push("delayed-boundary"`);
+    expect(fullOutput).toContain('"status":"complete"');
+    expect(fullOutput).toContain('</body></html>');
+    expect(res._ended).toBe(true);
+  });
+
+  it('should handle zero async boundaries gracefully', async () => {
+    const { config } = createStreamingConfig({ boundaries: [] });
+
+    const handler = createStreamingServer(config);
+    const req = createMockReq('/');
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    const fullOutput = res._written.join('');
+
+    // Should still have full HTML structure
+    expect(fullOutput).toContain('<!DOCTYPE html>');
+    expect(fullOutput).toContain('/client.js');
+    expect(fullOutput).toContain('</body></html>');
+    expect(res._ended).toBe(true);
+
+    // No streaming data chunks (bootstrap's .push in the receiver definition is ok)
+    const chunkPushes = fullOutput.match(/__INTEGRATION_STREAM__\.push\("/g);
+    expect(chunkPushes).toBeNull();
+  });
+
+  it('should handle boundary fetch errors without breaking the stream', async () => {
+    const { config, streamKey } = createStreamingConfig({
+      boundaries: [
+        {
+          id: 'good-data',
+          fetcher: () => Promise.resolve({ ok: true }),
+          pendingHtml: '<div>Loading...</div>',
+        },
+        {
+          id: 'bad-data',
+          fetcher: () => Promise.reject(new Error('Network error')),
+          pendingHtml: '<div>Loading...</div>',
+        },
+      ],
+    });
+
+    const handler = createStreamingServer(config);
+    const req = createMockReq('/');
+    const res = createMockRes();
+
+    // Should not throw
+    await handler(req, res);
+
+    const fullOutput = res._written.join('');
+
+    // Document should still be properly closed
+    expect(fullOutput).toContain('</body></html>');
+    expect(res._ended).toBe(true);
+
+    // Good boundary should still have streamed its data
+    expect(fullOutput).toContain(`${streamKey}.push("good-data"`);
+  });
+
+  it('should stream chunks wrapped in script tags', async () => {
+    const { config } = createStreamingConfig({
+      boundaries: [
+        {
+          id: 'script-test',
+          fetcher: () => Promise.resolve({ count: 5 }),
+          pendingHtml: '<div>Loading...</div>',
+        },
+      ],
+    });
+
+    const handler = createStreamingServer(config);
+    const req = createMockReq('/');
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    const fullOutput = res._written.join('');
+
+    // Chunks should be wrapped in <script> tags
+    const chunkMatch = fullOutput.match(/<script>[^<]*\.push\("script-test"[^<]*<\/script>/);
+    expect(chunkMatch).not.toBeNull();
   });
 });
