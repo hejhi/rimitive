@@ -426,6 +426,425 @@ Each handler is independent. Use only what you need — `createStreamingServer` 
 
 ---
 
+## Usage Examples
+
+### Minimal Server Setup
+
+A streaming SSR server with just `createStreamingServer` — no static files, no prefetch:
+
+```ts
+import { createServer } from 'node:http';
+import {
+  createParse5Adapter,
+  createStreamingServer,
+} from '@rimitive/ssr/server';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const handleStreaming = createStreamingServer({
+  shell: {
+    title: 'My App',
+    streamKey: '__APP_STREAM__',
+  },
+  clientSrc: '/client.js',
+  createService: ({ pathname, onResolve }) => {
+    const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
+    const service = createService(adapter, { initialPath: pathname, onResolve });
+    return { service, serialize, insertFragmentMarkers };
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+});
+
+createServer(async (req, res) => {
+  await handleStreaming(req, res);
+}).listen(3000, () => {
+  console.log('Listening on http://localhost:3000');
+});
+```
+
+### Server with Custom API Routes
+
+Add JSON API endpoints alongside streaming SSR using the handler composition pattern:
+
+```ts
+import { createServer } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import {
+  createParse5Adapter,
+  createStreamingServer,
+  createStaticHandler,
+} from '@rimitive/ssr/server';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const serveStatic = createStaticHandler({
+  clientDir: join(__dirname, '../dist/client'),
+  urlPatterns: ['/client.js', '/assets/'],
+});
+
+const handleStreaming = createStreamingServer({
+  shell: { title: 'My App', streamKey: '__APP__' },
+  clientSrc: '/client.js',
+  createService: ({ pathname, onResolve }) => {
+    const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
+    const service = createService(adapter, { initialPath: pathname, onResolve });
+    return { service, serialize, insertFragmentMarkers };
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+});
+
+function handleApiRoutes(req: IncomingMessage, res: ServerResponse): boolean {
+  const url = req.url ?? '/';
+
+  if (url === '/api/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok' }));
+    return true;
+  }
+
+  if (url.startsWith('/api/users')) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ users: [] }));
+    return true;
+  }
+
+  return false;
+}
+
+createServer(async (req, res) => {
+  if (serveStatic(req, res)) return;
+  if (handleApiRoutes(req, res)) return;
+  await handleStreaming(req, res);
+}).listen(3000);
+```
+
+### Server with Middleware
+
+Use `createDevServer` with its middleware pipeline for development, or compose handlers manually for production:
+
+```ts
+import {
+  createParse5Adapter,
+  createStreamingServer,
+  createStaticHandler,
+  createDataPrefetchHandler,
+  createDevServer,
+} from '@rimitive/ssr/server';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const serveStatic = createStaticHandler({
+  clientDir: join(__dirname, '../dist/client'),
+  urlPatterns: ['/client.js', '/assets/'],
+});
+
+const handlePrefetch = createDataPrefetchHandler({
+  createService: (path) => {
+    const { adapter } = createParse5Adapter();
+    return createService(adapter, { initialPath: path });
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+  getData: (svc) => svc.loader.getData(),
+});
+
+const handleStreaming = createStreamingServer({
+  shell: { title: 'My App', streamKey: '__APP__' },
+  clientSrc: '/client.js',
+  createService: ({ pathname, onResolve }) => {
+    const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
+    const service = createService(adapter, { initialPath: pathname, onResolve });
+    return { service, serialize, insertFragmentMarkers };
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+});
+
+const dev = createDevServer({
+  handler: handleStreaming,
+  port: 3000,
+  middleware: [
+    (req, res) => serveStatic(req, res),
+    (req, res) => handlePrefetch(req, res),
+  ],
+  logging: { exclude: ['/assets/'] },
+  errorPages: true,
+  onReady: (port) => console.log(`Dev server: http://localhost:${port}`),
+});
+
+dev.listen();
+```
+
+### Server with Custom Service Modules
+
+Use `createConfiguredServiceFactory` when your app requires additional modules beyond the base set (Signal, Computed, Effect, El, Match, Loader):
+
+```ts
+import { createServer } from 'node:http';
+import { BatchModule } from '@rimitive/signals/extend';
+import { MapModule } from '@rimitive/view/map';
+import {
+  createConfiguredServiceFactory,
+  createRequestScope,
+  createHtmlShell,
+  renderToStream,
+  generateChunkScript,
+  handleServiceError,
+} from '@rimitive/ssr/server';
+import { App } from './App.js';
+
+const factory = createConfiguredServiceFactory({
+  modules: (adapter) => [
+    BatchModule,
+    MapModule.with({ adapter }),
+  ],
+  lifecycle: {
+    onCreate: () => console.log('Service created'),
+    onDestroy: () => console.log('Service destroyed'),
+    onError: (error) =>
+      `<h1>Something went wrong</h1><p>${error instanceof Error ? error.message : String(error)}</p>`,
+  },
+});
+
+const shell = createHtmlShell({
+  title: 'Custom Modules App',
+  streamKey: '__APP__',
+});
+
+createServer(async (req, res) => {
+  const scope = createRequestScope(factory, {
+    onResolve: (id, data) => {
+      if (shell.stream) {
+        res.write(generateChunkScript(shell.stream, id, data));
+      }
+    },
+  });
+
+  try {
+    const { initialHtml, done } = renderToStream(App(scope.service), {
+      mount: (spec) => spec.create(scope.service),
+      serialize: scope.adapterResult.serialize,
+      insertFragmentMarkers: scope.adapterResult.insertFragmentMarkers,
+    });
+
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.write(shell.start);
+    res.write(initialHtml);
+    res.write(shell.appClose);
+    res.write(`<script type="module" src="/client.js"></script>`);
+    await done;
+    res.write('</body></html>');
+    res.end();
+  } catch (error) {
+    const { status, body, headers } = handleServiceError(error);
+    if (!res.headersSent) {
+      res.writeHead(status, headers);
+      res.end(body);
+    }
+  } finally {
+    scope.dispose();
+  }
+}).listen(3000);
+```
+
+### Server with Express Integration
+
+All handlers use standard `IncomingMessage`/`ServerResponse`, so they work directly with Express:
+
+```ts
+import express from 'express';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  createParse5Adapter,
+  createStreamingServer,
+  createStaticHandler,
+  createDataPrefetchHandler,
+} from '@rimitive/ssr/server';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const app = express();
+
+// Express static middleware for non-JS assets (images, CSS, etc.)
+app.use('/public', express.static(join(__dirname, '../public')));
+
+// Rimitive static handler for JS bundles
+const serveStatic = createStaticHandler({
+  clientDir: join(__dirname, '../dist/client'),
+  urlPatterns: ['/client.js', '/assets/'],
+});
+
+app.use((req, res, next) => {
+  if (serveStatic(req, res)) return;
+  next();
+});
+
+// Data prefetch for client-side navigation
+const handlePrefetch = createDataPrefetchHandler({
+  createService: (path) => {
+    const { adapter } = createParse5Adapter();
+    return createService(adapter, { initialPath: path });
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+  getData: (svc) => svc.loader.getData(),
+});
+
+app.use(async (req, res, next) => {
+  try {
+    if (await handlePrefetch(req, res)) return;
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Streaming SSR catch-all
+const handleStreaming = createStreamingServer({
+  shell: { title: 'Express App', streamKey: '__APP__' },
+  clientSrc: '/client.js',
+  createService: ({ pathname, onResolve }) => {
+    const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
+    const service = createService(adapter, { initialPath: pathname, onResolve });
+    return { service, serialize, insertFragmentMarkers };
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+});
+
+app.use(async (req, res, next) => {
+  try {
+    await handleStreaming(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.listen(3000);
+```
+
+### Production Configuration with Logging
+
+Use `createLogger` for structured SSR lifecycle logging and `createRequestLogger` for HTTP request logging:
+
+```ts
+import { createServer } from 'node:http';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  createParse5Adapter,
+  createStreamingServer,
+  createStaticHandler,
+  createDataPrefetchHandler,
+  createRequestLogger,
+  createLogger,
+  handleServiceError,
+} from '@rimitive/ssr/server';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Structured SSR lifecycle logger
+const ssrLogger = createLogger({
+  level: 'info',
+  output: (entry) => {
+    console.log(JSON.stringify({
+      level: entry.level,
+      event: entry.event.type,
+      message: entry.message,
+      timestamp: entry.timestamp,
+    }));
+  },
+});
+
+// HTTP request logger
+const logRequest = createRequestLogger({
+  exclude: ['/assets/', '/favicon.ico'],
+  log: (entry) => {
+    console.log(JSON.stringify({
+      method: entry.method,
+      url: entry.url,
+      status: entry.status,
+      durationMs: entry.durationMs,
+    }));
+  },
+});
+
+const serveStatic = createStaticHandler({
+  clientDir: join(__dirname, '../dist/client'),
+  urlPatterns: ['/client.js', '/assets/'],
+});
+
+const handlePrefetch = createDataPrefetchHandler({
+  createService: (path) => {
+    const { adapter } = createParse5Adapter();
+    return createService(adapter, { initialPath: path });
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+  getData: (svc) => svc.loader.getData(),
+});
+
+const handleStreaming = createStreamingServer({
+  shell: { title: 'Production App', streamKey: '__APP__' },
+  clientSrc: '/client.js',
+  createService: ({ pathname, onResolve }) => {
+    const reqLog = ssrLogger.request(pathname);
+    reqLog.serviceCreated();
+
+    const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
+    const service = createService(adapter, {
+      initialPath: pathname,
+      onResolve: (id, data) => {
+        reqLog.chunkSent(id);
+        onResolve(id, data);
+      },
+    });
+
+    reqLog.renderStart();
+    return { service, serialize, insertFragmentMarkers };
+  },
+  createApp: (svc) => App(svc),
+  mount: (svc) => (spec) => spec.create(svc),
+});
+
+const server = createServer(async (req, res) => {
+  await logRequest(req, res, async () => {
+    try {
+      if (serveStatic(req, res)) return;
+      if (await handlePrefetch(req, res)) return;
+      await handleStreaming(req, res);
+    } catch (error) {
+      const { status, body, headers } = handleServiceError(error);
+      if (!res.headersSent) {
+        res.writeHead(status, headers);
+        res.end(body);
+      }
+    }
+  });
+});
+
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+server.listen(PORT, () => {
+  console.log(`Production server listening on port ${PORT}`);
+});
+```
+
+---
+
 ## Troubleshooting
 
 ### "Cross-request state leakage"
