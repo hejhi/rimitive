@@ -9,6 +9,8 @@ import { MapModule } from '@rimitive/view/map';
 import {
   createServiceFactory,
   createConfiguredServiceFactory,
+  createRequestScope,
+  handleServiceError,
 } from './create-service-factory';
 
 describe('createServiceFactory', () => {
@@ -207,5 +209,184 @@ describe('createConfiguredServiceFactory', () => {
     const { service: s2 } = factory();
 
     expect(s1).not.toBe(s2);
+  });
+
+  it('should call onCreate hook with service and adapterResult', () => {
+    const onCreate = vi.fn();
+    const factory = createConfiguredServiceFactory({
+      modules: () => [],
+      lifecycle: { onCreate },
+    });
+
+    const { service, adapterResult } = factory();
+
+    expect(onCreate).toHaveBeenCalledOnce();
+    expect(onCreate).toHaveBeenCalledWith(service, adapterResult);
+  });
+});
+
+describe('service lifecycle hooks', () => {
+  describe('onCreate', () => {
+    it('should call onCreate when service is created via createServiceFactory', () => {
+      const onCreate = vi.fn();
+      const factory = createServiceFactory({
+        lifecycle: { onCreate },
+      });
+
+      const { service, adapterResult } = factory();
+
+      expect(onCreate).toHaveBeenCalledOnce();
+      expect(onCreate).toHaveBeenCalledWith(service, adapterResult);
+    });
+
+    it('should call onCreate for each service creation', () => {
+      const onCreate = vi.fn();
+      const factory = createServiceFactory({
+        lifecycle: { onCreate },
+      });
+
+      factory();
+      factory();
+      factory();
+
+      expect(onCreate).toHaveBeenCalledTimes(3);
+    });
+
+    it('should not call onCreate when not provided', () => {
+      const factory = createServiceFactory({ lifecycle: {} });
+      const { service } = factory();
+
+      // Should work without errors
+      expect(service.signal).toBeDefined();
+    });
+  });
+
+  describe('factory without lifecycle', () => {
+    it('should work with no lifecycle config', () => {
+      const factory = createServiceFactory();
+      const { service } = factory();
+
+      expect(service.signal).toBeDefined();
+    });
+  });
+});
+
+describe('createRequestScope', () => {
+  it('should return service and adapterResult', () => {
+    const factory = createServiceFactory();
+    const scope = createRequestScope(factory);
+
+    expect(scope.service.signal).toBeDefined();
+    expect(scope.adapterResult.serialize).toBeDefined();
+  });
+
+  it('should pass request options to factory', () => {
+    const onResolve = vi.fn();
+    const factory = createServiceFactory();
+    const scope = createRequestScope(factory, {
+      hydrationData: { key: 'value' },
+      onResolve,
+    });
+
+    expect(scope.service.loader).toBeDefined();
+  });
+
+  it('should dispose service on scope.dispose()', () => {
+    const factory = createServiceFactory();
+    const scope = createRequestScope(factory);
+
+    // Should not throw
+    scope.dispose();
+  });
+
+  it('should be safe to call dispose multiple times', () => {
+    const factory = createServiceFactory();
+    const scope = createRequestScope(factory);
+
+    scope.dispose();
+    scope.dispose();
+    scope.dispose();
+    // No error thrown
+  });
+
+  it('should create fresh scope per call', () => {
+    const factory = createServiceFactory();
+    const scope1 = createRequestScope(factory);
+    const scope2 = createRequestScope(factory);
+
+    expect(scope1.service).not.toBe(scope2.service);
+    expect(scope1.adapterResult).not.toBe(scope2.adapterResult);
+  });
+
+  it('should trigger onCreate hook via factory', () => {
+    const onCreate = vi.fn();
+    const factory = createServiceFactory({
+      lifecycle: { onCreate },
+    });
+
+    createRequestScope(factory);
+
+    expect(onCreate).toHaveBeenCalledOnce();
+  });
+});
+
+describe('handleServiceError', () => {
+  it('should return a 500 error response with default body', () => {
+    const response = handleServiceError(new Error('test error'));
+
+    expect(response.status).toBe(500);
+    expect(response.headers['Content-Type']).toBe('text/html');
+    expect(response.body).toContain('500');
+    expect(response.body).toContain('Internal Server Error');
+  });
+
+  it('should use custom onError body when provided', () => {
+    const lifecycle = {
+      onError: () => '<h1>Custom Error Page</h1>',
+    };
+    const response = handleServiceError(new Error('test'), lifecycle);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toBe('<h1>Custom Error Page</h1>');
+    expect(response.headers['Content-Type']).toBe('text/html');
+  });
+
+  it('should pass the error to onError callback', () => {
+    const onError = vi.fn(() => '<h1>Error</h1>');
+    const error = new Error('specific error');
+    handleServiceError(error, { onError });
+
+    expect(onError).toHaveBeenCalledWith(error);
+  });
+
+  it('should fall back to default body when onError returns undefined', () => {
+    const lifecycle = {
+      onError: () => undefined,
+    };
+    const response = handleServiceError(new Error('test'), lifecycle);
+
+    expect(response.body).toContain('500');
+    expect(response.body).toContain('Internal Server Error');
+  });
+
+  it('should work without lifecycle parameter', () => {
+    const response = handleServiceError(new Error('test'));
+
+    expect(response.status).toBe(500);
+    expect(response.body).toContain('500');
+  });
+
+  it('should handle non-Error objects', () => {
+    const response = handleServiceError('string error');
+
+    expect(response.status).toBe(500);
+    expect(response.body).toContain('500');
+  });
+
+  it('should return valid HTML in default response', () => {
+    const response = handleServiceError(new Error('test'));
+
+    expect(response.body).toContain('<!DOCTYPE html>');
+    expect(response.body).toContain('</html>');
   });
 });

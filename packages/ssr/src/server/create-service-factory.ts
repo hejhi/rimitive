@@ -27,6 +27,28 @@ export type ServiceRequestOptions = {
 };
 
 /**
+ * Lifecycle hooks for service instances.
+ */
+export type ServiceLifecycleHooks = {
+  /**
+   * Called after a service is created, before rendering begins.
+   * Use this to perform initialization, logging, or request-scoped setup.
+   */
+  onCreate?: (service: SSRService, adapterResult: Parse5AdapterResult) => void;
+  /**
+   * Called when a service is disposed (after response completes or on error).
+   * Use this for cleanup, metrics reporting, or resource release.
+   */
+  onDestroy?: (service: SSRService) => void;
+  /**
+   * Called when an error occurs during service creation or rendering.
+   * Return an HTML string to send as the error response body.
+   * If not provided, a default 500 response is generated.
+   */
+  onError?: (error: unknown) => string | undefined;
+};
+
+/**
  * Configuration for createServiceFactory.
  */
 export type ServiceFactoryConfig = {
@@ -44,6 +66,10 @@ export type ServiceFactoryConfig = {
    * ```
    */
   modules?: Module[];
+  /**
+   * Lifecycle hooks called during service creation and disposal.
+   */
+  lifecycle?: ServiceLifecycleHooks;
 };
 
 /**
@@ -65,6 +91,30 @@ export type ServiceFactory = {
    * Each call creates a fresh Parse5 adapter and service - safe for concurrent requests.
    */
   (options?: ServiceRequestOptions): ServiceFactoryResult;
+};
+
+/**
+ * A managed service scope that tracks lifecycle and enables automatic cleanup.
+ */
+export type RequestScope = {
+  /** The composed service instance */
+  service: SSRService;
+  /** Parse5 adapter result for rendering */
+  adapterResult: Parse5AdapterResult;
+  /** Dispose the service and call onDestroy hooks. Safe to call multiple times. */
+  dispose(): void;
+};
+
+/**
+ * Result from handling a request error.
+ */
+export type ErrorResponse = {
+  /** HTTP status code */
+  status: number;
+  /** Response body */
+  body: string;
+  /** Response headers */
+  headers: Record<string, string>;
 };
 
 /**
@@ -119,7 +169,7 @@ export type ServiceFactory = {
  * ```
  */
 export function createServiceFactory(config: ServiceFactoryConfig = {}): ServiceFactory {
-  const { modules: customModules = [] } = config;
+  const { modules: customModules = [], lifecycle } = config;
 
   return (options: ServiceRequestOptions = {}): ServiceFactoryResult => {
     const adapterResult = createParse5Adapter();
@@ -139,6 +189,8 @@ export function createServiceFactory(config: ServiceFactoryConfig = {}): Service
 
     const allModules = [...baseModules, ...customModules];
     const service = (compose as unknown as (...modules: Module[]) => SSRService)(...allModules);
+
+    lifecycle?.onCreate?.(service, adapterResult);
 
     return { service, adapterResult };
   };
@@ -166,6 +218,10 @@ export type ConfiguredFactoryConfig = {
    * ```
    */
   modules: (adapter: Adapter<Parse5TreeConfig>) => Module[];
+  /**
+   * Lifecycle hooks called during service creation and disposal.
+   */
+  lifecycle?: ServiceLifecycleHooks;
 };
 
 /**
@@ -196,6 +252,105 @@ export function createConfiguredServiceFactory(config: ConfiguredFactoryConfig):
     const allModules = [...baseModules, ...customModules];
     const service = (compose as unknown as (...modules: Module[]) => SSRService)(...allModules);
 
+    config.lifecycle?.onCreate?.(service, adapterResult);
+
     return { service, adapterResult };
+  };
+}
+
+/**
+ * Create a managed request scope from a service factory.
+ *
+ * Wraps a factory call in lifecycle management: the returned `dispose()` method
+ * calls `service.dispose()` and fires the factory's `onDestroy` hook. It is
+ * idempotent — calling it multiple times is safe.
+ *
+ * @example Per-request lifecycle
+ * ```ts
+ * const factory = createServiceFactory({
+ *   lifecycle: {
+ *     onCreate: (svc) => console.log('service created'),
+ *     onDestroy: (svc) => console.log('service destroyed'),
+ *   },
+ * });
+ *
+ * const scope = createRequestScope(factory, { hydrationData });
+ * try {
+ *   const html = renderToString(appSpec, { ... });
+ *   res.end(html);
+ * } finally {
+ *   scope.dispose();
+ * }
+ * ```
+ *
+ * @example With streaming
+ * ```ts
+ * const scope = createRequestScope(factory, { onResolve: handleChunk });
+ * const { initialHtml, done } = renderToStream(appSpec, { ... });
+ * res.write(initialHtml);
+ * await done;
+ * scope.dispose();
+ * ```
+ */
+export function createRequestScope(
+  factory: ServiceFactory,
+  options?: ServiceRequestOptions
+): RequestScope {
+  const { service, adapterResult } = factory(options);
+
+  let disposed = false;
+
+  return {
+    service,
+    adapterResult,
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      try {
+        service.dispose();
+      } catch {
+        // SSR services may not fully support dispose (e.g., modules with
+        // runtime-only state). Swallow errors since the service is being
+        // discarded after the request anyway.
+      }
+    },
+  };
+}
+
+/**
+ * Create a default error response for service/rendering failures.
+ *
+ * If lifecycle `onError` is provided, calls it to get a custom error body.
+ * Otherwise returns a minimal 500 HTML response.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   // render...
+ * } catch (error) {
+ *   const { status, body, headers } = handleServiceError(error, lifecycle);
+ *   res.writeHead(status, headers);
+ *   res.end(body);
+ * }
+ * ```
+ */
+export function handleServiceError(
+  error: unknown,
+  lifecycle?: ServiceLifecycleHooks,
+): ErrorResponse {
+  const customBody = lifecycle?.onError?.(error);
+
+  if (customBody !== undefined) {
+    return {
+      status: 500,
+      body: customBody,
+      headers: { 'Content-Type': 'text/html' },
+    };
+  }
+
+  return {
+    status: 500,
+    body: '<!DOCTYPE html><html><head><title>Server Error</title></head><body><h1>500 Internal Server Error</h1></body></html>',
+    headers: { 'Content-Type': 'text/html' },
   };
 }

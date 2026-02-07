@@ -54,13 +54,21 @@ export { createHtmlShell } from './html-shell';
 export type { HtmlShellOptions, HtmlShell } from './html-shell';
 
 // Service factory
-export { createServiceFactory, createConfiguredServiceFactory } from './create-service-factory';
+export {
+  createServiceFactory,
+  createConfiguredServiceFactory,
+  createRequestScope,
+  handleServiceError,
+} from './create-service-factory';
 export type {
   ServiceFactoryConfig,
   ServiceRequestOptions,
   ServiceFactoryResult,
   ServiceFactory,
   ConfiguredFactoryConfig,
+  ServiceLifecycleHooks,
+  RequestScope,
+  ErrorResponse,
 } from './create-service-factory';
 
 // Async fragment utilities (server-side)
