@@ -47,27 +47,6 @@ export type StreamWriter = {
 };
 
 /**
- * Create a stream writer for generating streaming JavaScript code.
- *
- * The writer generates JavaScript code that sets up and communicates with a
- * streaming receiver on the client. The receiver queues data chunks until
- * a loader connects, then forwards directly.
- *
- * @param streamKey - The window property name (e.g., '__MY_APP_STREAM__')
- * @returns StreamWriter with bootstrapCode() and chunkCode() methods
- *
- * @example
- * ```ts
- * const stream = createStreamWriter('__APP_STREAM__');
- *
- * res.write(`<head><script>${stream.bootstrapCode()}</script></head>`);
- * res.write(`<body>${initialHtml}</body>`);
- *
- * // As async boundaries resolve:
- * res.write(`<script>${stream.chunkCode('stats', { users: 100 })}</script>`);
- * ```
- */
-/**
  * Safely serialize a value for embedding in a script tag.
  * Escapes characters that could break out of the script context:
  * - < and > to prevent </script> breakout and XHTML compatibility
@@ -90,6 +69,27 @@ export function safeJsonStringify(value: unknown): string {
     .replace(/\u2029/g, '\\u2029');
 }
 
+/**
+ * Create a stream writer for generating streaming JavaScript code.
+ *
+ * The writer generates JavaScript code that sets up and communicates with a
+ * streaming receiver on the client. The receiver queues data chunks until
+ * a loader connects, then forwards directly.
+ *
+ * @param streamKey - The window property name (e.g., '__MY_APP_STREAM__')
+ * @returns StreamWriter with bootstrapCode() and chunkCode() methods
+ *
+ * @example
+ * ```ts
+ * const stream = createStreamWriter('__APP_STREAM__');
+ *
+ * res.write(`<head><script>${stream.bootstrapCode()}</script></head>`);
+ * res.write(`<body>${initialHtml}</body>`);
+ *
+ * // As async boundaries resolve:
+ * res.write(`<script>${stream.chunkCode('stats', { users: 100 })}</script>`);
+ * ```
+ */
 export function createStreamWriter(streamKey: string): StreamWriter {
   return {
     key: streamKey,

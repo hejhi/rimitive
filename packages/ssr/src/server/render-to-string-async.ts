@@ -17,15 +17,26 @@ import type { Serialize } from './parse5-adapter';
 import { renderToString } from './render-to-string';
 import { resolveAllAsyncFragments } from './resolve-fragments';
 
+/**
+ * Anything that can be rendered asynchronously: a mounted NodeRef,
+ * an unresolved AsyncFragment, or an unmounted RefSpec.
+ */
 export type AsyncRenderable<TElement> =
   | NodeRef<TElement>
   | AsyncFragment<TElement>
   | RefSpec<TElement>;
 
+/**
+ * Options for renderToStringAsync.
+ */
 export type RenderToStringAsyncOptions<TSvc> = {
+  /** The composed service instance */
   svc: TSvc;
+  /** Mount function to create NodeRef from RefSpec */
   mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
+  /** Function to serialize elements to HTML (from createParse5Adapter) */
   serialize: Serialize;
+  /** Function to insert fragment markers (from createParse5Adapter) */
   insertFragmentMarkers: (fragment: FragmentRef<unknown>) => void;
 };
 
