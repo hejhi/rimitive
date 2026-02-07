@@ -92,6 +92,23 @@ export type { StaticHandlerConfig, StaticHandler } from './static-handler';
 export { createDataPrefetchHandler } from './data-prefetch-handler';
 export type { DataPrefetchHandlerConfig, DataPrefetchHandler } from './data-prefetch-handler';
 
+// Development utilities
+export {
+  createDevErrorPage,
+  createRequestLogger,
+  installSourceMapSupport,
+  createDevServer,
+} from './dev';
+export type {
+  DevErrorPageOptions,
+  LogLevel,
+  RequestLogEntry,
+  RequestLoggerOptions,
+  RequestLoggerMiddleware,
+  DevServerConfig,
+  DevServerResult,
+} from './dev';
+
 // Async fragment utilities (server-side)
 export {
   isAsyncFragment,
