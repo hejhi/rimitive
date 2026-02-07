@@ -46,6 +46,13 @@ describe('createHtmlShell', () => {
       expect(shell.start).toContain('<div id="root">');
     });
 
+    it('should skip root wrapper when rootId is false', () => {
+      const shell = createHtmlShell({ rootId: false });
+      expect(shell.start).not.toContain('<div id=');
+      expect(shell.start).toContain('<body>');
+      expect(shell.appClose).toBe('');
+    });
+
     it('should include meta charset and viewport', () => {
       const shell = createHtmlShell();
       expect(shell.start).toContain('<meta charset="UTF-8">');

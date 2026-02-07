@@ -23,8 +23,8 @@ export type HtmlShellOptions = {
   hydrationData?: Record<string, unknown> | null;
   /** Window property name for hydration data (defaults to '__RIMITIVE_DATA__') */
   hydrationKey?: string;
-  /** ID for the root app container element (defaults to 'app') */
-  rootId?: string;
+  /** ID for the root app container element (defaults to 'app', set to false to skip wrapper) */
+  rootId?: string | false;
 };
 
 /**
@@ -110,6 +110,7 @@ export function createHtmlShell(options: HtmlShellOptions = {}): HtmlShell {
   const stream = streamKey ? createStreamWriter(streamKey) : undefined;
   const styleContent = Array.isArray(styles) ? styles.join('\n') : styles;
 
+  const rootOpen = rootId !== false ? `\n  <div id="${escapeHtml(rootId)}">` : '';
   const start = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -120,10 +121,9 @@ export function createHtmlShell(options: HtmlShellOptions = {}): HtmlShell {
   ${styleContent ? `<style>${styleContent}</style>` : ''}
   ${head}
 </head>
-<body>
-  <div id="${escapeHtml(rootId)}">`;
+<body>${rootOpen}`;
 
-  const appClose = `</div>`;
+  const appClose = rootId !== false ? `</div>` : '';
 
   const end = (clientSrc: string) => {
     const hydrationScript = hasHydrationData(hydrationData)

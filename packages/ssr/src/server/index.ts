@@ -71,6 +71,23 @@ export type {
   ErrorResponse,
 } from './create-service-factory';
 
+// Streaming server
+export { createStreamingServer } from './streaming-server';
+export type {
+  StreamingServerConfig,
+  StreamingHandler,
+  StreamingRequestContext,
+  StreamingServiceResult,
+} from './streaming-server';
+
+// Static file handler
+export { createStaticHandler } from './static-handler';
+export type { StaticHandlerConfig, StaticHandler } from './static-handler';
+
+// Data prefetch handler
+export { createDataPrefetchHandler } from './data-prefetch-handler';
+export type { DataPrefetchHandlerConfig, DataPrefetchHandler } from './data-prefetch-handler';
+
 // Async fragment utilities (server-side)
 export {
   isAsyncFragment,
