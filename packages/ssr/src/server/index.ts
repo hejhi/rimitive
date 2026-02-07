@@ -41,6 +41,14 @@ export type {
 export { createStreamWriter, safeJsonStringify } from './stream';
 export type { StreamWriter } from './stream';
 
+// Server stream writer (higher-level helpers)
+export {
+  createServerStreamWriter,
+  generateChunkScript,
+  generateBootstrapScript,
+} from './stream-writer';
+export type { ServerStreamWriter } from './stream-writer';
+
 // HTML shell
 export { createHtmlShell } from './html-shell';
 export type { HtmlShellOptions, HtmlShell } from './html-shell';
