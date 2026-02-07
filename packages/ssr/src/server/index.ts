@@ -109,6 +109,18 @@ export type {
   DevServerResult,
 } from './dev';
 
+// Logging
+export { createLogger } from './logging';
+export type {
+  SSRLogLevel,
+  SSRLogEvent,
+  SSRLogEntry,
+  SSRLogFormatter,
+  SSRLoggerOptions,
+  SSRLogger,
+  SSRRequestLogger,
+} from './logging';
+
 // Async fragment utilities (server-side)
 export {
   isAsyncFragment,
