@@ -391,7 +391,7 @@ describe('createDevServer', () => {
       callOrder.push('handler');
     });
 
-    const middleware = vi.fn((_req: IncomingMessage, _res: ServerResponse) => {
+    const middleware = vi.fn(() => {
       callOrder.push('middleware');
       return false;
     });

@@ -74,9 +74,7 @@ export const DetailPage = (svc: PageService) => {
         };
 
         const progress = computed(() =>
-          totalCount() > 0
-            ? (completedCount() / totalCount()) * 100
-            : 0
+          totalCount() > 0 ? (completedCount() / totalCount()) * 100 : 0
         );
 
         return div.props({ className: 'page detail-page' })(

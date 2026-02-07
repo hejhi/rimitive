@@ -579,12 +579,12 @@ describe('Example: Production configuration with logging', () => {
     reqLog.renderStart();
 
     // Simulate what happens in the production example's onResolve wrapper
-    const wrappedOnResolve = (id: string, _data: unknown) => {
+    const wrappedOnResolve = (id: string) => {
       reqLog.chunkSent(id);
     };
 
-    wrappedOnResolve('user-profile', { name: 'Alice' });
-    wrappedOnResolve('stats', { views: 100 });
+    wrappedOnResolve('user-profile');
+    wrappedOnResolve('stats');
 
     reqLog.renderComplete(2);
     reqLog.streamComplete();

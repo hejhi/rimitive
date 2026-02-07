@@ -20,7 +20,7 @@ export type RenderOptions<TService> = HtmlTemplateOptions & {
     options: { initialPath: string; onResolve?: (id: string, data: unknown) => void }
   ) => TService;
   /** Create the app spec from service */
-  createApp: (service: TService) => RefSpec<unknown>;
+  createApp: (service: TService) => () => RefSpec<unknown>;
   /** Path to client bundle */
   clientSrc?: string;
   /** Cache-Control header value */
@@ -56,7 +56,7 @@ export function renderToResponse<TService>(
 
   const { adapter, serialize } = createParse5Adapter();
   const service = createService(adapter, { initialPath: pathname });
-  const app = createApp(service);
+  const app = createApp(service)();
   const ref = app.create(service);
   const body = renderToString(ref, serialize);
 
@@ -126,7 +126,7 @@ export function renderToStreamingResponse<TService>(
         },
       });
 
-      const app = createApp(service);
+      const app = createApp(service)();
       const { initialHtml, done } = renderToStream(app, {
         mount: (spec: RefSpec<unknown>) => spec.create(service),
         serialize,

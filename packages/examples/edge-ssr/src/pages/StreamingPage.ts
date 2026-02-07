@@ -89,8 +89,8 @@ const ErrorFallback = (svc: Service, title: string, error: Reactive<unknown>) =>
   svc.el('div').props({ class: 'card error' })(
     svc.el('h3')(title),
     svc.el('p')('Something went wrong while loading this section.'),
-    svc.el('p').props({ class: 'error-detail' })(
-      () => error() instanceof Error ? (error() as Error).message : String(error())
+    svc.el('p').props({ class: 'error-detail' })(() =>
+      error() instanceof Error ? (error() as Error).message : String(error())
     )
   );
 

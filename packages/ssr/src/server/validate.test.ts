@@ -20,6 +20,13 @@ import {
 
 const noop = () => {};
 
+/** Create a shallow copy of `obj` without the given `key`. */
+function omit<T extends Record<string, unknown>, K extends keyof T>(obj: T, key: K): Omit<T, K> {
+  const copy = { ...obj };
+  delete copy[key];
+  return copy;
+}
+
 function validStreamingConfig() {
   return {
     shell: { streamKey: '__APP__', title: 'Test' },
@@ -174,7 +181,7 @@ describe('validateStreamingServerConfig', () => {
   // --- clientSrc ---
 
   it('should require clientSrc', () => {
-    const { clientSrc: _, ...config } = validStreamingConfig();
+    const config = omit(validStreamingConfig(), 'clientSrc');
     expect(() => validateStreamingServerConfig(config)).toThrow('clientSrc');
   });
 
@@ -193,7 +200,7 @@ describe('validateStreamingServerConfig', () => {
   // --- callbacks ---
 
   it('should require createService', () => {
-    const { createService: _, ...config } = validStreamingConfig();
+    const config = omit(validStreamingConfig(), 'createService');
     expect(() => validateStreamingServerConfig(config)).toThrow('createService');
   });
 
@@ -203,12 +210,12 @@ describe('validateStreamingServerConfig', () => {
   });
 
   it('should require createApp', () => {
-    const { createApp: _, ...config } = validStreamingConfig();
+    const config = omit(validStreamingConfig(), 'createApp');
     expect(() => validateStreamingServerConfig(config)).toThrow('createApp');
   });
 
   it('should require mount', () => {
-    const { mount: _, ...config } = validStreamingConfig();
+    const config = omit(validStreamingConfig(), 'mount');
     expect(() => validateStreamingServerConfig(config)).toThrow('mount');
   });
 
@@ -349,26 +356,26 @@ describe('validateDataPrefetchHandlerConfig', () => {
   });
 
   it('should require createService', () => {
-    const { createService: _, ...config } = validDataPrefetchConfig();
+    const config = omit(validDataPrefetchConfig(), 'createService');
     expect(() => validateDataPrefetchHandlerConfig(config)).toThrow(
       'createService',
     );
   });
 
   it('should require createApp', () => {
-    const { createApp: _, ...config } = validDataPrefetchConfig();
+    const config = omit(validDataPrefetchConfig(), 'createApp');
     expect(() => validateDataPrefetchHandlerConfig(config)).toThrow(
       'createApp',
     );
   });
 
   it('should require mount', () => {
-    const { mount: _, ...config } = validDataPrefetchConfig();
+    const config = omit(validDataPrefetchConfig(), 'mount');
     expect(() => validateDataPrefetchHandlerConfig(config)).toThrow('mount');
   });
 
   it('should require getData', () => {
-    const { getData: _, ...config } = validDataPrefetchConfig();
+    const config = omit(validDataPrefetchConfig(), 'getData');
     expect(() => validateDataPrefetchHandlerConfig(config)).toThrow('getData');
   });
 

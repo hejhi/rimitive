@@ -138,7 +138,7 @@ function createTestStreamingHandler(): StreamingHandler {
         create: () => nodeRef,
       } as RefSpec<unknown>;
     },
-    mount: (_svc: { pathname: string }) => (spec: RefSpec<unknown>) =>
+    mount: () => (spec: RefSpec<unknown>) =>
       spec.create(),
   });
 }
@@ -150,7 +150,7 @@ function startServer(
     const server = createServer(async (req, res) => {
       try {
         await handler(req, res);
-      } catch (err) {
+      } catch {
         if (!res.headersSent) {
           res.writeHead(500);
           res.end('Internal Server Error');
@@ -483,7 +483,7 @@ describe('streaming error handling (boundary fails mid-stream)', () => {
         };
         return containerSpec;
       },
-      mount: (_svc: TestService) => (spec: RefSpec<unknown>) => spec.create(),
+      mount: () => (spec: RefSpec<unknown>) => spec.create(),
     };
 
     return config;
@@ -1011,7 +1011,6 @@ describe('errors do not crash the server', () => {
   });
 
   it('server handles concurrent requests with mixed success/failure', async () => {
-    let requestIndex = 0;
     const handler = createStreamingServer({
       shell: {
         title: 'Concurrent Test',
@@ -1020,7 +1019,6 @@ describe('errors do not crash the server', () => {
       },
       clientSrc: '/client.js',
       createService: ({ pathname }) => {
-        requestIndex++;
         if (pathname === '/fail') {
           throw new Error('Intentional failure');
         }

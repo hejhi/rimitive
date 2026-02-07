@@ -69,7 +69,7 @@ function createTestStreamingHandler(): StreamingHandler {
         create: () => nodeRef,
       } as RefSpec<unknown>;
     },
-    mount: (_svc: { pathname: string }) => (spec: RefSpec<unknown>) =>
+    mount: () => (spec: RefSpec<unknown>) =>
       spec.create(),
   });
 }
@@ -104,7 +104,7 @@ function createTestPrefetchHandler(): DataPrefetchHandler {
       path,
       data: { page: path, timestamp: 12345 },
     }),
-    createApp: (_svc) => ({
+    createApp: () => ({
       status: 4 as RefSpec<unknown>['status'],
       create: () =>
         ({
@@ -117,7 +117,7 @@ function createTestPrefetchHandler(): DataPrefetchHandler {
           lastChild: null,
         }) as unknown as NodeRef<unknown>,
     }),
-    mount: (_svc) => (spec: RefSpec<unknown>) => spec.create(),
+    mount: () => (spec: RefSpec<unknown>) => spec.create(),
     getData: (svc) => svc.data,
   });
 }
@@ -130,7 +130,7 @@ function startServer(
     const server = createServer(async (req, res) => {
       try {
         await handler(req, res);
-      } catch (err) {
+      } catch {
         if (!res.headersSent) {
           res.writeHead(500);
           res.end('Internal Server Error');
@@ -340,7 +340,7 @@ describe('Express-style middleware pattern integration', () => {
   function streamingAsExpressMiddleware(
     handler: StreamingHandler,
   ): (req: IncomingMessage, res: ServerResponse, next: () => void) => Promise<void> {
-    return async (req, res, _next) => {
+    return async (req, res) => {
       await handler(req, res);
     };
   }
@@ -383,16 +383,16 @@ describe('Express-style middleware pattern integration', () => {
   });
 
   it('should work with Express-style error handling middleware', async () => {
-    const failingHandler = async (_req: IncomingMessage, _res: ServerResponse) => {
+    const failingHandler = async () => {
       throw new Error('Intentional test error');
     };
 
     let caughtError: unknown;
 
     // Simulate Express-style error wrapping around handler pipeline
-    const app = async (req: IncomingMessage, res: ServerResponse) => {
+    const app = async (...[, res]: [IncomingMessage, ServerResponse]) => {
       try {
-        await failingHandler(req, res);
+        await failingHandler();
       } catch (err) {
         caughtError = err;
         if (!res.headersSent) {

@@ -41,9 +41,9 @@ const handlePrefetch = createDataPrefetchHandler({
     const { adapter } = createParse5Adapter();
     return createService(adapter, { initialPath: path });
   },
-  createApp: (service) => AppLayout(service),
-  mount: (service) => (spec) => spec.create(service),
-  getData: (service) => service.loader.getData(),
+  createApp: (svc) => svc(AppLayout)(),
+  mount: (svc) => (spec) => svc(spec.create),
+  getData: ({ loader }) => loader.getData(),
 });
 
 // Streaming SSR handler
@@ -57,11 +57,14 @@ const handleStreaming = createStreamingServer({
   clientSrc: '/client.js',
   createService: ({ pathname, onResolve }) => {
     const { adapter, serialize, insertFragmentMarkers } = createParse5Adapter();
-    const service = createService(adapter, { initialPath: pathname, onResolve });
+    const service = createService(adapter, {
+      initialPath: pathname,
+      onResolve,
+    });
     return { service, serialize, insertFragmentMarkers };
   },
-  createApp: (service) => AppLayout(service),
-  mount: (service) => (spec) => spec.create(service),
+  createApp: (svc) => svc(AppLayout)(),
+  mount: (svc) => (spec) => svc(spec.create),
 });
 
 // Create HTTP server

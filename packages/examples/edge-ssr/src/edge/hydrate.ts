@@ -21,7 +21,7 @@ export type HydrateOptions<TService> = {
     options: { initialPath: string }
   ) => TService;
   /** Create the app spec from service */
-  createApp: (service: TService) => RefSpec<unknown>;
+  createApp: (service: TService) => () => RefSpec<unknown>;
   /** Stream key for streaming SSR (must match server). Requires service to have a loader. */
   streamKey?: string;
 };
@@ -66,7 +66,7 @@ export function hydrateApp<TService>(
   if (!root) {
     throw new Error(
       `Hydration root not found: "${rootSelector}". ` +
-      `Make sure this selector matches the element your App component creates.`
+        `Make sure this selector matches the element your App component creates.`
     );
   }
 
@@ -74,25 +74,25 @@ export function hydrateApp<TService>(
   const adapter = createClientAdapter(root);
 
   // Create service with hydration adapter
-  const service = createService(adapter, {
+  const svc = createService(adapter, {
     initialPath: window.location.pathname,
   });
 
   // Run the app to hydrate
-  const app = createApp(service);
-  app.create(service);
+  const app = createApp(svc);
+  app().create(svc);
 
   // Switch to normal DOM mode
   adapter.activate();
 
   // Connect to streaming receiver if streaming
   if (streamKey) {
-    connectStream(service as HasLoader, streamKey);
+    connectStream(svc as HasLoader, streamKey);
   }
 
   console.log('[hydrate] Complete');
 
-  return { service, adapter };
+  return { service: svc, adapter };
 }
 
 /**

@@ -3797,6 +3797,133 @@ div.props({ className: 'container' })(
 
 ---
 
+## lazy()
+
+The \`lazy()\` function wraps a dynamic import into a transparent stand-in. On the server (or once the import resolves), calls pass through directly. On the client before the chunk loads, it creates a reactive async boundary that swaps in the real content when the chunk arrives.
+
+## Syntax
+
+\`\`\`typescript
+lazy(importer)
+\`\`\`
+
+### Parameters
+
+**\`importer\`**
+: A function that returns a \`Promise\` — typically a dynamic \`import()\` with a \`.then()\` that resolves to a callable producing a \`RefSpec\`.
+
+### Return value
+
+The same type as whatever the promise resolves to. Calls are intercepted transparently — if the import has resolved, calls go straight through. If it hasn't, an async boundary is created.
+
+## Description
+
+\`lazy()\` intercepts exactly one call. The importer should resolve to a function that produces a \`RefSpec\` when called:
+
+\`\`\`typescript
+// The import resolves to a function: (data) => RefSpec
+const LazyChart = lazy(() =>
+  import('./Chart').then(m => m.Chart(svc))
+);
+
+// Call the result — if loaded, passes through; if not, creates async boundary
+const view = LazyChart(data);
+\`\`\`
+
+### Fast path (cached)
+
+When the import has already resolved (always the case on the server, since bundlers resolve imports synchronously), the call goes directly to the real value. No async boundary, no signal overhead.
+
+### Slow path (pending)
+
+When the import hasn't resolved yet:
+
+1. \`lazy()\` returns a wrapper function
+2. When called, the wrapper creates a reactive boundary using \`signal\` + \`match\`
+3. The boundary renders nothing while pending
+4. When the import resolves, \`match\` swaps in the real content
+5. \`ASYNC_FRAGMENT\` metadata is attached so SSR can introspect the boundary
+
+### preloadAll()
+
+Resolves all pending lazy imports. Call before hydration to prevent client/server mismatch:
+
+\`\`\`typescript
+await lazy.preloadAll();
+\`\`\`
+
+## Examples
+
+### Lazy-loaded route
+
+\`\`\`typescript
+const LazyStreamingPage = (svc: Service) =>
+  svc.lazy(() =>
+    import('./pages/StreamingPage').then(m => m.StreamingPage(svc))
+  );
+
+// Use in a route switch
+match(currentRoute, (route) => {
+  switch (route) {
+    case 'home': return HomePage(svc);
+    case 'streaming': return LazyStreamingPage(svc)();
+  }
+})
+\`\`\`
+
+### Multiple lazy components
+
+\`\`\`typescript
+const LazyChart = lazy(() =>
+  import('./Chart').then(m => m.Chart(svc))
+);
+const LazyTable = lazy(() =>
+  import('./Table').then(m => m.Table(svc))
+);
+
+// Both chunks load in parallel
+el('div')(
+  LazyChart(chartData),
+  LazyTable(tableData),
+)
+\`\`\`
+
+### Preload before hydration
+
+\`\`\`typescript
+// Server rendered the full page — ensure all chunks are
+// loaded before hydrating so the DOM matches
+await lazy.preloadAll();
+hydrate(containerEl, App);
+\`\`\`
+
+## Module usage
+
+\`lazy\` is available via \`LazyModule\` for use with \`compose()\`:
+
+\`\`\`typescript
+import { compose } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/extend';
+import { LazyModule } from '@rimitive/view/lazy';
+import { MatchModule } from '@rimitive/view/match';
+
+const { lazy } = compose(
+  SignalModule,
+  MatchModule.with({ adapter }),
+  LazyModule,
+);
+\`\`\`
+
+\`LazyModule\` depends on \`SignalModule\` and \`MatchModule\` — both must be composed.
+
+## See also
+
+- [match()](/view/match) — Conditional rendering (used internally by lazy boundaries)
+- [load()](/ssr/load) — Async data loading with fetcher/renderer pattern
+- [el()](/view/el) — Create elements
+
+---
+
 ## map()
 
 The \`map()\` function renders a reactive array as a list of elements.
@@ -4602,6 +4729,214 @@ const Tooltip = (anchor: HTMLElement, text: string) => {
 
 - [match()](/view/match) — Conditional rendering (often used with portals)
 - [mount()](/view/mount) — Alternative for one-off DOM insertion
+
+---
+
+## shadow()
+
+The \`shadow()\` function renders children into a shadow root attached to the parent element—creating an isolated DOM subtree with encapsulated styles.
+
+## Syntax
+
+\`\`\`typescript
+shadow(options)(...children)
+shadow(options).ref(callback)(...children)
+shadow(options).props(newOptions)(...children)
+\`\`\`
+
+### Parameters
+
+**\`options\`** (optional)
+: Configuration for the shadow root:
+- \`mode\`: \`'open'\` or \`'closed'\` — whether the shadow root is accessible via \`element.shadowRoot\`
+- \`styles\`: CSS string or array of strings to inject into the shadow root
+- \`delegatesFocus\`: Whether to delegate focus to the shadow tree
+
+**\`children\`**
+: Element specs to render inside the shadow root.
+
+### Return value
+
+A spec for use with \`mount()\` or as a child of other elements.
+
+## Description
+
+Shadow DOM provides style encapsulation—styles defined inside the shadow root don't leak out, and parent styles don't leak in (with some exceptions like inherited properties).
+
+\`\`\`typescript
+el('div').props({ className: 'host' })(
+  shadow({ mode: 'open', styles: '.inner { color: blue; }' })(
+    el('p').props({ className: 'inner' })('Styled inside shadow')
+  )
+)
+\`\`\`
+
+The \`.inner\` class only exists inside this shadow root. External \`.inner\` styles won't affect it.
+
+### Mode
+
+- **\`open\`**: The shadow root is accessible via \`element.shadowRoot\`. Use this for most cases.
+- **\`closed\`**: The shadow root is not accessible externally. Use for true encapsulation where you don't want consumers inspecting or modifying the shadow tree.
+
+\`\`\`typescript
+// Open - shadowRoot is accessible
+el('div')(shadow({ mode: 'open' })(content))
+// element.shadowRoot returns the ShadowRoot
+
+// Closed - shadowRoot is hidden
+el('div')(shadow({ mode: 'closed' })(content))
+// element.shadowRoot returns null
+\`\`\`
+
+### Lifecycle with .ref()
+
+Use \`.ref()\` to access the shadow root for imperative setup:
+
+\`\`\`typescript
+el('div')(
+  shadow({ mode: 'open' })
+    .ref((shadowRoot) => {
+      // Setup code runs when shadow is attached
+      const editor = createCodeMirror({ root: shadowRoot });
+
+      // Return cleanup function
+      return () => editor.destroy();
+    })
+    (el('div').props({ className: 'editor-container' })())
+)
+\`\`\`
+
+Multiple \`.ref()\` callbacks can be chained:
+
+\`\`\`typescript
+shadow({ mode: 'open' })
+  .ref(setupEditor)
+  .ref(setupTheme)
+  .ref(trackAnalytics)
+  (content)
+\`\`\`
+
+### Updating options with .props()
+
+Use \`.props()\` to update shadow options:
+
+\`\`\`typescript
+const baseShadow = shadow({ mode: 'open' });
+
+// Add styles later
+baseShadow.props({ styles: css })(content)
+
+// Or use a function to merge
+baseShadow.props((current) => ({
+  ...current,
+  styles: [...(current.styles || []), additionalCss]
+}))(content)
+\`\`\`
+
+## Examples
+
+### Encapsulated component
+
+\`\`\`typescript
+const Card = (title: string, body: string) => {
+  const styles = \`
+    .card {
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+  \`;
+
+  return el('div')(
+    shadow({ mode: 'open', styles })(
+      el('div').props({ className: 'card' })(
+        el('div').props({ className: 'title' })(title),
+        el('div')(body)
+      )
+    )
+  );
+};
+\`\`\`
+
+### Third-party library integration
+
+\`\`\`typescript
+const CodeEditor = (initialCode: string, onChange: (code: string) => void) => {
+  return el('div').props({ className: 'editor-host' })(
+    shadow({ mode: 'open' })
+      .ref((shadowRoot) => {
+        // Initialize CodeMirror inside the shadow root
+        const editor = CodeMirror(shadowRoot, {
+          value: initialCode,
+          mode: 'javascript',
+        });
+
+        editor.on('change', () => onChange(editor.getValue()));
+
+        return () => editor.toTextArea(); // cleanup
+      })
+      ()
+  );
+};
+\`\`\`
+
+### Multiple style sources
+
+\`\`\`typescript
+const baseStyles = \`
+  :host { display: block; }
+  * { box-sizing: border-box; }
+\`;
+
+const themeStyles = \`
+  .container { background: var(--bg, white); }
+\`;
+
+const componentStyles = \`
+  .button { padding: 0.5rem 1rem; }
+\`;
+
+el('custom-element')(
+  shadow({
+    mode: 'open',
+    styles: [baseStyles, themeStyles, componentStyles]
+  })(
+    el('div').props({ className: 'container' })(
+      el('button').props({ className: 'button' })('Click')
+    )
+  )
+)
+\`\`\`
+
+### Reactive content inside shadow
+
+Signals and computed values work inside shadow DOM:
+
+\`\`\`typescript
+const Counter = () => {
+  const count = signal(0);
+
+  return el('div')(
+    shadow({ mode: 'open', styles: '.count { font-size: 2rem; }' })(
+      el('span').props({ className: 'count' })(
+        () => \`Count: \${count()}\`
+      ),
+      el('button').props({
+        onclick: () => count(count() + 1)
+      })('Increment')
+    )
+  );
+};
+\`\`\`
+
+## See also
+
+- [el()](/view/el) — Create elements that can host shadow roots
+- [portal()](/view/portal) — Render to different DOM locations (different use case)
 
 ---
 
@@ -8696,6 +9031,31 @@ match(showModal, (show) => (show ? Modal() : null));
 
 ---
 
+## lazy
+
+Code-splitting with dynamic imports. Wraps an import into a stand-in that passes through when loaded, or creates an async boundary while pending.
+
+\`\`\`typescript
+import { LazyModule } from '@rimitive/view/lazy';
+
+const { lazy, match, el } = compose(...modules, MatchModule.with({ adapter }), LazyModule);
+
+// Resolve to a RefSpec-producing function in .then()
+const LazyChart = lazy(() =>
+  import('./Chart').then(m => m.Chart(svc))
+);
+
+// Use like any other component — async boundary is transparent
+el('div')(LazyChart(data));
+
+// Before hydration, ensure all chunks are loaded
+await lazy.preloadAll();
+\`\`\`
+
+On the server, bundlers resolve imports synchronously so \`lazy()\` always hits the fast path (direct call-through, no overhead). On the client, a \`signal\` + \`match\` boundary renders nothing until the chunk arrives, then swaps in the real content.
+
+---
+
 ## portal
 
 Renders content into a different DOM location.
@@ -8711,6 +9071,49 @@ portal()(el('div').props({ className: 'modal' })('Content'));
 // Portal to specific element
 portal(() => document.getElementById('tooltips'))(Tooltip());
 \`\`\`
+
+---
+
+## shadow
+
+Renders children into a shadow root attached to the parent element—creating an isolated DOM subtree with encapsulated styles.
+
+\`\`\`typescript
+import { createShadowModule } from '@rimitive/view/shadow';
+
+const { shadow, el } = compose(...modules, createShadowModule(adapter));
+
+// Basic shadow DOM
+el('div').props({ className: 'host' })(
+  shadow({ mode: 'open' })(
+    el('p')('Inside shadow DOM')
+  )
+)
+
+// With scoped styles
+const css = \`.content { color: blue; }\`;
+el('div')(
+  shadow({ mode: 'open', styles: css })(
+    el('span').props({ className: 'content' })('Styled text')
+  )
+)
+
+// Access shadow root imperatively via .ref()
+el('div')(
+  shadow({ mode: 'open' })
+    .ref((shadowRoot) => {
+      const editor = createEditor({ root: shadowRoot });
+      return () => editor.dispose(); // cleanup
+    })
+    (el('div')('Content'))
+)
+\`\`\`
+
+Options:
+
+- \`mode\`: \`'open'\` (accessible via \`element.shadowRoot\`) or \`'closed'\` (not accessible)
+- \`styles\`: CSS string or array of strings to inject into the shadow root
+- \`delegatesFocus\`: Whether to delegate focus to the shadow tree
 
 ---
 

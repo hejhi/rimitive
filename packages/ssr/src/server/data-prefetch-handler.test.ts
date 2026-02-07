@@ -62,8 +62,8 @@ describe('createDataPrefetchHandler', () => {
 
     const handler = createDataPrefetchHandler({
       createService,
-      createApp: vi.fn((_svc) => ({}) as RefSpec<unknown>),
-      mount: vi.fn((_svc) => (_spec: RefSpec<unknown>) => mockNodeRef),
+      createApp: vi.fn(() => ({}) as RefSpec<unknown>),
+      mount: vi.fn(() => () => mockNodeRef),
       getData: (svc) => svc.loader.getData(),
     });
 
@@ -125,7 +125,7 @@ describe('createDataPrefetchHandler', () => {
   });
 
   it('should support custom prefix', async () => {
-    const createService = vi.fn((_path: string) => ({
+    const createService = vi.fn(() => ({
       loader: { getData: () => ({ ok: true }) },
     }));
     const mockNodeRef = {} as NodeRef<unknown>;
@@ -133,8 +133,8 @@ describe('createDataPrefetchHandler', () => {
     const handler = createDataPrefetchHandler({
       prefix: '/_prefetch',
       createService,
-      createApp: vi.fn((_svc) => ({}) as RefSpec<unknown>),
-      mount: vi.fn((_svc) => (_spec: RefSpec<unknown>) => mockNodeRef),
+      createApp: vi.fn(() => ({}) as RefSpec<unknown>),
+      mount: vi.fn(() => () => mockNodeRef),
       getData: (svc) => svc.loader.getData(),
     });
 
@@ -211,7 +211,7 @@ describe('data prefetch handler — integration', () => {
         };
         return containerSpec;
       },
-      mount: (_svc) => (spec: RefSpec<unknown>) => spec.create(),
+      mount: () => (spec: RefSpec<unknown>) => spec.create(),
       getData: (svc) => svc.loader.getData(),
     });
 

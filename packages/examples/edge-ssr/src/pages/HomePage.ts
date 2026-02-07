@@ -7,26 +7,26 @@ import type { Service } from '../service.js';
 export const HomePage = (svc: Service) => (): RefSpec<HTMLDivElement> => {
   const { el } = svc;
 
-  return el('div').props({ class: 'page home-page' })(
-    el('h1')('Rimitive Edge SSR'),
-    el('p').props({ class: 'lead' })(
-      'Full SSR running on Cloudflare Workers.'
-    ),
-    el('p')(`Rendered at: ${new Date().toISOString()}`),
+  const div = el('div');
+  const p = el('p');
+  const li = el('li');
 
-    el('div').props({ class: 'card' })(
+  return div.props({ class: 'page home-page' })(
+    el('h1')('Rimitive Edge SSR'),
+    p.props({ class: 'lead' })('Full SSR running on Cloudflare Workers.'),
+    p(`Rendered at: ${new Date().toISOString()}`),
+
+    div.props({ class: 'card' })(
       el('h3')('What This Proves'),
       el('ul')(
-        el('li')('Parse5 adapter works in Workers runtime'),
-        el('li')('Same components render on edge and client'),
-        el('li')('Zero Node.js dependencies'),
-        el('li')('Streaming SSR with async boundaries'),
-        el('li')('Client-side hydration and navigation')
+        li('Parse5 adapter works in Workers runtime'),
+        li('Same components render on edge and client'),
+        li('Zero Node.js dependencies'),
+        li('Streaming SSR with async boundaries'),
+        li('Client-side hydration and navigation')
       )
     ),
 
-    el('p')(
-      el('a').props({ href: '/streaming' })('Try the streaming demo →')
-    )
+    p(el('a').props({ href: '/streaming' })('Try the streaming demo →'))
   );
 };

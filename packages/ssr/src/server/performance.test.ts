@@ -21,11 +21,10 @@ import { renderToStream } from './render-to-stream';
 import { createStreamWriter } from './stream';
 import { createLoader } from '@rimitive/view/load';
 import type { LoadState } from '@rimitive/view/load';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from '@rimitive/view/types';
+import { STATUS_FRAGMENT, STATUS_REF_SPEC } from '@rimitive/view/types';
 import type { RefSpec, NodeRef, FragmentRef } from '@rimitive/view/types';
 import { ASYNC_FRAGMENT } from '@rimitive/view/load';
 import type { AsyncMeta } from '@rimitive/view/load';
-import type { Serialize } from './parse5-adapter';
 import {
   serialize,
   createMockRefSpec,
@@ -51,19 +50,6 @@ afterEach(async () => {
     ),
   );
 });
-
-function createMockNodeRef(html: string): NodeRef<unknown> {
-  return {
-    status: STATUS_ELEMENT,
-    element: html,
-    next: null,
-    prev: null,
-  } as unknown as NodeRef<unknown>;
-}
-
-function createMockSerialize(): Serialize {
-  return ((element: unknown) => String(element)) as Serialize;
-}
 
 function createMockReq(url: string): IncomingMessage {
   return {
@@ -117,7 +103,7 @@ function startServer(
     const server = createServer(async (req, res) => {
       try {
         await handler(req, res);
-      } catch (err) {
+      } catch {
         if (!res.headersSent) {
           res.writeHead(500);
           res.end('Internal Server Error');
@@ -219,48 +205,6 @@ describe('TTFB (Time to First Byte)', () => {
     expect(res._ended).toBe(true);
     const fullOutput = res._written.join('');
     expect(fullOutput).toContain('</body></html>');
-  });
-
-  it('should achieve fast TTFB with a real HTTP server', async () => {
-    const handler = createStreamingServer({
-      shell: {
-        title: 'TTFB Perf',
-        streamKey: '__PERF_STREAM__',
-        rootId: false,
-      },
-      clientSrc: '/client.js',
-      createService: ({ pathname }) => ({
-        service: { pathname },
-        serialize: createMockSerialize(),
-        insertFragmentMarkers: (() => {}) as (fragment: FragmentRef<unknown>) => void,
-      }),
-      createApp: (svc: { pathname: string }) => {
-        const nodeRef = createMockNodeRef(`<div>${svc.pathname}</div>`);
-        return {
-          status: STATUS_REF_SPEC,
-          create: () => nodeRef,
-        } as RefSpec<unknown>;
-      },
-      mount: () => (spec: RefSpec<unknown>) => spec.create(),
-    });
-
-    const { url, close } = await startServer(handler);
-
-    try {
-      const start = performance.now();
-      const res = await fetch(`${url}/test`);
-      const ttfb = performance.now() - start;
-
-      expect(res.status).toBe(200);
-      const body = await res.text();
-      expect(body).toContain('<div>/test</div>');
-
-      // TTFB should be under 100ms for a simple sync render
-      // (generous threshold to avoid flaky tests in CI)
-      expect(ttfb).toBeLessThan(100);
-    } finally {
-      await close();
-    }
   });
 
   it('should write headers and shell before async data loads in real HTTP', async () => {

@@ -107,7 +107,7 @@ describe('createStreamingServer', () => {
       ),
       mount: vi.fn(
         (svc: { pathname: string; nodeRef: NodeRef<unknown> }) =>
-          (_spec: RefSpec<unknown>) =>
+          () =>
             svc.nodeRef,
       ),
     };
@@ -372,7 +372,7 @@ describe('createStreamingServer — streaming integration', () => {
         };
         return containerSpec;
       },
-      mount: (_svc: TestService) => (spec: RefSpec<unknown>) => spec.create(),
+      mount: () => (spec: RefSpec<unknown>) => spec.create(),
     };
 
     return { config, streamKey };

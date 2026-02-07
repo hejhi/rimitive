@@ -10,7 +10,7 @@ import type { RefSpec } from '@rimitive/view/types';
 import type { Service } from './service.js';
 import { HomePage } from './pages/index.js';
 
-const Nav = (svc: Service) => {
+const Nav = (svc: Service) => () => {
   const { el, router } = svc;
 
   // Use router.navigate for SPA navigation
@@ -31,7 +31,7 @@ const Nav = (svc: Service) => {
   );
 };
 
-const NotFound = (svc: Service) =>
+const NotFound = (svc: Service) => () =>
   svc.el('div').props({ class: 'page not-found' })(
     svc.el('h1')('404 - Not Found'),
     svc.el('p')('The page you requested does not exist.'),
@@ -41,14 +41,18 @@ const NotFound = (svc: Service) =>
 /**
  * Main App component with routing
  */
-export const App = (svc: Service): RefSpec<HTMLDivElement> => {
-  const { el, router, match } = svc;
+export const App = (svc: Service) => (): RefSpec<HTMLDivElement> => {
+  const { el, router, match, lazy } = svc;
+
+  const HomePageView = svc(HomePage);
+  const NotFoundView = svc(NotFound);
+  const NavView = svc(Nav);
 
   // Eager: start the chunk import now, register with lazy registry.
   // When the import resolves, the outer closure fires load() calls immediately.
   // This will _also_ resolve all of StreamingPage's lazy loaded service-level deps.
-  const StreamingPage = svc.lazy(() =>
-    import('./pages/StreamingPage.js').then((m) => m.StreamingPage(svc))
+  const StreamingPage = lazy(() =>
+    import('./pages/StreamingPage.js').then((m) => svc(m.StreamingPage))
   );
 
   // Route-based page rendering
@@ -57,14 +61,14 @@ export const App = (svc: Service): RefSpec<HTMLDivElement> => {
     (routeId: string | undefined) => {
       switch (routeId) {
         case 'home':
-          return HomePage(svc)();
+          return HomePageView();
         case 'streaming':
           return StreamingPage();
         default:
-          return NotFound(svc);
+          return NotFoundView();
       }
     }
   );
 
-  return el('div').props({ class: 'container' })(Nav(svc), page);
+  return el('div').props({ class: 'container' })(NavView(), page);
 };
