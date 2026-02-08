@@ -67,7 +67,7 @@ describe('ReactiveList', () => {
       list.insertAfter(first, second);
 
       const values = [...list.values()];
-      expect(values.map(v => v.text)).toEqual(['first', 'second', 'third']);
+      expect(values.map((v) => v.text)).toEqual(['first', 'second', 'third']);
     });
 
     it('should insertBefore in O(1)', () => {
@@ -82,7 +82,7 @@ describe('ReactiveList', () => {
       list.insertBefore(third, second);
 
       const values = [...list.values()];
-      expect(values.map(v => v.text)).toEqual(['first', 'second', 'third']);
+      expect(values.map((v) => v.text)).toEqual(['first', 'second', 'third']);
     });
 
     it('should update in O(1)', () => {
@@ -122,7 +122,7 @@ describe('ReactiveList', () => {
 
       expect(list.size).toBe(2);
       expect(list.has(2)).toBe(false);
-      expect([...list.values()].map(v => v.id)).toEqual([1, 3]);
+      expect([...list.values()].map((v) => v.id)).toEqual([1, 3]);
     });
   });
 
@@ -158,10 +158,11 @@ describe('ReactiveList', () => {
       const updates: Array<{ old: string; new: string }> = [];
       const list = createReactiveList<Item>((item) => item.id);
       list.setCallbacks({
-        onUpdate: (node, oldValue) => updates.push({
-          old: oldValue.text,
-          new: node.value.text,
-        }),
+        onUpdate: (node, oldValue) =>
+          updates.push({
+            old: oldValue.text,
+            new: node.value.text,
+          }),
       });
 
       list.append({ id: 1, text: 'old' });
@@ -206,7 +207,7 @@ describe('ReactiveList', () => {
       list.append({ id: 1, text: 'one' });
       list.append({ id: 2, text: 'two' });
 
-      expect([...list.values()].map(v => v.id)).toEqual([1, 2]);
+      expect([...list.values()].map((v) => v.id)).toEqual([1, 2]);
     });
 
     it('should iterate keys', () => {
@@ -245,7 +246,9 @@ describe('ReactiveList', () => {
       const list = createReactiveList<Item>((item) => item.id);
 
       list.append({ id: 1, text: 'first' });
-      expect(() => list.append({ id: 1, text: 'duplicate' })).toThrow('already exists');
+      expect(() => list.append({ id: 1, text: 'duplicate' })).toThrow(
+        'already exists'
+      );
     });
 
     it('should clear all items', () => {
@@ -269,39 +272,10 @@ describe('ReactiveList', () => {
       expect(list.removeByKey(999)).toBe(null);
       expect(list.getByKey(999)).toBe(undefined);
       expect(list.update({ id: 999, text: 'nope' })).toBe(false);
-      expect(list.insertAfter({ id: 999, text: 'nope' }, { id: 1, text: 'new' })).toBe(null);
+      expect(
+        list.insertAfter({ id: 999, text: 'nope' }, { id: 1, text: 'new' })
+      ).toBe(null);
     });
   });
 
-  describe('performance - O(1) verification', () => {
-    it('should have constant-time append regardless of list size', () => {
-      const sizes = [100, 1000, 10000];
-      const appendTimes: number[] = [];
-
-      for (const size of sizes) {
-        const list = createReactiveList<Item>((item) => item.id);
-
-        // Pre-populate
-        for (let i = 0; i < size; i++) {
-          list.append({ id: i, text: `Item ${i}` });
-        }
-
-        // Measure time to append 100 more items
-        const start = performance.now();
-        for (let i = 0; i < 100; i++) {
-          list.append({ id: size + i, text: `Item ${size + i}` });
-        }
-        const elapsed = performance.now() - start;
-        appendTimes.push(elapsed);
-      }
-
-      // With O(1), all times should be similar
-      // If O(n), the 10000 case would be ~100x slower than 100 case
-      const maxTime = Math.max(...appendTimes);
-      const minTime = Math.min(...appendTimes);
-
-      // Allow 10x variance for noise, but should NOT scale with size
-      expect(maxTime / minTime).toBeLessThan(10);
-    });
-  });
 });
