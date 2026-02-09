@@ -15,7 +15,7 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "devDependencies": {
-    "@preact/signals-core": "1.12.2",
+    "@preact/signals-core": "1.13.0",
     "@reduxjs/toolkit": "2.11.2",
     "@rimitive/core": "workspace:*",
     "@rimitive/signals": "workspace:*",
@@ -24,8 +24,8 @@
     "@types/node": "25.2.0",
     "@types/react": "19.2.10",
     "@types/react-dom": "19.2.3",
-    "glob": "13.0.0",
-    "jsdom": "27.4.0",
+    "glob": "13.0.1",
+    "jsdom": "28.0.0",
     "mitata": "1.0.34",
     "mobx": "6.15.0",
     "pinia": "3.0.4",

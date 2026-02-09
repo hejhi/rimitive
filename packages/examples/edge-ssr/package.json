@@ -18,9 +18,9 @@
     "@rimitive/view": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20250505.0",
+    "@cloudflare/workers-types": "4.20260207.0",
     "typescript": "5.9.3",
     "vite": "7.3.1",
-    "wrangler": "4.59.1"
+    "wrangler": "4.63.0"
   }
 }
